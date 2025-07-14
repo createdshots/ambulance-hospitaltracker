@@ -280,15 +280,6 @@
                 renderAll();
             }
         }
-        
-        async function initializeDefaultData() {
-            if (!localData.hospitals || localData.hospitals.length === 0) {
-                localData.hospitals = await loadListFromFile('hospitals');
-            }
-            if (!localData.ambulance || localData.ambulance.length === 0) {
-                localData.ambulance = await loadListFromFile('ambulance');
-            }
-        }
 
         document.getElementById('signout-btn').addEventListener('click', () => {
             signOut(auth);
