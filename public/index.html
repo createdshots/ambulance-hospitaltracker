@@ -236,72 +236,98 @@
             'visits_100': { name: 'Century Club', description: 'Accumulate 100 total visits.', icon: '&#127941;' }
         };
 
-        try {
-            console.log("Initializing Firebase with config:", firebaseConfig);
-            app = initializeApp(firebaseConfig);
-            db = getFirestore(app);
-            auth = getAuth(app);
-            console.log("Firebase initialized successfully");
-        } catch (e) {
-            console.error("Firebase initialization failed:", e);
-            showStatusMessage("Could not connect to the database.", "error");
-        }
-
-        // --- Authentication ---
-
-        onAuthStateChanged(auth, async (user) => {
-            // Clean up any existing listener
-            if (unsubscribe) {
-                unsubscribe();
-                unsubscribe = null;
+        function initializeAppLogic() {
+            // Check for config files first
+            if (typeof userFirebaseConfig === 'undefined') {
+                document.body.innerHTML = `<div class="p-8 text-center text-red-500"><h1 class="text-2xl font-bold">Fatal Error</h1><p class="mt-2">The file 'firebase-config.js' could not be loaded. Please ensure it exists and is in the same folder as index.html.</p></div>`;
+                throw new Error("firebase-config.js not found.");
             }
 
-            if (user) {
-                if (typeof userFirebaseConfig === 'undefined') {
-                    showStatusMessage("FATAL: firebase-config.js not found. App cannot start.", "error");
-                    loadingIndicator.classList.add('loader-hidden');
-                    return;
-                }
+            try {
+                app = initializeApp(userFirebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+            } catch (e) {
+                console.error("Firebase initialization failed:", e);
+                showStatusMessage("Could not connect to the database.", "error");
+                return; // Stop execution if Firebase fails
+            }
 
+            // Setup all event listeners for the page
+            setupEventListeners();
+            // Start listening for authentication state changes
+            onAuthStateChanged(auth, handleAuthStateChange);
+        }
+
+        async function handleAuthStateChange(user) {
+            if (unsubscribe) unsubscribe();
+
+            if (user) {
                 userId = user.uid;
                 userIdDisplay.textContent = user.isAnonymous ? 'Guest' : user.displayName || user.email;
                 authSignedInView.style.display = 'flex';
                 authSignedOutView.style.display = 'none';
-
-                updateProfileButtonVisibility();
-
-                // Set up Firestore document reference
-                docRef = doc(db, "users", userId);
-                console.log("Document reference created for user:", userId);
-
-                // Show loading and start listening
+                
+                docRef = doc(db, `users/${userId}`);
                 loadingIndicator.classList.remove('loader-hidden');
-                loaderText.textContent = 'Connecting to your data...';
-
+                loaderText.textContent = 'Loading data...';
                 setupSnapshotListener();
             } else {
-                // User signed out
                 userId = null;
                 docRef = null;
                 authSignedInView.style.display = 'none';
                 authSignedOutView.style.display = 'block';
                 loadingIndicator.classList.add('loader-hidden');
-
-                // Reset to default local data
-                localData = {
-                    hospitals: [],
-                    ambulance: [],
-                    awards: [],
-                    visitHistory: [],
-                    medicalRecords: [],
-                    symptomTracking: [],
-                    userProfile: {}
-                };
-
-                updateProfileButtonVisibility();
+                localData = { hospitals: [], ambulance: [], awards: [], visitHistory: [], medicalRecords: [], symptomTracking: [], userProfile: {} };
                 renderAll();
             }
-        });
+        }
+
+          function setupSnapshotListener() {
+            if (!docRef) return;
+            let initialLoadComplete = false;
+
+            unsubscribe = onSnapshot(docRef, async (snapshot) => {
+                try {
+                    let needsSave = false;
+                    if (snapshot.exists()) {
+                        localData = { ...localData, ...snapshot.data() };
+                    } else {
+                        // Document doesn't exist, initialize with default data
+                        console.log("No existing document found, initializing with default data");
+                        await initializeDefaultData();
+                        needsSave = true;
+                    }
+                    
+                    if (!initialLoadComplete) {
+                        renderAll();
+                        loadingIndicator.classList.add('loader-hidden');
+                        initialLoadComplete = true;
+                        
+                        if (needsSave) {
+                            await saveData();
+                        }
+                    }
+                } catch (error) {
+                    console.error("Error processing snapshot:", error);
+                    showStatusMessage("Error loading data.", "error");
+                    loadingIndicator.classList.add('loader-hidden');
+                }
+            }, (error) => {
+                console.error("Snapshot listener error:", error);
+                showStatusMessage("Error connecting to database.", "error");
+                loadingIndicator.classList.add('loader-hidden');
+            });
+        }
+        
+        async function initializeDefaultData() {
+            if (!localData.hospitals || localData.hospitals.length === 0) {
+                localData.hospitals = await loadListFromFile('hospitals');
+            }
+            if (!localData.ambulance || localData.ambulance.length === 0) {
+                localData.ambulance = await loadListFromFile('ambulance');
+            }
+        }
 
         document.getElementById('signout-btn').addEventListener('click', () => {
             signOut(auth);
