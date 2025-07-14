@@ -866,7 +866,7 @@
             const notesTextarea = document.getElementById('entry-notes');
             if (!notesTextarea) return;
 
-            const entryIndex = localData.visitHistory.findIndex(h => h.id === entryId);
+            const entryIndex = localData.visitHistory?.findIndex(h => h.id === entryId);
             if (entryIndex === -1) return;
 
             localData.visitHistory[entryIndex].notes = notesTextarea.value;
