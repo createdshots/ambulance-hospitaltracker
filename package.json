@@ -1,0 +1,27 @@
+{
+  "name": "ambulance-hospitaltracker",
+  "version": "1.0.0",
+  "description": "Hospital & Ambulance Trust Tracker",
+  "scripts": {
+    "build": "npx run build",
+    "start": "npx http-server public -p 8080",
+    "dev": "npx http-server public -p 8080 -o",
+    "deploy": "firebase deploy",
+    "serve": "firebase serve"
+  },
+  "dependencies": {
+    "firebase": "^11.10.0",
+    "firebase-tools": "^14.10.1",
+    "node": "^24.4.0"
+  },
+  "devDependencies": {
+    "http-server": "^14.1.1"
+  },
+  "main": "index.html",
+  "repository": {
+    "type": "git",
+    "url": "createdshots\\ambulance-hospitaltracker"
+  },
+  "author": "Jack Tolley",
+  "license": "ISC"
+}
