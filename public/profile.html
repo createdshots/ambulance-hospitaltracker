@@ -109,7 +109,7 @@
         <div id="profile-content" class="hidden">
             <!-- Content will be dynamically inserted here -->
         </div>
-        
+
         <!-- Not signed in message -->
         <div id="not-signed-in" class="text-center py-16">
             <div class="text-gray-400 text-6xl mb-4">👤</div>
@@ -215,7 +215,7 @@
             messageDiv.className = `status-message p-4 rounded-lg shadow-lg font-medium mb-2 ${type === 'error' ? 'bg-red-100 text-red-800 border border-red-200' : 'bg-green-100 text-green-800 border border-green-200'}`;
             messageDiv.textContent = message;
             statusMessageArea.appendChild(messageDiv);
-            
+
             setTimeout(() => {
                 messageDiv.style.opacity = '0';
                 setTimeout(() => messageDiv.remove(), 300);
@@ -229,25 +229,34 @@
             const totalVisits = totalHospitalVisits + totalAmbulanceVisits;
             const visitedHospitals = localData.hospitals.filter(h => h.visited).length;
             const visitedAmbulance = localData.ambulance.filter(a => a.visited).length;
-            
+
             const joinDate = history.length > 0 ? new Date(history[history.length - 1].timestamp).toLocaleDateString() : 'Today';
             const lastActivity = history.length > 0 ? new Date(history[0].timestamp).toLocaleDateString() : 'No activity yet';
-            
+
             profileContent.innerHTML = `
                 <!-- Profile Header -->
-                <div class="bg-gradient-to-r from-purple-500 to-indigo-600 text-white p-8 rounded-xl mb-8">
-                    <div class="flex items-center justify-between">
-                        <div>
-                            <h1 class="text-3xl font-bold mb-2">${userId ? (userIdDisplay.textContent || 'User') : 'Guest'}</h1>
-                            <p class="text-purple-100">Member since ${joinDate}</p>
-                            <p class="text-purple-100">Last activity: ${lastActivity}</p>
-                        </div>
-                        <div class="text-right">
-                            <div class="text-4xl font-bold mb-1">${totalVisits}</div>
-                            <div class="text-purple-100">Total Visits</div>
-                        </div>
-                    </div>
+<div class="bg-gradient-to-r from-purple-500 to-indigo-600 text-white p-8 rounded-xl mb-8">
+    <div class="flex items-center justify-between">
+        <div>
+            <h1 class="text-3xl font-bold mb-2">${userId ? (userIdDisplay.textContent || 'User') : 'Guest'}</h1>
+            <p class="text-purple-100">Member since ${joinDate}</p>
+            <p class="text-purple-100">Last activity: ${lastActivity}</p>
+            ${localData.userProfile?.conditions?.length > 0 ? `
+                <div class="mt-2">
+                    <p class="text-purple-100 text-sm">Tracking conditions: ${localData.userProfile.conditions.length}</p>
                 </div>
+            ` : ''}
+        </div>
+        <div class="text-right">
+            <div class="text-4xl font-bold mb-1">${totalVisits}</div>
+            <div class="text-purple-100 mb-3">Total Visits</div>
+            <button id="edit-profile-btn" 
+                    class="bg-white bg-opacity-20 hover:bg-opacity-30 text-white px-4 py-2 rounded-lg transition-colors text-sm">
+                ✏️ Edit Profile
+            </button>
+        </div>
+    </div>
+</div>
                 
                 <!-- Quick Stats Grid -->
                 <div class="grid grid-cols-2 md:grid-cols-4 gap-6 mb-8">
@@ -505,26 +514,26 @@
 
         function createAchievementsTab() {
             let achievementsHTML = '<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">';
-            
+
             for (const id in awardsDefinition) {
                 const award = awardsDefinition[id];
                 const unlocked = (localData.awards || []).includes(id);
-                
+
                 achievementsHTML += `
                     <div class="award p-6 border rounded-xl ${unlocked ? 'unlocked bg-green-50 border-green-200' : 'bg-gray-50 border-gray-200'}">
                         <div class="text-5xl mb-4 text-center">${award.icon}</div>
                         <h4 class="font-bold text-lg mb-2">${award.name}</h4>
                         <p class="text-sm text-gray-600 mb-4">${award.description}</p>
-                        ${unlocked ? 
-                            `<p class="text-xs text-green-600 font-medium">✓ Unlocked</p>` :
-                            `<p class="text-xs text-gray-400">🔒 Locked</p>`
-                        }
+                        ${unlocked ?
+                        `<p class="text-xs text-green-600 font-medium">✓ Unlocked</p>` :
+                        `<p class="text-xs text-gray-400">🔒 Locked</p>`
+                    }
                     </div>
                 `;
             }
-            
+
             achievementsHTML += '</div>';
-            
+
             return `<div class="profile-tab-panel" data-tab="achievements">${achievementsHTML}</div>`;
         }
 
@@ -532,13 +541,13 @@
             const history = localData.visitHistory || [];
             const hospitalHistory = history.filter(h => h.type === 'hospitals');
             const ambulanceHistory = history.filter(h => h.type === 'ambulance');
-            
+
             const analytics = calculateAnalytics(history);
-            
+
             // Calculate progress percentages
             const hospitalProgress = localData.hospitals.length > 0 ? Math.round((localData.hospitals.filter(h => h.visited).length / localData.hospitals.length) * 100) : 0;
             const ambulanceProgress = localData.ambulance.length > 0 ? Math.round((localData.ambulance.filter(a => a.visited).length / localData.ambulance.length) * 100) : 0;
-            
+
             return `
                 <div class="profile-tab-panel" data-tab="analytics">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -598,7 +607,7 @@
 
         function createRecordsTab() {
             const records = localData.medicalRecords || [];
-            
+
             if (records.length === 0) {
                 return `
                     <div class="profile-tab-panel text-center py-12" data-tab="records">
@@ -611,7 +620,7 @@
                     </div>
                 `;
             }
-            
+
             const recordsHTML = records.map(record => {
                 const date = new Date(record.date);
                 const visitTypeColors = {
@@ -622,7 +631,7 @@
                     'test': 'bg-green-100 text-green-800',
                     'other': 'bg-gray-100 text-gray-800'
                 };
-                
+
                 return `
                     <div class="border border-gray-200 rounded-lg p-6 mb-4 hover:shadow-md transition-shadow">
                         <div class="flex justify-between items-start mb-4">
@@ -650,7 +659,7 @@
                     </div>
                 `;
             }).join('');
-            
+
             return `
                 <div class="profile-tab-panel" data-tab="records">
                     <div class="max-h-96 overflow-y-auto custom-scrollbar">
@@ -664,13 +673,13 @@
             document.querySelectorAll('.profile-tab-btn').forEach(btn => {
                 btn.addEventListener('click', (e) => {
                     const targetTab = e.target.dataset.tab;
-                    
+
                     // Update tab buttons
                     document.querySelectorAll('.profile-tab-btn').forEach(b => {
                         b.className = 'profile-tab-btn border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm';
                     });
                     e.target.className = 'profile-tab-btn border-purple-500 text-purple-600 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm';
-                    
+
                     // Update content
                     const contentArea = document.getElementById('profile-tab-content');
                     switch (targetTab) {
@@ -690,9 +699,130 @@
                     }
                 });
             });
-            
+
             // Set up initial history listeners
             setupHistoryEventListeners();
+        }
+
+        // Add this after the setupProfileEventListeners function
+
+        // Add Edit Profile functionality
+        document.addEventListener('click', (e) => {
+            if (e.target.id === 'edit-profile-btn') {
+                showEditProfileModal();
+            }
+        });
+
+        function showEditProfileModal() {
+            const conditions = [
+                { id: 'epilepsy', name: 'Epilepsy', trackable: ['Seizures', 'Medication times', 'Triggers', 'Aura symptoms'] },
+                { id: 'autism', name: 'Autism/ADHD', trackable: ['Sensory overload', 'Meltdowns', 'Stimming episodes', 'Social fatigue'] },
+                { id: 'diabetes', name: 'Diabetes', trackable: ['Blood sugar levels', 'Insulin doses', 'Hypoglycemic episodes', 'HbA1c results'] },
+                { id: 'mental_health', name: 'Mental Health', trackable: ['Panic attacks', 'Anxiety episodes', 'Mood changes', 'Therapy sessions'] },
+                { id: 'chronic_pain', name: 'Chronic Pain', trackable: ['Pain levels', 'Flare-ups', 'Medication effectiveness', 'Activity tolerance'] },
+                { id: 'heart_condition', name: 'Heart Condition', trackable: ['Heart rate', 'Blood pressure', 'Chest pain episodes', 'Palpitations'] },
+                { id: 'respiratory', name: 'Respiratory Conditions', trackable: ['Breathing difficulties', 'Peak flow readings', 'Inhaler usage', 'Oxygen levels'] },
+                { id: 'autoimmune', name: 'Autoimmune Disorders', trackable: ['Flare-ups', 'Fatigue levels', 'Joint pain', 'Medication side effects'] },
+                { id: 'neurological', name: 'Neurological Conditions', trackable: ['Migraines', 'Coordination issues', 'Memory problems', 'Speech difficulties'] },
+                { id: 'gastrointestinal', name: 'Gastrointestinal Issues', trackable: ['Symptoms severity', 'Food triggers', 'Bathroom urgency', 'Medication response'] }
+            ];
+
+            const userConditions = localData.userProfile?.conditions || [];
+
+            const modalContent = `
+        <form id="edit-profile-form" class="space-y-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <h4 class="font-semibold text-lg mb-4">Medical Conditions</h4>
+                    <p class="text-sm text-gray-600 mb-4">Select conditions you'd like to track in your medical records.</p>
+                    
+                    <div class="space-y-3 max-h-80 overflow-y-auto custom-scrollbar">
+                        ${conditions.map(condition => `
+                            <label class="flex items-start cursor-pointer p-3 border border-gray-200 rounded-lg hover:bg-gray-50">
+                                <input type="checkbox" name="conditions" value="${condition.id}" 
+                                       ${userConditions.includes(condition.id) ? 'checked' : ''}
+                                       class="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded mt-1">
+                                <div class="ml-3 flex-grow">
+                                    <div class="font-medium text-gray-900 text-sm">${condition.name}</div>
+                                    <div class="text-xs text-gray-500 mt-1">
+                                        ${condition.trackable.slice(0, 2).join(', ')}${condition.trackable.length > 2 ? '...' : ''}
+                                    </div>
+                                </div>
+                            </label>
+                        `).join('')}
+                    </div>
+                </div>
+                
+                <div>
+                    <h4 class="font-semibold text-lg mb-4">Profile Information</h4>
+                    
+                    <div class="space-y-4">
+                        <div>
+                            <label for="emergency-contact" class="block text-sm font-medium text-gray-700 mb-2">Emergency Contact (Optional)</label>
+                            <input type="text" id="emergency-contact" 
+                                   value="${localData.userProfile?.emergencyContact || ''}"
+                                   placeholder="Name and phone number"
+                                   class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
+                        </div>
+                        
+                        <div>
+                            <label for="allergies" class="block text-sm font-medium text-gray-700 mb-2">Allergies/Important Medical Info</label>
+                            <textarea id="allergies" rows="3" 
+                                      placeholder="List any allergies, medications, or important medical information..."
+                                      class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500">${localData.userProfile?.allergies || ''}</textarea>
+                        </div>
+                        
+                        <div>
+                            <label for="preferred-hospital" class="block text-sm font-medium text-gray-700 mb-2">Preferred Hospital (Optional)</label>
+                            <select id="preferred-hospital" 
+                                    class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
+                                <option value="">Select preferred hospital...</option>
+                                ${localData.hospitals.map(h => `
+                                    <option value="${h.name}" ${localData.userProfile?.preferredHospital === h.name ? 'selected' : ''}>
+                                        ${h.name}${h.city ? ` - ${h.city}` : ''}
+                                    </option>
+                                `).join('')}
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="flex justify-end space-x-3 pt-4 border-t">
+                <button type="button" class="close-modal-btn px-4 py-2 text-gray-600 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors">
+                    Cancel
+                </button>
+                <button type="submit" 
+                        class="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors">
+                    Save Changes
+                </button>
+            </div>
+        </form>
+    `;
+
+            const modal = createModal('edit-profile-modal', 'Edit Profile', modalContent, 'max-w-4xl');
+            openModal(modal);
+
+            // Handle form submission
+            document.getElementById('edit-profile-form').addEventListener('submit', async (e) => {
+                e.preventDefault();
+
+                const selectedConditions = Array.from(document.querySelectorAll('input[name="conditions"]:checked'))
+                    .map(checkbox => checkbox.value);
+
+                if (!localData.userProfile) localData.userProfile = {};
+
+                localData.userProfile.conditions = selectedConditions;
+                localData.userProfile.emergencyContact = document.getElementById('emergency-contact').value;
+                localData.userProfile.allergies = document.getElementById('allergies').value;
+                localData.userProfile.preferredHospital = document.getElementById('preferred-hospital').value;
+                localData.userProfile.lastUpdated = new Date().toISOString();
+
+                await saveData();
+                renderProfile();
+                closeModal(modal);
+                showStatusMessage('Profile updated successfully!', 'success');
+            });
         }
 
         // Add Record functionality
@@ -703,21 +833,28 @@
             setupAddRecordEventListeners(modal);
         });
 
+        // Update the createModal function to properly handle close buttons
+
         function createModal(id, title, content, size = 'max-w-4xl') {
             const modalHTML = `
-                <div id="${id}" class="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center p-4 z-50 opacity-0 modal-backdrop">
-                    <div class="bg-white rounded-xl shadow-2xl p-6 w-full ${size} modal-content transform scale-95">
-                        <div class="flex justify-between items-center mb-4">
-                            <h2 class="text-2xl font-bold text-gray-900">${title}</h2>
-                            <button class="close-modal-btn text-gray-500 hover:text-gray-800 text-3xl leading-none">&times;</button>
-                        </div>
-                        <div>${content}</div>
-                    </div>
-                </div>`;
+        <div id="${id}" class="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center p-4 z-50 opacity-0 modal-backdrop">
+            <div class="bg-white rounded-xl shadow-2xl p-6 w-full ${size} modal-content transform scale-95">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-2xl font-bold text-gray-900">${title}</h2>
+                    <button class="close-modal-btn text-gray-500 hover:text-gray-800 text-3xl leading-none">&times;</button>
+                </div>
+                <div>${content}</div>
+            </div>
+        </div>`;
             document.body.insertAdjacentHTML('beforeend', modalHTML);
             const modal = document.getElementById(id);
-            modal.querySelector('.close-modal-btn').addEventListener('click', () => closeModal(modal));
-            modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(modal); });
+
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal || e.target.classList.contains('close-modal-btn')) {
+                    closeModal(modal);
+                }
+            });
+
             return modal;
         }
 
@@ -735,14 +872,14 @@
         }
 
         function createAddRecordForm() {
-            const hospitalOptions = localData.hospitals.map(h => 
+            const hospitalOptions = localData.hospitals.map(h =>
                 `<option value="${h.name}">${h.name}${h.city ? ` - ${h.city}` : ''}</option>`
             ).join('');
-            
-            const ambulanceOptions = localData.ambulance.map(a => 
+
+            const ambulanceOptions = localData.ambulance.map(a =>
                 `<option value="${a.name}">${a.name}</option>`
             ).join('');
-            
+
             return `
                 <form id="add-record-form" class="space-y-6">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -825,7 +962,7 @@
             const ambulanceSection = modal.querySelector('#ambulance-section');
             const ambulanceSelect = modal.querySelector('#ambulance-select');
             const cancelBtn = modal.querySelector('.cancel-btn');
-            
+
             ambulanceCheckbox.addEventListener('change', (e) => {
                 if (e.target.checked) {
                     ambulanceSection.classList.remove('hidden');
@@ -836,14 +973,14 @@
                     ambulanceSelect.value = '';
                 }
             });
-            
+
             cancelBtn.addEventListener('click', () => {
                 closeModal(modal);
             });
-            
+
             form.addEventListener('submit', async (e) => {
                 e.preventDefault();
-                
+
                 const formData = {
                     id: `${new Date().toISOString()}_${Math.random().toString(36).substr(2, 9)}`,
                     timestamp: new Date().toISOString(),
@@ -855,16 +992,16 @@
                     visitType: modal.querySelector('#visit-type').value,
                     notes: modal.querySelector('#visit-notes').value || null
                 };
-                
+
                 if (!localData.medicalRecords) localData.medicalRecords = [];
                 localData.medicalRecords.unshift(formData);
-                
+
                 const hospitalIndex = localData.hospitals.findIndex(h => h.name === formData.hospital);
                 if (hospitalIndex !== -1) {
                     localData.hospitals[hospitalIndex].count++;
                     localData.hospitals[hospitalIndex].visited = true;
                 }
-                
+
                 if (formData.ambulanceInvolved && formData.ambulanceTrust) {
                     const ambulanceIndex = localData.ambulance.findIndex(a => a.name === formData.ambulanceTrust);
                     if (ambulanceIndex !== -1) {
@@ -872,7 +1009,7 @@
                         localData.ambulance[ambulanceIndex].visited = true;
                     }
                 }
-                
+
                 await saveData();
                 renderProfile();
                 closeModal(modal);
@@ -904,7 +1041,7 @@
         function getTimeAgo(date) {
             const now = new Date();
             const diffInSeconds = Math.floor((now - date) / 1000);
-            
+
             if (diffInSeconds < 60) return 'Just now';
             if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
             if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
@@ -918,11 +1055,11 @@
                 const day = new Date(entry.timestamp).toDateString();
                 dayGroups[day] = (dayGroups[day] || 0) + 1;
             });
-            
-            const mostActiveDay = Object.keys(dayGroups).reduce((a, b) => 
+
+            const mostActiveDay = Object.keys(dayGroups).reduce((a, b) =>
                 dayGroups[a] > dayGroups[b] ? a : b, Object.keys(dayGroups)[0]
             );
-            
+
             return {
                 mostActiveDay: mostActiveDay ? new Date(mostActiveDay).toLocaleDateString() : null
             };
@@ -934,4 +1071,5 @@
     </script>
 
 </body>
+
 </html>

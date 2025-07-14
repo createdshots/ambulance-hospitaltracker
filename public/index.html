@@ -237,6 +237,7 @@
             app = initializeApp(firebaseConfig);
             db = getFirestore(app);
             auth = getAuth(app);
+            const provider = new GoogleAuthProvider();
         } catch (e) {
             console.error("Firebase initialization failed:", e);
             showStatusMessage("Could not connect to the database.", "error");
@@ -254,26 +255,31 @@
                     return;
                 }
 
-                userId = user.uid; // Set userId first
+                userId = user.uid;
                 userIdDisplay.textContent = user.isAnonymous ? 'Guest' : user.displayName || user.email;
                 authSignedInView.style.display = 'flex';
                 authSignedOutView.style.display = 'none';
 
-                updateProfileButtonVisibility(); // Call after userId is set
+                updateProfileButtonVisibility();
 
                 docRef = doc(db, `artifacts/${appId}/users/${userId}/hospitals-tracker`, "data");
                 loadingIndicator.classList.remove('loader-hidden');
                 loaderText.textContent = 'Loading data...';
                 setupSnapshotListener();
+
+                // Check for onboarding after data loads
+                setTimeout(() => {
+                    if (!localData.userProfile?.onboardingCompleted) {
+                        showOnboardingQuestionnaire();
+                    }
+                }, 2000);
             } else {
-                userId = null; // Clear userId
+                userId = null;
                 authSignedInView.style.display = 'none';
                 authSignedOutView.style.display = 'block';
                 loadingIndicator.classList.add('loader-hidden');
                 localData = { hospitals: [], ambulance: [], awards: [] };
-
-                updateProfileButtonVisibility(); // Call after userId is cleared
-
+                updateProfileButtonVisibility();
                 renderAll();
             }
         });
@@ -284,17 +290,38 @@
 
         document.getElementById('google-signin-btn').addEventListener('click', () => {
             const provider = new GoogleAuthProvider();
+            provider.addScope('profile');
+            provider.addScope('email');
+
             signInWithPopup(auth, provider)
-                .catch(error => showStatusMessage(error.message, 'error'));
+                .then((result) => {
+                    console.log('Google sign-in successful:', result.user);
+                    // Check if this is a new user and show onboarding
+                    if (result.additionalUserInfo?.isNewUser) {
+                        showOnboardingQuestionnaire();
+                    }
+                })
+                .catch(error => {
+                    console.error('Google sign-in error:', error);
+                    showStatusMessage(`Sign-in failed: ${error.message}`, 'error');
+                });
         });
 
         document.getElementById('anon-signin-btn').addEventListener('click', () => {
             signInAnonymously(auth)
-                .catch(error => showStatusMessage(error.message, 'error'));
+                .then((result) => {
+                    console.log('Anonymous sign-in successful:', result.user);
+                    setTimeout(() => {
+                        if (!localData.userProfile?.onboardingCompleted) {
+                            showOnboardingQuestionnaire();
+                        }
+                    }, 1000);
+                })
+                .catch(error => {
+                    console.error('Anonymous sign-in error:', error);
+                    showStatusMessage(`Anonymous sign-in failed: ${error.message}`, 'error');
+                });
         });
-
-        // --- Firestore Data Handling ---
-        // ...existing code...
 
         // --- Firestore Data Handling ---
         function setupSnapshotListener() {
@@ -752,8 +779,6 @@
             openModal(modal);
         });
 
-        // Add this with your other event listeners
-
         document.getElementById('add-record-btn').addEventListener('click', () => {
             const modalContent = createAddRecordForm();
             const modal = createModal('add-record-modal', 'Add Medical Record', modalContent, 'max-w-2xl');
@@ -770,87 +795,88 @@
                 `<option value="${a.name}">${a.name}</option>`
             ).join('');
 
-            return `
-        <form id="add-record-form" class="space-y-6">
+            return
+
+            <form id="add-record-form" class="space-y-6">
             <!-- Date and Time -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                    <label for="visit-date" class="block text-sm font-medium text-gray-700 mb-2">Visit Date</label>
-                    <input type="date" id="visit-date" required 
-                           class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                           value="${new Date().toISOString().split('T')[0]}">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="visit-date" class="block text-sm font-medium text-gray-700 mb-2">Visit Date</label>
+                        <input type="date" id="visit-date" required
+                            class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                            value="${new Date().toISOString().split('T')[0]}">
+                    </div>
+                    <div>
+                        <label for="visit-time" class="block text-sm font-medium text-gray-700 mb-2">Visit Time (Optional)</label>
+                        <input type="time" id="visit-time"
+                            class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
+                    </div>
                 </div>
+
+                <!-- Hospital Selection -->
                 <div>
-                    <label for="visit-time" class="block text-sm font-medium text-gray-700 mb-2">Visit Time (Optional)</label>
-                    <input type="time" id="visit-time" 
-                           class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
+                    <label for="hospital-select" class="block text-sm font-medium text-gray-700 mb-2">Hospital/Medical Facility</label>
+                    <select id="hospital-select" required
+                        class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
+                        <option value="">Select a hospital...</option>
+                        ${hospitalOptions}
+                    </select>
                 </div>
-            </div>
-            
-            <!-- Hospital Selection -->
-            <div>
-                <label for="hospital-select" class="block text-sm font-medium text-gray-700 mb-2">Hospital/Medical Facility</label>
-                <select id="hospital-select" required 
+
+                <!-- Ambulance Involved -->
+                <div>
+                    <label class="flex items-center">
+                        <input type="checkbox" id="ambulance-involved"
+                            class="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded">
+                            <span class="ml-2 text-sm font-medium text-gray-700">Ambulance service was involved</span>
+                    </label>
+                </div>
+
+                <!-- Ambulance Trust Selection (hidden by default) -->
+                <div id="ambulance-section" class="hidden">
+                    <label for="ambulance-select" class="block text-sm font-medium text-gray-700 mb-2">Ambulance Trust</label>
+                    <select id="ambulance-select"
                         class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
-                    <option value="">Select a hospital...</option>
-                    ${hospitalOptions}
-                </select>
-            </div>
-            
-            <!-- Ambulance Involved -->
-            <div>
-                <label class="flex items-center">
-                    <input type="checkbox" id="ambulance-involved" 
-                           class="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded">
-                    <span class="ml-2 text-sm font-medium text-gray-700">Ambulance service was involved</span>
-                </label>
-            </div>
-            
-            <!-- Ambulance Trust Selection (hidden by default) -->
-            <div id="ambulance-section" class="hidden">
-                <label for="ambulance-select" class="block text-sm font-medium text-gray-700 mb-2">Ambulance Trust</label>
-                <select id="ambulance-select" 
+                        <option value="">Select an ambulance trust...</option>
+                        ${ambulanceOptions}
+                    </select>
+                </div>
+
+                <!-- Visit Type -->
+                <div>
+                    <label for="visit-type" class="block text-sm font-medium text-gray-700 mb-2">Type of Visit</label>
+                    <select id="visit-type" required
                         class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
-                    <option value="">Select an ambulance trust...</option>
-                    ${ambulanceOptions}
-                </select>
-            </div>
-            
-            <!-- Visit Type -->
-            <div>
-                <label for="visit-type" class="block text-sm font-medium text-gray-700 mb-2">Type of Visit</label>
-                <select id="visit-type" required 
-                        class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
-                    <option value="">Select visit type...</option>
-                    <option value="emergency">Emergency</option>
-                    <option value="outpatient">Outpatient Appointment</option>
-                    <option value="inpatient">Inpatient Stay</option>
-                    <option value="procedure">Procedure/Surgery</option>
-                    <option value="test">Tests/Diagnostic</option>
-                    <option value="other">Other</option>
-                </select>
-            </div>
-            
-            <!-- Notes -->
-            <div>
-                <label for="visit-notes" class="block text-sm font-medium text-gray-700 mb-2">Notes (Optional)</label>
-                <textarea id="visit-notes" rows="4" 
-                          placeholder="Add any additional details about your visit..."
-                          class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"></textarea>
-            </div>
-            
-            <!-- Submit Button -->
-            <div class="flex justify-end space-x-3 pt-4 border-t">
-                <button type="button" class="cancel-btn px-4 py-2 text-gray-600 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors">
-                    Cancel
-                </button>
-                <button type="submit" 
+                        <option value="">Select visit type...</option>
+                        <option value="emergency">Emergency</option>
+                        <option value="outpatient">Outpatient Appointment</option>
+                        <option value="inpatient">Inpatient Stay</option>
+                        <option value="procedure">Procedure/Surgery</option>
+                        <option value="test">Tests/Diagnostic</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+
+                <!-- Notes -->
+                <div>
+                    <label for="visit-notes" class="block text-sm font-medium text-gray-700 mb-2">Notes (Optional)</label>
+                    <textarea id="visit-notes" rows="4"
+                        placeholder="Add any additional details about your visit..."
+                        class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"></textarea>
+                </div>
+
+                <!-- Submit Button -->
+                <div class="flex justify-end space-x-3 pt-4 border-t">
+                    <button type="button" class="cancel-btn px-4 py-2 text-gray-600 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors">
+                        Cancel
+                    </button>
+                    <button type="submit"
                         class="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors">
-                    Add Record
-                </button>
-            </div>
-        </form>
-    `;
+                        Add Record
+                    </button>
+                </div>
+            </form>
+                ;
         }
 
         function setupAddRecordEventListeners(modal) {
@@ -918,6 +944,101 @@
                 renderAll();
                 closeModal(modal);
                 showStatusMessage('Medical record added successfully!', 'success');
+            });
+        }
+        // Add this function after your existing functions
+
+        function showOnboardingQuestionnaire() {
+            const conditions = [
+                { id: 'epilepsy', name: 'Epilepsy', trackable: ['Seizures', 'Medication times', 'Triggers', 'Aura symptoms'] },
+                { id: 'autism', name: 'Autism/ADHD', trackable: ['Sensory overload', 'Meltdowns', 'Stimming episodes', 'Social fatigue'] },
+                { id: 'diabetes', name: 'Diabetes', trackable: ['Blood sugar levels', 'Insulin doses', 'Hypoglycemic episodes', 'HbA1c results'] },
+                { id: 'mental_health', name: 'Mental Health', trackable: ['Panic attacks', 'Anxiety episodes', 'Mood changes', 'Therapy sessions'] },
+                { id: 'chronic_pain', name: 'Chronic Pain', trackable: ['Pain levels', 'Flare-ups', 'Medication effectiveness', 'Activity tolerance'] },
+                { id: 'heart_condition', name: 'Heart Condition', trackable: ['Heart rate', 'Blood pressure', 'Chest pain episodes', 'Palpitations'] },
+                { id: 'respiratory', name: 'Respiratory Conditions', trackable: ['Breathing difficulties', 'Peak flow readings', 'Inhaler usage', 'Oxygen levels'] },
+                { id: 'autoimmune', name: 'Autoimmune Disorders', trackable: ['Flare-ups', 'Fatigue levels', 'Joint pain', 'Medication side effects'] },
+                { id: 'neurological', name: 'Neurological Conditions', trackable: ['Migraines', 'Coordination issues', 'Memory problems', 'Speech difficulties'] },
+                { id: 'gastrointestinal', name: 'Gastrointestinal Issues', trackable: ['Symptoms severity', 'Food triggers', 'Bathroom urgency', 'Medication response'] }
+            ];
+
+            const modalContent = `
+        <form id="onboarding-form" class="space-y-6">
+            <div class="text-center mb-6">
+                <h3 class="text-xl font-semibold text-gray-900 mb-2">Welcome! Let's personalize your experience</h3>
+                <p class="text-gray-600">Select any conditions you'd like to track. This will help us customize your medical record forms and analytics.</p>
+            </div>
+            
+            <div class="space-y-4 max-h-96 overflow-y-auto custom-scrollbar">
+                ${conditions.map(condition => `
+                    <div class="border border-gray-200 rounded-lg p-4">
+                        <label class="flex items-start cursor-pointer">
+                            <input type="checkbox" name="conditions" value="${condition.id}" 
+                                   class="h-5 w-5 text-purple-600 focus:ring-purple-500 border-gray-300 rounded mt-1">
+                            <div class="ml-3 flex-grow">
+                                <div class="font-medium text-gray-900">${condition.name}</div>
+                                <div class="text-sm text-gray-500 mt-1">
+                                    Track: ${condition.trackable.join(', ')}
+                                </div>
+                            </div>
+                        </label>
+                    </div>
+                `).join('')}
+            </div>
+            
+            <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div class="flex items-start">
+                    <div class="text-blue-600 text-xl mr-3">ℹ️</div>
+                    <div class="text-sm text-blue-800">
+                        <p class="font-medium mb-1">Your privacy matters</p>
+                        <p>This information is stored securely and only used to customize your experience. You can change these settings anytime in your profile.</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="flex justify-end space-x-3 pt-4 border-t">
+                <button type="button" id="skip-onboarding" 
+                        class="px-4 py-2 text-gray-600 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors">
+                    Skip for now
+                </button>
+                <button type="submit" 
+                        class="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors">
+                    Save Preferences
+                </button>
+            </div>
+        </form>
+    `;
+
+            const modal = createModal('onboarding-modal', 'Personalize Your Experience', modalContent, 'max-w-2xl');
+            openModal(modal);
+
+            // Handle form submission
+            document.getElementById('onboarding-form').addEventListener('submit', async (e) => {
+                e.preventDefault();
+
+                const selectedConditions = Array.from(document.querySelectorAll('input[name="conditions"]:checked'))
+                    .map(checkbox => checkbox.value);
+
+                // Save to user profile
+                if (!localData.userProfile) localData.userProfile = {};
+                localData.userProfile.conditions = selectedConditions;
+                localData.userProfile.onboardingCompleted = true;
+                localData.userProfile.setupDate = new Date().toISOString();
+
+                await saveData();
+                closeModal(modal);
+                showStatusMessage('Preferences saved! Your experience has been personalized.', 'success');
+            });
+
+            // Handle skip button
+            document.getElementById('skip-onboarding').addEventListener('click', async () => {
+                if (!localData.userProfile) localData.userProfile = {};
+                localData.userProfile.onboardingCompleted = true;
+                localData.userProfile.conditions = [];
+                localData.userProfile.setupDate = new Date().toISOString();
+
+                await saveData();
+                closeModal(modal);
             });
         }
     </script>
