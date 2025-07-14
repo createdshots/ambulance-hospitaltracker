@@ -123,7 +123,7 @@
 
     <!-- Status Message Area -->
     <div id="status-message-area" class="fixed top-20 right-4 z-30"></div>
-
+    
     <!-- Modals Container -->
     <div id="modal-container"></div>
 
@@ -134,7 +134,7 @@
                 class="bg-gray-600 text-white px-3 py-2 rounded-lg hover:bg-gray-700 transition-colors text-sm shadow-lg">
                 ❓ Help
             </button>
-
+            
             <!-- Creator Credit -->
             <a href="https://github.com/jack-tolley" target="_blank" rel="noopener noreferrer"
                 class="flex items-center text-xs text-gray-400 hover:text-gray-600 bg-white px-2 py-1 rounded shadow">
@@ -195,7 +195,7 @@
             if (diffInDays < 7) return `${diffInDays}d ago`;
             return date.toLocaleDateString();
         }
-
+        
         function getActionText(action, previousCount, newCount) {
             switch (action) {
                 case 'visited': return 'Marked as visited';
@@ -289,7 +289,7 @@
                 userIdDisplay.textContent = user.isAnonymous ? 'Guest' : user.displayName || user.email;
                 authSignedInView.style.display = 'flex';
                 notSignedIn.style.display = 'none';
-
+                
                 docRef = doc(db, `artifacts/${appId}/users/${userId}/hospitals-tracker`, "data");
                 loadingIndicator.classList.remove('loader-hidden');
                 loaderText.textContent = 'Loading data...';
@@ -312,7 +312,7 @@
                 if (snapshot.exists()) {
                     localData = { ...localData, ...snapshot.data() };
                 }
-
+                
                 if (!initialLoadComplete) {
                     renderProfile();
                     profileContent.style.display = 'block';
@@ -325,7 +325,7 @@
                 loadingIndicator.classList.add('loader-hidden');
             });
         }
-
+        
         async function saveData() {
             if (!docRef) return;
             try {
@@ -404,9 +404,9 @@
             `;
             setupProfileEventListeners();
         }
-
+        
         function setupProfileEventListeners() {
-            document.getElementById('profile-content').addEventListener('click', (e) => {
+            profileContent.addEventListener('click', (e) => {
                 if (e.target.closest('.profile-tab-btn')) {
                     const targetTab = e.target.closest('.profile-tab-btn').dataset.tab;
                     document.querySelectorAll('.profile-tab-btn').forEach(b => {
@@ -436,56 +436,49 @@
                     showEditProfileModal();
                 } else if (e.target.id === 'add-first-record-btn') {
                     document.getElementById('add-record-btn').click();
+                } else if (e.target.closest('[data-action="delete-history"]')) {
+                    const entryId = e.target.closest('[data-entry-id]').dataset.entryId;
+                    deleteHistoryEntry(entryId);
                 } else if (e.target.closest('.history-entry')) {
                     const entryId = e.target.closest('.history-entry').dataset.entryId;
-                    if (e.target.dataset.action === 'delete-history') {
-                        deleteHistoryEntry(entryId);
-                    } else {
-                        showHistoryDetails(entryId);
-                    }
+                    showHistoryDetails(entryId);
                 }
             });
         }
         
-        function getTimeAgo(date) {
-            const now = new Date();
-            const diffInMs = now - date;
-            const diffInMins = Math.floor(diffInMs / (1000 * 60));
-            const diffInHours = Math.floor(diffInMs / (1000 * 60 * 60));
-            const diffInDays = Math.floor(diffInMs / (1000 * 60 * 60 * 24));
-
-            if (diffInMins < 1) return 'Just now';
-            if (diffInMins < 60) return `${diffInMins}m ago`;
-            if (diffInHours < 24) return `${diffInHours}h ago`;
-            if (diffInDays < 7) return `${diffInDays}d ago`;
-            return date.toLocaleDateString();
-        }
-
-        function getActionText(action, previousCount, newCount) {
-            switch (action) {
-                case 'visited': return 'Marked as visited';
-                case 'unvisited': return 'Unmarked as visited';
-                case 'count_increased': return `Visit count: ${previousCount} → ${newCount}`;
-                case 'count_decreased': return `Visit count: ${newCount} → ${previousCount}`;
+        // --- All other functions are defined below ---
+        
+        function createHistoryTab(history) {
+            if (history.length === 0) {
+                return `<div class="profile-tab-panel text-center py-12" data-tab="history"><div class="text-gray-400 text-6xl mb-4">📋</div><h3 class="text-xl font-medium text-gray-900 mb-2">No visit history yet</h3><p class="text-gray-500 mb-6">Start checking off hospitals and ambulance trusts to build your history!</p><a href="/" class="bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 transition-colors">Start Tracking</a></div>`;
             }
+            const historyHTML = history.slice(0, 50).map(entry => {
+                const date = new Date(entry.timestamp);
+                const timeAgo = getTimeAgo(date);
+                const actionText = getActionText(entry.action, entry.previousCount, entry.newCount);
+                const icon = entry.type === 'hospitals' ? '🏥' : '🚑';
+                const colorClass = entry.type === 'hospitals' ? 'text-blue-600' : 'text-green-600';
+                return `<div class="history-entry flex items-start space-x-4 p-4 hover:bg-gray-50 rounded-lg border-b border-gray-100 last:border-b-0 cursor-pointer" data-entry-id="${entry.id}"><div class="flex-shrink-0 text-2xl">${icon}</div><div class="flex-grow min-w-0"><div class="flex items-start justify-between"><div class="min-w-0 flex-1"><p class="text-sm font-medium text-gray-900 truncate">${entry.name}</p>${entry.city ? `<p class="text-xs text-gray-500">${entry.city}</p>` : ''}<p class="text-xs ${colorClass} mt-1">${actionText}</p>${entry.notes ? `<p class="text-xs text-gray-600 mt-1">📝 Has notes</p>` : ''}</div><div class="text-right flex-shrink-0 ml-4"><p class="text-xs text-gray-500">${timeAgo}</p><p class="text-xs text-gray-400">${date.toLocaleDateString()}</p><button class="text-xs text-red-500 hover:text-red-700 mt-1" data-action="delete-history" data-entry-id="${entry.id}">Delete</button></div></div></div></div>`;
+            }).join('');
+            return `<div class="profile-tab-panel" data-tab="history"><div class="space-y-0 max-h-96 overflow-y-auto custom-scrollbar">${historyHTML}</div>${history.length > 50 ? `<p class="text-sm text-gray-500 text-center mt-4 pt-4 border-t">Showing latest 50 entries of ${history.length} total</p>` : ''}</div>`;
         }
 
-        function calculateAnalytics(history) {
-            if (!history || history.length === 0) return { mostActiveDay: 'N/A' };
-            const dayGroups = {};
-            history.forEach(entry => {
-                const day = new Date(entry.timestamp).toDateString();
-                dayGroups[day] = (dayGroups[day] || 0) + 1;
-            });
+        function createRecordsTab() { return `<div class="profile-tab-panel text-center py-12" data-tab="records"><div class="text-gray-400 text-6xl mb-4">📋</div><h3 class="text-xl font-medium text-gray-900 mb-2">No medical records yet</h3><p class="text-gray-500 mb-6">Use the "Add Record" button to start tracking your medical visits!</p><button class="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition-colors" id="add-first-record-btn">Add First Record</button></div>`; }
+        function createAchievementsTab() { return `<div class="profile-tab-panel text-center py-12" data-tab="achievements"><div class="text-gray-400 text-6xl mb-4">🏆</div><h3 class="text-xl font-medium text-gray-900 mb-2">Achievements Coming Soon</h3></div>`; }
+        function createAnalyticsTab() { return `<div class="profile-tab-panel text-center py-12" data-tab="analytics"><div class="text-gray-400 text-6xl mb-4">📊</div><h3 class="text-xl font-medium text-gray-900 mb-2">Analytics Coming Soon</h3></div>`; }
+        function createSymptomsTab() { return `<div class="profile-tab-panel text-center py-12" data-tab="symptoms"><div class="text-gray-400 text-6xl mb-4">🩺</div><h3 class="text-xl font-medium text-gray-900 mb-2">Symptom Tracking Coming Soon</h3></div>`; }
+        function showEditProfileModal() { showStatusMessage('Edit profile modal coming soon!', 'success'); }
+        function showHistoryDetails(entryId) { showStatusMessage(`Details for entry ${entryId} coming soon!`, 'success'); }
+        async function deleteHistoryEntry(entryId) { showStatusMessage(`Deletion for entry ${entryId} coming soon!`, 'success'); }
+        function showHelpModal() { showStatusMessage('Help modal coming soon!', 'success'); }
+        function showOnboardingQuestionnaire() { showStatusMessage('Onboarding coming soon!', 'success'); }
 
-            const mostActiveDay = Object.keys(dayGroups).reduce((a, b) =>
-                dayGroups[a] > dayGroups[b] ? a : b, Object.keys(dayGroups)[0]
-            );
-
-            return {
-                mostActiveDay: mostActiveDay ? new Date(mostActiveDay).toLocaleDateString() : 'N/A'
-            };
-        }
+        // Initialize event listeners for static elements
+        document.getElementById('add-record-btn').addEventListener('click', () => {
+            showStatusMessage('Add record functionality coming soon!', 'success');
+        });
+        document.getElementById('help-btn').addEventListener('click', showHelpModal);
+    </script>
 
         // Make functions available globally for onclick handlers
         window.saveEntryNotes = saveEntryNotes;
