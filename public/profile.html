@@ -286,6 +286,9 @@
             }, 300);
         }
 
+        // --- Function Declarations (moved early to avoid timing issues) ---
+        let showAddRecordModal; // Declare early to avoid reference errors
+        
         // --- Core Application Logic ---
         try {
             app = initializeApp(firebaseConfig);
@@ -1452,7 +1455,7 @@
             openModal(modal);
         }
 
-        function showAddRecordModal() {
+        showAddRecordModal = function() {
             const userConditions = localData.userProfile?.conditions || [];
             const hospitalData = localData.hospitals || [];
             
@@ -1563,16 +1566,25 @@
             
             // Setup event listeners for this modal
             setupAddRecordEventListeners(modal);
-        }
+        };
 
         // Make functions globally available
         window.showAddRecordModal = showAddRecordModal;
 
-        // Initialize event listeners for static elements
-        document.getElementById('add-record-btn').addEventListener('click', showAddRecordModal);
-        document.getElementById('help-btn').addEventListener('click', showHelpModal);
+        // Initialize event listeners for static elements after DOM is ready
+        document.addEventListener('DOMContentLoaded', () => {
+            const addRecordBtn = document.getElementById('add-record-btn');
+            const helpBtn = document.getElementById('help-btn');
+            
+            if (addRecordBtn) {
+                addRecordBtn.addEventListener('click', showAddRecordModal);
+            }
+            if (helpBtn) {
+                helpBtn.addEventListener('click', showHelpModal);
+            }
+        });
         
-        // Add event listener for symptoms page add record button
+        // Add event listener for symptoms page add record button (use event delegation)
         document.addEventListener('click', (e) => {
             if (e.target.id === 'add-record-symptoms-btn') {
                 if (typeof showAddRecordModal === 'function') {
