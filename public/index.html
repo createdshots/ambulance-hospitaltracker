@@ -10,7 +10,7 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
     <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-    <!-- Pre-processed Data -->
+    <!-- External Config Files -->
     <script src="firebase-config.js"></script>
     <script src="hospital_data.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -167,23 +167,6 @@
             'visits_100': { name: 'Century Club', description: 'Accumulate 100 total visits.', icon: '&#127941;' }
         };
 
-        // --- Initial Checks ---
-        if (typeof hospitalData === 'undefined') {
-            document.body.innerHTML = `<div class="p-8 text-center text-red-500">
-                <h1 class="text-2xl font-bold">Error: Missing Data File</h1>
-                <p class="mt-2">The file 'hospital_data.js' could not be loaded. Please ensure it is in the same folder as index.html.</p>
-            </div>`;
-            throw new Error("hospital_data.js not found."); 
-        }
-        
-        if (typeof userFirebaseConfig === 'undefined') {
-             document.body.innerHTML = `<div class="p-8 text-center text-red-500">
-                <h1 class="text-2xl font-bold">Error: Missing Config File</h1>
-                <p class="mt-2">The file 'firebase-config.js' could not be loaded. Please ensure it exists and is in the same folder as index.html.</p>
-            </div>`;
-            throw new Error("firebase-config.js not found.");
-        }
-
         try {
             app = initializeApp(firebaseConfig);
             db = getFirestore(app);
@@ -198,6 +181,18 @@
             if (unsubscribe) unsubscribe(); 
             
             if (user) {
+                // --- Configuration Checks ---
+                if (typeof userFirebaseConfig === 'undefined') {
+                    showStatusMessage("FATAL: firebase-config.js not found. App cannot start.", "error");
+                    loadingIndicator.classList.add('loader-hidden');
+                    return;
+                }
+                if (typeof hospitalData === 'undefined') {
+                    showStatusMessage("FATAL: hospital_data.js not found. App cannot start.", "error");
+                    loadingIndicator.classList.add('loader-hidden');
+                    return;
+                }
+
                 userId = user.uid;
                 userIdDisplay.textContent = user.isAnonymous ? 'Guest' : user.displayName || user.email;
                 authSignedInView.style.display = 'flex';
@@ -280,7 +275,6 @@
         async function loadListFromFile(type) {
             if (type === 'hospitals') {
                 loaderText.textContent = `Loading hospital data...`;
-                // Create the list structure from the pre-processed data file
                 const newList = hospitalData.map(hospital => ({
                     name: hospital.name,
                     visited: false,
@@ -289,7 +283,7 @@
                 }));
                 showStatusMessage(`${newList.length} hospitals loaded successfully!`, 'success');
                 return newList;
-            } else { // Ambulance trusts still load from txt and geocode
+            } else { 
                  try {
                     const fileName = 'ambulance.txt';
                     const response = await fetch(fileName);
