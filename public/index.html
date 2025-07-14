@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
     <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <!-- City Data -->
+    <script src="hospital_cities.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         body {
@@ -68,11 +70,12 @@
     
     <!-- Auth Buttons -->
     <div class="fixed top-4 right-4 z-20">
-        <div id="auth-signed-out-view">
-            <button id="google-signin-btn" class="bg-white text-gray-700 font-semibold py-2 px-4 border border-gray-300 rounded-lg shadow-md hover:bg-gray-50 transition-colors flex items-center">
+        <div id="auth-signed-out-view" class="flex flex-col items-end space-y-2">
+            <button id="google-signin-btn" class="bg-white text-gray-700 font-semibold py-2 px-4 border border-gray-300 rounded-lg shadow-md hover:bg-gray-50 transition-colors flex items-center w-full justify-center">
                 <svg class="w-5 h-5 mr-2" viewBox="0 0 48 48"><path fill="#4285F4" d="M43.611 20.083H42V20H24v8h11.303c-1.649 4.657-6.08 8-11.303 8c-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4C12.955 4 4 12.955 4 24s8.955 20 20 20s20-8.955 20-20c0-1.341-.138-2.65-.389-3.917z"></path><path fill="#34A853" d="M6.306 14.691l6.571 4.819C14.655 15.108 18.961 12 24 12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4C16.318 4 9.656 8.337 6.306 14.691z"></path><path fill="#FBBC05" d="M27.461 44.5l5.657-5.657C30.485 41.658 27.214 44 24 44c-5.166 0-9.558-2.922-11.481-7.281l-6.571 4.819C9.656 40.663 16.318 44 24 44z"></path><path fill="#EA4335" d="M43.611 20.083H42V20H24v8h11.303c-.792 2.237-2.231 4.166-4.087 5.571l5.657 5.657C42.485 36.678 44 31.888 44 24c0-1.341-.138-2.65-.389-3.917z"></path></svg>
                 Sign in with Google
             </button>
+            <button id="anon-signin-btn" class="bg-gray-600 text-white font-semibold py-2 px-4 border border-gray-600 rounded-lg shadow-md hover:bg-gray-700 transition-colors w-full">Continue as Guest</button>
         </div>
         <div id="auth-signed-in-view" class="hidden items-center">
             <span id="user-id-display" class="text-sm text-gray-600 bg-white p-2 rounded-l-lg border-r-0 border"></span>
@@ -132,7 +135,7 @@
     <script type="module">
         // Firebase Imports
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, onAuthStateChanged, signOut, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getAuth, onAuthStateChanged, signOut, GoogleAuthProvider, signInWithPopup, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // --- Firebase Configuration ---
@@ -153,6 +156,7 @@
         let localData = { hospitals: [], ambulance: [], awards: [] };
         let map;
         let initialLoadComplete = false;
+        let unsubscribe; // To hold the onSnapshot listener
 
         const loadingIndicator = document.getElementById('full-page-loader');
         const loaderText = document.getElementById('loader-text');
@@ -183,10 +187,12 @@
 
         // --- Authentication ---
         onAuthStateChanged(auth, async (user) => {
-            initialLoadComplete = false; // Reset on auth change
+            if (unsubscribe) unsubscribe(); // Detach old listener
+            initialLoadComplete = false; 
+            
             if (user) {
                 userId = user.uid;
-                userIdDisplay.textContent = user.email;
+                userIdDisplay.textContent = user.isAnonymous ? 'Guest' : user.displayName || user.email;
                 authSignedInView.style.display = 'flex';
                 authSignedOutView.style.display = 'none';
                 
@@ -212,17 +218,21 @@
             signInWithPopup(auth, provider)
                 .catch(error => showStatusMessage(error.message, 'error'));
         });
+        
+        document.getElementById('anon-signin-btn').addEventListener('click', () => {
+            signInAnonymously(auth)
+                .catch(error => showStatusMessage(error.message, 'error'));
+        });
 
         // --- Firestore Data Handling ---
         function setupSnapshotListener() {
             if (!isAuthReady || !docRef) return;
         
-            onSnapshot(docRef, async (snapshot) => {
+            unsubscribe = onSnapshot(docRef, async (snapshot) => {
                 if (initialLoadComplete) {
                     if (snapshot.exists()) {
                         localData = snapshot.data();
                     } else {
-                        // Handle case where data is deleted elsewhere
                         localData = { hospitals: [], ambulance: [], awards: [] };
                     }
                     renderAll();
@@ -356,7 +366,11 @@
         function renderList(type, data, searchTerm) {
             const listElement = document.getElementById(`${type}-list`);
             listElement.innerHTML = ''; 
-            const filteredData = data.filter(item => item.name.toLowerCase().includes(searchTerm.toLowerCase()));
+            let filteredData = data.filter(item => item.name.toLowerCase().includes(searchTerm.toLowerCase()));
+            
+            // Sort to put visited items at the top
+            filteredData.sort((a, b) => b.visited - a.visited);
+
             if (filteredData.length === 0) {
                 listElement.innerHTML = `<p class="text-gray-500">No matching ${type}.</p>`;
                 return;
@@ -367,10 +381,19 @@
                 itemElement.className = 'list-item flex items-center justify-between p-3 rounded-lg border';
                 itemElement.classList.toggle('bg-green-50', item.visited);
                 itemElement.classList.toggle('border-green-200', item.visited);
+                
+                let cityHTML = '';
+                if (type === 'hospitals' && typeof hospitalCities !== 'undefined' && hospitalCities[item.name]) {
+                    cityHTML = `<span class="text-xs text-gray-500 ml-4">${hospitalCities[item.name]}</span>`;
+                }
+
                 itemElement.innerHTML = `
                     <div class="flex items-center flex-grow min-w-0">
                         <input type="checkbox" class="h-5 w-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer flex-shrink-0" ${item.visited ? 'checked' : ''} data-type="${type}" data-index="${index}">
-                        <span class="ml-4 text-base truncate ${item.visited ? 'line-through text-gray-500' : 'text-gray-700'}" title="${item.name}">${item.name}</span>
+                        <div class="ml-4">
+                           <span class="text-base truncate ${item.visited ? 'line-through text-gray-500' : 'text-gray-700'}" title="${item.name}">${item.name}</span>
+                           ${cityHTML}
+                        </div>
                     </div>
                     <div class="flex items-center space-x-3 flex-shrink-0 ml-4">
                         <button class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold w-7 h-7 rounded-full transition-colors" data-action="decrease" data-type="${type}" data-index="${index}">-</button>
