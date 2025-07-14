@@ -5,9 +5,23 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>My Profile - Hospital & Ambulance Trust Tracker</title>
+    <!-- Tailwind CSS - Note: For production, install via npm or use Tailwind CLI -->
+    <!-- Development: CDN (not recommended for production) -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Production alternative: <link href="./styles/tailwind.css" rel="stylesheet"> -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="firebase-config.js"></script>
+    <!-- Firebase Configuration -->
+    <script>
+        const userFirebaseConfig = {
+            apiKey: "AIzaSyBrmQBFe8jdcQSTu7H8ttjhNd-tmGaTeCg",
+            authDomain: "hospitaltracker-39adb.firebaseapp.com",
+            projectId: "hospitaltracker-39adb",
+            storageBucket: "hospitaltracker-39adb.appspot.com",
+            messagingSenderId: "1004447062283",
+            appId: "1:1004447062283:web:8624b4173fc722a7db6a0e",
+            measurementId: "G-KEK2G7YDDT"
+        };
+    </script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         body {
@@ -291,7 +305,7 @@
                 authSignedInView.style.display = 'flex';
                 notSignedIn.style.display = 'none';
                 
-                docRef = doc(db, `artifacts/${appId}/users/${userId}/hospitals-tracker`, "data");
+                docRef = doc(db, `users/${userId}`);
                 loadingIndicator.classList.remove('loader-hidden');
                 loaderText.textContent = 'Loading data...';
                 setupSnapshotListener();
@@ -428,7 +442,14 @@
                 } else if (e.target.id === 'edit-profile-btn') {
                     showEditProfileModal();
                 } else if (e.target.id === 'add-first-record-btn') {
-                    document.getElementById('add-record-btn').click();
+                    // Use setTimeout to ensure the function is available
+                    setTimeout(() => {
+                        if (typeof showAddRecordModal === 'function') {
+                            showAddRecordModal();
+                        } else {
+                            document.getElementById('add-record-btn').click();
+                        }
+                    }, 0);
                 } else if (e.target.closest('[data-action="delete-history"]')) {
                     const entryId = e.target.closest('[data-entry-id]').dataset.entryId;
                     deleteHistoryEntry(entryId);
@@ -437,7 +458,7 @@
                     showHistoryDetails(entryId);
                 }
             });
-            document.getElementById('add-record-btn').addEventListener('click', showAddRecordModal);
+            // Remove the early event listener setup - it will be done later when function is defined
             document.getElementById('help-btn').addEventListener('click', showHelpModal);
         }
 
@@ -584,7 +605,7 @@
                 <h3 class="text-xl font-medium text-gray-900 mb-2">No symptom data yet</h3>
                 <p class="text-gray-500 mb-6">Add medical records or log symptoms to see trends here.</p>
                 <div class="space-x-3">
-                    <button onclick="showAddRecordModal()" 
+                    <button id="add-record-symptoms-btn"
                             class="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition-colors">
                         Add Medical Record
                     </button>
@@ -1431,12 +1452,134 @@
             openModal(modal);
         }
 
+        function showAddRecordModal() {
+            const userConditions = localData.userProfile?.conditions || [];
+            const hospitalData = localData.hospitals || [];
+            
+            const modalContent = `
+                <form id="add-record-form" class="space-y-4">
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <!-- Basic Visit Information -->
+                        <div class="space-y-4">
+                            <h3 class="text-lg font-semibold text-gray-900 mb-3">📋 Visit Details</h3>
+                            
+                            <div>
+                                <label for="hospital-select" class="block text-sm font-medium text-gray-700 mb-1">Hospital/Location *</label>
+                                <select id="hospital-select" required
+                                        class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500">
+                                    <option value="">Select a hospital...</option>
+                                    ${hospitalData.map(h => `<option value="${h.name}">${h.name}${h.city ? ` - ${h.city}` : ''}</option>`).join('')}
+                                    <option value="other">Other (specify below)</option>
+                                </select>
+                            </div>
+                            
+                            <div id="other-hospital-input" class="hidden">
+                                <label for="other-hospital" class="block text-sm font-medium text-gray-700 mb-1">Hospital Name</label>
+                                <input type="text" id="other-hospital"
+                                       placeholder="Enter hospital name..."
+                                       class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500">
+                            </div>
+                            
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label for="visit-date" class="block text-sm font-medium text-gray-700 mb-1">Date *</label>
+                                    <input type="date" id="visit-date" required
+                                           class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500">
+                                </div>
+                                <div>
+                                    <label for="visit-time" class="block text-sm font-medium text-gray-700 mb-1">Time</label>
+                                    <input type="time" id="visit-time"
+                                           class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500">
+                                </div>
+                            </div>
+                            
+                            <div>
+                                <label for="visit-type" class="block text-sm font-medium text-gray-700 mb-1">Visit Type *</label>
+                                <select id="visit-type" required
+                                        class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500">
+                                    <option value="">Select visit type...</option>
+                                    <option value="emergency">🚨 Emergency</option>
+                                    <option value="outpatient">🏥 Outpatient</option>
+                                    <option value="inpatient">🛏️ Inpatient</option>
+                                    <option value="procedure">⚕️ Procedure</option>
+                                    <option value="test">🧪 Test/Scan</option>
+                                    <option value="other">📋 Other</option>
+                                </select>
+                            </div>
+                            
+                            <div>
+                                <label for="visit-notes" class="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+                                <textarea id="visit-notes" rows="3"
+                                          placeholder="Any additional notes about this visit..."
+                                          class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"></textarea>
+                            </div>
+                        </div>
+                        
+                        <!-- Condition-specific Questions -->
+                        <div class="space-y-4">
+                            <h3 class="text-lg font-semibold text-gray-900 mb-3">🩺 Health Information</h3>
+                            
+                            ${userConditions.length > 0 ? `
+                                <div class="bg-blue-50 p-4 rounded-lg">
+                                    <p class="text-sm text-blue-800 mb-3">Based on your tracked conditions:</p>
+                                    <div id="condition-questions" class="space-y-4">
+                                        ${generateConditionQuestionsForRecord(userConditions)}
+                                    </div>
+                                </div>
+                            ` : `
+                                <div class="bg-gray-50 p-4 rounded-lg text-center">
+                                    <p class="text-sm text-gray-600 mb-2">Set up condition tracking to get personalized questions here.</p>
+                                    <button type="button" onclick="document.getElementById('edit-profile-btn').click();" 
+                                            class="text-purple-600 hover:text-purple-700 text-sm font-medium">
+                                        Set up tracking →
+                                    </button>
+                                </div>
+                            `}
+                        </div>
+                    </div>
+                    
+                    <div class="flex justify-end space-x-3 pt-4 border-t">
+                        <button type="button" class="close-modal-btn px-4 py-2 text-gray-600 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors">
+                            Cancel
+                        </button>
+                        <button type="submit" class="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
+                            📋 Add Record
+                        </button>
+                    </div>
+                </form>
+            `;
+            
+            const modal = createModal('add-record-modal', '📋 Add Medical Record', modalContent, 'max-w-5xl');
+            openModal(modal);
+            
+            // Set default date to today
+            modal.querySelector('#visit-date').value = new Date().toISOString().split('T')[0];
+            
+            // Handle hospital selection
+            modal.querySelector('#hospital-select').addEventListener('change', (e) => {
+                const otherInput = modal.querySelector('#other-hospital-input');
+                otherInput.classList.toggle('hidden', e.target.value !== 'other');
+            });
+            
+            // Setup event listeners for this modal
+            setupAddRecordEventListeners(modal);
+        }
+
         // Make functions globally available
         window.showAddRecordModal = showAddRecordModal;
 
         // Initialize event listeners for static elements
         document.getElementById('add-record-btn').addEventListener('click', showAddRecordModal);
         document.getElementById('help-btn').addEventListener('click', showHelpModal);
+        
+        // Add event listener for symptoms page add record button
+        document.addEventListener('click', (e) => {
+            if (e.target.id === 'add-record-symptoms-btn') {
+                if (typeof showAddRecordModal === 'function') {
+                    showAddRecordModal();
+                }
+            }
+        });
     </script>
 </body>
 
