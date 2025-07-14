@@ -208,7 +208,10 @@
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'local-dev-app';
 
         let app, db, auth, userId, docRef;
-        let localData = { hospitals: [], ambulance: [], awards: [] };
+
+        let localData = { hospitals: [], ambulance: [], awards: [], visitHistory: [], medicalRecords: [] };
+
+        localData = { hospitals: [], ambulance: [], awards: [], visitHistory: [], medicalRecords: [] };
         let map;
         let unsubscribe; // To hold the onSnapshot listener
 
