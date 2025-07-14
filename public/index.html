@@ -210,23 +210,14 @@
         // Firebase Imports
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, onAuthStateChanged, signOut, GoogleAuthProvider, signInWithPopup, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, onSnapshot, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // --- Firebase Configuration ---
-        console.log("Firebase config check:", typeof userFirebaseConfig !== 'undefined' ? 'Found' : 'Missing');
-        console.log("App ID check:", typeof __app_id !== 'undefined' ? __app_id : 'Missing');
-        
-        const firebaseConfig = typeof userFirebaseConfig !== 'undefined' ? userFirebaseConfig : {};
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'local-dev-app';
-
+        // --- Global Variables ---
         let app, db, auth, userId, docRef;
+        let localData = { hospitals: [], ambulance: [], awards: [], visitHistory: [], medicalRecords: [], symptomTracking: [], userProfile: {} };
+        let unsubscribe;
 
-        let localData = { hospitals: [], ambulance: [], awards: [], visitHistory: [], medicalRecords: [] };
-
-        localData = { hospitals: [], ambulance: [], awards: [], visitHistory: [], medicalRecords: [] };
-        let map;
-        let unsubscribe; // To hold the onSnapshot listener
-
+        // --- DOM Element References ---
         const loadingIndicator = document.getElementById('full-page-loader');
         const loaderText = document.getElementById('loader-text');
         const statusMessageArea = document.getElementById('status-message-area');
