@@ -277,6 +277,9 @@
         });
 
         // --- Firestore Data Handling ---
+// ...existing code...
+
+        // --- Firestore Data Handling ---
         function setupSnapshotListener() {
             if (!docRef) return;
             let initialLoadComplete = false;
@@ -296,11 +299,14 @@
                 const data = snapshot.exists() ? snapshot.data() : {};
                 localData = { hospitals: [], ambulance: [], awards: [], ...data };
 
-                if (!localData.hospitals || localData.hospitals.length === 0) {
+                // Load hospital data from file if we don't have the expected amount
+                if (!localData.hospitals || localData.hospitals.length < 100) { // Assuming you should have hundreds of hospitals
                     localData.hospitals = await loadListFromFile('hospitals');
                     needsSave = true;
                 }
-                if (!localData.ambulance || localData.ambulance.length === 0) {
+                
+                // Load ambulance data from file if we don't have the expected amount
+                if (!localData.ambulance || localData.ambulance.length < 10) { // You have 12 ambulance trusts in your txt file
                     localData.ambulance = await loadListFromFile('ambulance');
                     needsSave = true;
                 }
