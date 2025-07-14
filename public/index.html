@@ -10,7 +10,8 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
     <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-    <!-- City Data -->
+    <!-- External Config Files -->
+    <script src="firebase-config.js"></script>
     <script src="hospital_cities.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
@@ -139,15 +140,8 @@
         import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // --- Firebase Configuration ---
-        const userFirebaseConfig = {
-          apiKey: "AIzaSyBrmQBFe8jdcQSTu7H8ttjhNd-tmGaTeCg",
-          authDomain: "hospitaltracker-39adb.firebaseapp.com",
-          projectId: "hospitaltracker-39adb",
-          storageBucket: "hospitaltracker-39adb.appspot.com",
-          messagingSenderId: "1004447062283",
-          appId: "1:1004447062283:web:8624b4173fc722a7db6a0e",
-          measurementId: "G-KEK2G7YDDT"
-        };
+        // This now uses the `userFirebaseConfig` variable from `firebase-config.js`
+        // Make sure `firebase-config.js` is included in your HTML and added to .gitignore
         const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : userFirebaseConfig;
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'local-dev-app';
 
@@ -155,7 +149,6 @@
         let isAuthReady = false;
         let localData = { hospitals: [], ambulance: [], awards: [] };
         let map;
-        let initialLoadComplete = false;
         let unsubscribe; // To hold the onSnapshot listener
 
         const loadingIndicator = document.getElementById('full-page-loader');
@@ -184,6 +177,14 @@
             </div>`;
             throw new Error("hospital_cities.js not found."); 
         }
+        
+        if (typeof userFirebaseConfig === 'undefined') {
+             document.body.innerHTML = `<div class="p-8 text-center text-red-500">
+                <h1 class="text-2xl font-bold">Error: Missing Config File</h1>
+                <p class="mt-2">The file 'firebase-config.js' could not be loaded. Please ensure it exists and is in the same folder as your index.html file.</p>
+            </div>`;
+            throw new Error("firebase-config.js not found.");
+        }
 
         try {
             app = initializeApp(firebaseConfig);
@@ -197,7 +198,6 @@
         // --- Authentication ---
         onAuthStateChanged(auth, async (user) => {
             if (unsubscribe) unsubscribe(); 
-            initialLoadComplete = false; 
             
             if (user) {
                 userId = user.uid;
@@ -208,6 +208,7 @@
                 docRef = doc(db, `artifacts/${appId}/users/${userId}/hospitals-tracker`, "data");
                 isAuthReady = true;
                 loadingIndicator.classList.remove('loader-hidden');
+                loaderText.textContent = 'Loading data...';
                 setupSnapshotListener();
             } else {
                 authSignedInView.style.display = 'none';
@@ -236,6 +237,7 @@
         // --- Firestore Data Handling ---
         function setupSnapshotListener() {
             if (!isAuthReady || !docRef) return;
+            let initialLoadComplete = false;
         
             unsubscribe = onSnapshot(docRef, async (snapshot) => {
                 if (initialLoadComplete) {
@@ -278,42 +280,47 @@
         }
         
         async function loadListFromFile(type) {
-            const fileName = type === 'hospitals' ? 'hospital.txt' : 'ambulance.txt';
-            try {
-                const response = await fetch(fileName);
-                if (!response.ok) {
-                    throw new Error(`Could not load '${fileName}'. Make sure it is in the same folder as index.html.`);
-                }
-                const text = await response.text();
-                // More robust check to prevent rendering HTML as a list
-                if (text.trim().toLowerCase().startsWith('<!doctype html>')) {
-                    throw new Error(`Received an HTML file instead of '${fileName}'. Please check that the file exists and is in the correct folder.`);
-                }
-                const lines = text.split(/\r\n?|\n/).filter(line => line.trim() !== '');
-
-                if (lines.length === 0) {
-                    showStatusMessage(`${fileName} is empty or could not be read.`, "error");
+            let lines = [];
+            if (type === 'hospitals') {
+                lines = Object.keys(hospitalCities);
+            } else {
+                 try {
+                    const fileName = 'ambulance.txt';
+                    const response = await fetch(fileName);
+                    if (!response.ok) {
+                        throw new Error(`Could not load '${fileName}'. Make sure it is in the same folder as index.html.`);
+                    }
+                    const text = await response.text();
+                    if (text.trim().toLowerCase().startsWith('<!doctype html>')) {
+                        throw new Error(`Server returned an HTML page for '${fileName}'. Please check that the file exists and is in the correct folder.`);
+                    }
+                    lines = text.split(/\r\n?|\n/).filter(line => line.trim() !== '');
+                 } catch (error) {
+                    console.error(`Error loading ${type} list:`, error);
+                    showStatusMessage(error.message, "error");
+                    loadingIndicator.classList.add('loader-hidden');
                     return [];
-                }
+                 }
+            }
 
-                loaderText.textContent = `Geocoding ${lines.length} ${type}...`;
-
-                const newList = [];
-                for (const [index, line] of lines.entries()) {
-                    const name = line.trim();
-                    loaderText.textContent = `Geocoding ${type} (${index + 1}/${lines.length})...`;
-                    const coords = await geocodeLocation(name);
-                    newList.push({ name, visited: false, count: 0, coords });
-                    await new Promise(resolve => setTimeout(resolve, 250)); // Delay to avoid rate-limiting
-                }
-
-                showStatusMessage(`${newList.length} ${type} loaded successfully!`, 'success');
-                return newList;
-            } catch (error) {
-                console.error(`Error loading ${fileName}:`, error);
-                showStatusMessage(error.message, "error");
+            if (lines.length === 0) {
+                showStatusMessage(`No data found for ${type}.`, "error");
                 return [];
             }
+
+            loaderText.textContent = `Geocoding ${lines.length} ${type}...`;
+
+            const newList = [];
+            for (const [index, line] of lines.entries()) {
+                const name = line.trim();
+                loaderText.textContent = `Geocoding ${type} (${index + 1}/${lines.length})...`;
+                const coords = await geocodeLocation(name);
+                newList.push({ name, visited: false, count: 0, coords });
+                await new Promise(resolve => setTimeout(resolve, 250)); 
+            }
+
+            showStatusMessage(`${newList.length} ${type} loaded successfully!`, 'success');
+            return newList;
         }
 
         async function saveData() {
@@ -381,7 +388,6 @@
             listElement.innerHTML = ''; 
             let filteredData = (data || []).filter(item => item.name.toLowerCase().includes(searchTerm.toLowerCase()));
             
-            // Sort to put visited items at the top
             filteredData.sort((a, b) => b.visited - a.visited);
 
             if (filteredData.length === 0) {
@@ -472,7 +478,6 @@
         }
 
         // --- Event Handling ---
-        // FIX: Changed to delegate from a static parent to handle dynamic elements
         document.getElementById('hospitals-list').addEventListener('click', handleInteraction);
         document.getElementById('ambulance-list').addEventListener('click', handleInteraction);
 
