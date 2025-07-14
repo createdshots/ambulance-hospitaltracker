@@ -94,7 +94,8 @@
         // Firebase Imports
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, onSnapshot, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        // FIX: Removed getDoc as it's not needed with the new logic
+        import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // --- Firebase Configuration ---
         const userFirebaseConfig = {
@@ -199,9 +200,9 @@
                 initialLoadComplete = true;
 
                 if (needsSave) {
-                    await saveData(); // This will save and trigger the snapshot listener again, but the `initialLoadComplete` flag will prevent this block from re-running.
+                    await saveData(); 
                 } else {
-                    renderAll(); // Render with existing data if no file load was needed.
+                    renderAll(); 
                 }
 
             }, (error) => {
