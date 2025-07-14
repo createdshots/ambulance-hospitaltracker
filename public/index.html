@@ -94,7 +94,6 @@
         // Firebase Imports
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        // FIX: Removed getDoc as it's not needed with the new logic
         import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // --- Firebase Configuration ---
@@ -172,7 +171,6 @@
         
             onSnapshot(docRef, async (snapshot) => {
                 if (initialLoadComplete) {
-                    // Subsequent updates from Firestore
                     if (snapshot.exists()) {
                         localData = snapshot.data();
                         renderAll();
@@ -180,18 +178,15 @@
                     return;
                 }
 
-                // This is the first run
                 let needsSave = false;
                 const data = snapshot.exists() ? snapshot.data() : {};
                 localData = { hospitals: [], ambulance: [], awards: [], ...data };
 
                 if (!localData.hospitals || localData.hospitals.length === 0) {
-                    console.log("Hospitals list is empty, loading from file...");
                     localData.hospitals = await loadListFromFile('hospitals');
                     needsSave = true;
                 }
                 if (!localData.ambulance || localData.ambulance.length === 0) {
-                    console.log("Ambulance list is empty, loading from file...");
                     localData.ambulance = await loadListFromFile('ambulance');
                     needsSave = true;
                 }
@@ -230,7 +225,6 @@
 
                 const promises = lines.map((line, index) => {
                     return new Promise(resolve => {
-                        // Stagger the API calls to avoid being rate-limited
                         setTimeout(async () => {
                             const name = line.trim();
                             const coords = await geocodeLocation(name);
@@ -291,13 +285,15 @@
         function openModal(modal) {
             modal.classList.remove('hidden');
             setTimeout(() => {
-                modal.querySelector('.modal-backdrop').classList.add('opacity-100');
+                // FIX: Apply animation class to the modal itself, not a child
+                modal.classList.add('opacity-100');
                 modal.querySelector('.modal-content').classList.remove('scale-95');
             }, 10);
         }
 
         function closeModal(modal) {
-            modal.querySelector('.modal-backdrop').classList.remove('opacity-100');
+            // FIX: Apply animation class to the modal itself, not a child
+            modal.classList.remove('opacity-100');
             modal.querySelector('.modal-content').classList.add('scale-95');
             setTimeout(() => { modal.remove(); }, 300);
         }
