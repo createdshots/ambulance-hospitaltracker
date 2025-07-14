@@ -140,7 +140,8 @@
                     paramount.</p>
             </div>
 
-            <div class="mt-6 flex justify-center space-x-2">
+            <!-- Update the button section -->
+            <div class="mt-6 flex justify-center space-x-2 flex-wrap">
                 <button id="show-stats-btn"
                     class="bg-indigo-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-indigo-700 transition-colors">Show
                     Charts</button>
@@ -150,6 +151,9 @@
                 <button id="show-awards-btn"
                     class="bg-amber-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-amber-600 transition-colors">Show
                     Awards</button>
+                <button id="add-record-btn"
+                    class="bg-green-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-700 transition-colors hidden">Add
+                    Record</button>
                 <button id="show-profile-btn"
                     class="bg-purple-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-purple-700 transition-colors hidden">My
                     Profile</button>
@@ -236,11 +240,10 @@
         }
 
         // --- Authentication ---
+
         onAuthStateChanged(auth, async (user) => {
             if (unsubscribe) unsubscribe();
 
-            updateProfileButtonVisibility();
-            
             if (user) {
                 if (typeof userFirebaseConfig === 'undefined') {
                     showStatusMessage("FATAL: firebase-config.js not found. App cannot start.", "error");
@@ -248,20 +251,26 @@
                     return;
                 }
 
-                userId = user.uid;
+                userId = user.uid; // Set userId first
                 userIdDisplay.textContent = user.isAnonymous ? 'Guest' : user.displayName || user.email;
                 authSignedInView.style.display = 'flex';
                 authSignedOutView.style.display = 'none';
+
+                updateProfileButtonVisibility(); // Call after userId is set
 
                 docRef = doc(db, `artifacts/${appId}/users/${userId}/hospitals-tracker`, "data");
                 loadingIndicator.classList.remove('loader-hidden');
                 loaderText.textContent = 'Loading data...';
                 setupSnapshotListener();
             } else {
+                userId = null; // Clear userId
                 authSignedInView.style.display = 'none';
                 authSignedOutView.style.display = 'block';
                 loadingIndicator.classList.add('loader-hidden');
                 localData = { hospitals: [], ambulance: [], awards: [] };
+
+                updateProfileButtonVisibility(); // Call after userId is cleared
+
                 renderAll();
             }
         });
@@ -546,97 +555,100 @@
         }
 
         // --- Event Handling ---
-// Add this function after your existing functions
+        // Add this function after your existing functions
 
-// --- Visit History Tracking ---
-function logVisit(type, index, action) {
-    const item = localData[type][index];
-    const timestamp = new Date().toISOString();
-    
-    const historyEntry = {
-        id: `${timestamp}_${Math.random().toString(36).substr(2, 9)}`,
-        timestamp,
-        type, // 'hospitals' or 'ambulance'
-        name: item.name,
-        city: item.city || null,
-        action, // 'visited', 'unvisited', 'count_increased', 'count_decreased'
-        previousCount: item.count,
-        newCount: action === 'count_increased' ? item.count + 1 : 
-                 action === 'count_decreased' ? item.count - 1 : item.count,
-        coords: item.coords
-    };
-    
-    if (!localData.visitHistory) localData.visitHistory = [];
-    localData.visitHistory.unshift(historyEntry); // Add to beginning for recent-first order
-    
-    // Keep only last 1000 entries to prevent data bloat
-    if (localData.visitHistory.length > 1000) {
-        localData.visitHistory = localData.visitHistory.slice(0, 1000);
-    }
-}
+        // --- Visit History Tracking ---
+        function logVisit(type, index, action) {
+            const item = localData[type][index];
+            const timestamp = new Date().toISOString();
 
-// Update your existing handleInteraction function
-function handleInteraction(event) {
-    const target = event.target;
-    if (!target.dataset.type) return;
+            const historyEntry = {
+                id: `${timestamp}_${Math.random().toString(36).substr(2, 9)}`,
+                timestamp,
+                type, // 'hospitals' or 'ambulance'
+                name: item.name,
+                city: item.city || null,
+                action, // 'visited', 'unvisited', 'count_increased', 'count_decreased'
+                previousCount: item.count,
+                newCount: action === 'count_increased' ? item.count + 1 :
+                    action === 'count_decreased' ? item.count - 1 : item.count,
+                coords: item.coords
+            };
 
-    const type = target.dataset.type;
-    const index = parseInt(target.dataset.index);
-    const data = localData[type];
+            if (!localData.visitHistory) localData.visitHistory = [];
+            localData.visitHistory.unshift(historyEntry); // Add to beginning for recent-first order
 
-    if (!data || !data[index]) return;
-
-    let action = '';
-    
-    if (target.type === 'checkbox') {
-        const wasVisited = data[index].visited;
-        data[index].visited = target.checked;
-        action = target.checked ? 'visited' : 'unvisited';
-        
-        if (target.checked && data[index].count === 0) {
-            data[index].count = 1;
-            action = 'visited'; // First visit
+            // Keep only last 1000 entries to prevent data bloat
+            if (localData.visitHistory.length > 1000) {
+                localData.visitHistory = localData.visitHistory.slice(0, 1000);
+            }
         }
-        
-        logVisit(type, index, action);
-        
-    } else if (target.dataset.action === 'increase') {
-        action = 'count_increased';
-        logVisit(type, index, action);
-        
-        data[index].count++;
-        if (data[index].count > 0) {
-            data[index].visited = true;
+
+        // Update your existing handleInteraction function
+        function handleInteraction(event) {
+            const target = event.target;
+            if (!target.dataset.type) return;
+
+            const type = target.dataset.type;
+            const index = parseInt(target.dataset.index);
+            const data = localData[type];
+
+            if (!data || !data[index]) return;
+
+            let action = '';
+
+            if (target.type === 'checkbox') {
+                const wasVisited = data[index].visited;
+                data[index].visited = target.checked;
+                action = target.checked ? 'visited' : 'unvisited';
+
+                if (target.checked && data[index].count === 0) {
+                    data[index].count = 1;
+                    action = 'visited'; // First visit
+                }
+
+                logVisit(type, index, action);
+
+            } else if (target.dataset.action === 'increase') {
+                action = 'count_increased';
+                logVisit(type, index, action);
+
+                data[index].count++;
+                if (data[index].count > 0) {
+                    data[index].visited = true;
+                }
+
+            } else if (target.dataset.action === 'decrease' && data[index].count > 0) {
+                action = 'count_decreased';
+                logVisit(type, index, action);
+
+                data[index].count--;
+                if (data[index].count === 0) {
+                    data[index].visited = false;
+                }
+            }
+
+            saveData();
+            renderAll();
         }
-        
-    } else if (target.dataset.action === 'decrease' && data[index].count > 0) {
-        action = 'count_decreased';
-        logVisit(type, index, action);
-        
-        data[index].count--;
-        if (data[index].count === 0) {
-            data[index].visited = false;
+
+        // Add profile button event listener with your other button listeners
+        document.getElementById('show-profile-btn').addEventListener('click', () => {
+            window.location.href = '/profile.html';
+        });
+
+        function updateProfileButtonVisibility() {
+            const profileBtn = document.getElementById('show-profile-btn');
+            const addRecordBtn = document.getElementById('add-record-btn');
+
+            if (userId) {
+                profileBtn.classList.remove('hidden');
+                addRecordBtn.classList.remove('hidden');
+            } else {
+                profileBtn.classList.add('hidden');
+                addRecordBtn.classList.add('hidden');
+            }
         }
-    }
-
-    saveData();
-    renderAll();
-}
-
-// Add profile button event listener with your other button listeners
-document.getElementById('show-profile-btn').addEventListener('click', () => {
-    window.location.href = '/profile.html';
-});
-
-// Show profile button only when signed in - add this to your onAuthStateChanged function
-function updateProfileButtonVisibility() {
-    const profileBtn = document.getElementById('show-profile-btn');
-    if (userId) {
-        profileBtn.classList.remove('hidden');
-    } else {
-        profileBtn.classList.add('hidden');
-    }
-}
 
         document.getElementById('hospitals-list').addEventListener('click', handleInteraction);
         document.getElementById('ambulance-list').addEventListener('click', handleInteraction);
@@ -737,6 +749,174 @@ function updateProfileButtonVisibility() {
             openModal(modal);
         });
 
+        // Add this with your other event listeners
+
+        document.getElementById('add-record-btn').addEventListener('click', () => {
+            const modalContent = createAddRecordForm();
+            const modal = createModal('add-record-modal', 'Add Medical Record', modalContent, 'max-w-2xl');
+            openModal(modal);
+            setupAddRecordEventListeners(modal);
+        });
+
+        function createAddRecordForm() {
+            const hospitalOptions = localData.hospitals.map(h =>
+                `<option value="${h.name}">${h.name}${h.city ? ` - ${h.city}` : ''}</option>`
+            ).join('');
+
+            const ambulanceOptions = localData.ambulance.map(a =>
+                `<option value="${a.name}">${a.name}</option>`
+            ).join('');
+
+            return `
+        <form id="add-record-form" class="space-y-6">
+            <!-- Date and Time -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label for="visit-date" class="block text-sm font-medium text-gray-700 mb-2">Visit Date</label>
+                    <input type="date" id="visit-date" required 
+                           class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                           value="${new Date().toISOString().split('T')[0]}">
+                </div>
+                <div>
+                    <label for="visit-time" class="block text-sm font-medium text-gray-700 mb-2">Visit Time (Optional)</label>
+                    <input type="time" id="visit-time" 
+                           class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
+                </div>
+            </div>
+            
+            <!-- Hospital Selection -->
+            <div>
+                <label for="hospital-select" class="block text-sm font-medium text-gray-700 mb-2">Hospital/Medical Facility</label>
+                <select id="hospital-select" required 
+                        class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
+                    <option value="">Select a hospital...</option>
+                    ${hospitalOptions}
+                </select>
+            </div>
+            
+            <!-- Ambulance Involved -->
+            <div>
+                <label class="flex items-center">
+                    <input type="checkbox" id="ambulance-involved" 
+                           class="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded">
+                    <span class="ml-2 text-sm font-medium text-gray-700">Ambulance service was involved</span>
+                </label>
+            </div>
+            
+            <!-- Ambulance Trust Selection (hidden by default) -->
+            <div id="ambulance-section" class="hidden">
+                <label for="ambulance-select" class="block text-sm font-medium text-gray-700 mb-2">Ambulance Trust</label>
+                <select id="ambulance-select" 
+                        class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
+                    <option value="">Select an ambulance trust...</option>
+                    ${ambulanceOptions}
+                </select>
+            </div>
+            
+            <!-- Visit Type -->
+            <div>
+                <label for="visit-type" class="block text-sm font-medium text-gray-700 mb-2">Type of Visit</label>
+                <select id="visit-type" required 
+                        class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
+                    <option value="">Select visit type...</option>
+                    <option value="emergency">Emergency</option>
+                    <option value="outpatient">Outpatient Appointment</option>
+                    <option value="inpatient">Inpatient Stay</option>
+                    <option value="procedure">Procedure/Surgery</option>
+                    <option value="test">Tests/Diagnostic</option>
+                    <option value="other">Other</option>
+                </select>
+            </div>
+            
+            <!-- Notes -->
+            <div>
+                <label for="visit-notes" class="block text-sm font-medium text-gray-700 mb-2">Notes (Optional)</label>
+                <textarea id="visit-notes" rows="4" 
+                          placeholder="Add any additional details about your visit..."
+                          class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"></textarea>
+            </div>
+            
+            <!-- Submit Button -->
+            <div class="flex justify-end space-x-3 pt-4 border-t">
+                <button type="button" class="cancel-btn px-4 py-2 text-gray-600 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors">
+                    Cancel
+                </button>
+                <button type="submit" 
+                        class="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors">
+                    Add Record
+                </button>
+            </div>
+        </form>
+    `;
+        }
+
+        function setupAddRecordEventListeners(modal) {
+            const form = modal.querySelector('#add-record-form');
+            const ambulanceCheckbox = modal.querySelector('#ambulance-involved');
+            const ambulanceSection = modal.querySelector('#ambulance-section');
+            const ambulanceSelect = modal.querySelector('#ambulance-select');
+            const cancelBtn = modal.querySelector('.cancel-btn');
+
+            // Show/hide ambulance section
+            ambulanceCheckbox.addEventListener('change', (e) => {
+                if (e.target.checked) {
+                    ambulanceSection.classList.remove('hidden');
+                    ambulanceSelect.required = true;
+                } else {
+                    ambulanceSection.classList.add('hidden');
+                    ambulanceSelect.required = false;
+                    ambulanceSelect.value = '';
+                }
+            });
+
+            // Cancel button
+            cancelBtn.addEventListener('click', () => {
+                closeModal(modal);
+            });
+
+            // Form submission
+            form.addEventListener('submit', (e) => {
+                e.preventDefault();
+
+                const formData = {
+                    id: `${new Date().toISOString()}_${Math.random().toString(36).substr(2, 9)}`,
+                    timestamp: new Date().toISOString(),
+                    date: modal.querySelector('#visit-date').value,
+                    time: modal.querySelector('#visit-time').value || null,
+                    hospital: modal.querySelector('#hospital-select').value,
+                    ambulanceInvolved: ambulanceCheckbox.checked,
+                    ambulanceTrust: ambulanceCheckbox.checked ? ambulanceSelect.value : null,
+                    visitType: modal.querySelector('#visit-type').value,
+                    notes: modal.querySelector('#visit-notes').value || null
+                };
+
+                // Add to records
+                if (!localData.medicalRecords) localData.medicalRecords = [];
+                localData.medicalRecords.unshift(formData);
+
+                // Update visit counts for tracking
+                const hospitalIndex = localData.hospitals.findIndex(h => h.name === formData.hospital);
+                if (hospitalIndex !== -1) {
+                    localData.hospitals[hospitalIndex].count++;
+                    localData.hospitals[hospitalIndex].visited = true;
+                    logVisit('hospitals', hospitalIndex, 'count_increased');
+                }
+
+                if (formData.ambulanceInvolved && formData.ambulanceTrust) {
+                    const ambulanceIndex = localData.ambulance.findIndex(a => a.name === formData.ambulanceTrust);
+                    if (ambulanceIndex !== -1) {
+                        localData.ambulance[ambulanceIndex].count++;
+                        localData.ambulance[ambulanceIndex].visited = true;
+                        logVisit('ambulance', ambulanceIndex, 'count_increased');
+                    }
+                }
+
+                saveData();
+                renderAll();
+                closeModal(modal);
+                showStatusMessage('Medical record added successfully!', 'success');
+            });
+        }
     </script>
 </body>
 
