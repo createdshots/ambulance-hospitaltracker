@@ -10,9 +10,9 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
     <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-    <!-- External Config Files -->
+    <!-- Pre-processed Data -->
     <script src="firebase-config.js"></script>
-    <script src="hospital_cities.js"></script>
+    <script src="hospital_data.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         body {
@@ -140,9 +140,7 @@
         import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // --- Firebase Configuration ---
-        // This now uses the `userFirebaseConfig` variable from `firebase-config.js`
-        // Make sure `firebase-config.js` is included in your HTML and added to .gitignore
-        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : userFirebaseConfig;
+        const firebaseConfig = typeof userFirebaseConfig !== 'undefined' ? userFirebaseConfig : {};
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'local-dev-app';
 
         let app, db, auth, userId, docRef;
@@ -170,18 +168,18 @@
         };
 
         // --- Initial Checks ---
-        if (typeof hospitalCities === 'undefined') {
+        if (typeof hospitalData === 'undefined') {
             document.body.innerHTML = `<div class="p-8 text-center text-red-500">
                 <h1 class="text-2xl font-bold">Error: Missing Data File</h1>
-                <p class="mt-2">The file 'hospital_cities.js' could not be loaded. Please ensure it is in the same folder as your index.html file.</p>
+                <p class="mt-2">The file 'hospital_data.js' could not be loaded. Please ensure it is in the same folder as index.html.</p>
             </div>`;
-            throw new Error("hospital_cities.js not found."); 
+            throw new Error("hospital_data.js not found."); 
         }
         
         if (typeof userFirebaseConfig === 'undefined') {
              document.body.innerHTML = `<div class="p-8 text-center text-red-500">
                 <h1 class="text-2xl font-bold">Error: Missing Config File</h1>
-                <p class="mt-2">The file 'firebase-config.js' could not be loaded. Please ensure it exists and is in the same folder as your index.html file.</p>
+                <p class="mt-2">The file 'firebase-config.js' could not be loaded. Please ensure it exists and is in the same folder as index.html.</p>
             </div>`;
             throw new Error("firebase-config.js not found.");
         }
@@ -280,10 +278,18 @@
         }
         
         async function loadListFromFile(type) {
-            let lines = [];
             if (type === 'hospitals') {
-                lines = Object.keys(hospitalCities);
-            } else {
+                loaderText.textContent = `Loading hospital data...`;
+                // Create the list structure from the pre-processed data file
+                const newList = hospitalData.map(hospital => ({
+                    name: hospital.name,
+                    visited: false,
+                    count: 0,
+                    coords: hospital.coords
+                }));
+                showStatusMessage(`${newList.length} hospitals loaded successfully!`, 'success');
+                return newList;
+            } else { // Ambulance trusts still load from txt and geocode
                  try {
                     const fileName = 'ambulance.txt';
                     const response = await fetch(fileName);
@@ -294,7 +300,26 @@
                     if (text.trim().toLowerCase().startsWith('<!doctype html>')) {
                         throw new Error(`Server returned an HTML page for '${fileName}'. Please check that the file exists and is in the correct folder.`);
                     }
-                    lines = text.split(/\r\n?|\n/).filter(line => line.trim() !== '');
+                    const lines = text.split(/\r\n?|\n/).filter(line => line.trim() !== '');
+
+                    if (lines.length === 0) {
+                        showStatusMessage(`${fileName} is empty or could not be read.`, "error");
+                        return [];
+                    }
+
+                    loaderText.textContent = `Geocoding ${lines.length} ambulance trusts...`;
+
+                    const newList = [];
+                    for (const [index, line] of lines.entries()) {
+                        const name = line.trim();
+                        loaderText.textContent = `Geocoding ambulance trusts (${index + 1}/${lines.length})...`;
+                        const coords = await geocodeLocation(name);
+                        newList.push({ name, visited: false, count: 0, coords });
+                        await new Promise(resolve => setTimeout(resolve, 250)); 
+                    }
+
+                    showStatusMessage(`${newList.length} ambulance trusts loaded successfully!`, 'success');
+                    return newList;
                  } catch (error) {
                     console.error(`Error loading ${type} list:`, error);
                     showStatusMessage(error.message, "error");
@@ -302,25 +327,6 @@
                     return [];
                  }
             }
-
-            if (lines.length === 0) {
-                showStatusMessage(`No data found for ${type}.`, "error");
-                return [];
-            }
-
-            loaderText.textContent = `Geocoding ${lines.length} ${type}...`;
-
-            const newList = [];
-            for (const [index, line] of lines.entries()) {
-                const name = line.trim();
-                loaderText.textContent = `Geocoding ${type} (${index + 1}/${lines.length})...`;
-                const coords = await geocodeLocation(name);
-                newList.push({ name, visited: false, count: 0, coords });
-                await new Promise(resolve => setTimeout(resolve, 250)); 
-            }
-
-            showStatusMessage(`${newList.length} ${type} loaded successfully!`, 'success');
-            return newList;
         }
 
         async function saveData() {
@@ -402,8 +408,11 @@
                 itemElement.classList.toggle('border-green-200', item.visited);
                 
                 let cityHTML = '';
-                if (type === 'hospitals' && typeof hospitalCities !== 'undefined' && hospitalCities[item.name]) {
-                    cityHTML = `<span class="text-sm text-gray-500">${hospitalCities[item.name]}</span>`;
+                if (type === 'hospitals' && typeof hospitalData !== 'undefined') {
+                    const hospitalInfo = hospitalData.find(h => h.name === item.name);
+                    if (hospitalInfo && hospitalInfo.city) {
+                         cityHTML = `<span class="text-sm text-gray-500">${hospitalInfo.city}</span>`;
+                    }
                 }
 
                 itemElement.innerHTML = `
