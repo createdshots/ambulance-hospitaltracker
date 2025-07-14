@@ -272,7 +272,13 @@
             const fileName = type === 'hospitals' ? 'hospital.txt' : 'ambulance.txt';
             try {
                 const response = await fetch(fileName);
-                if (!response.ok) throw new Error(`Could not fetch ${fileName}`);
+                if (!response.ok) {
+                    throw new Error(`Could not fetch ${fileName} - Status: ${response.status}`);
+                }
+                const contentType = response.headers.get("content-type");
+                if (contentType && contentType.indexOf("text/html") !== -1) {
+                    throw new Error(`Server returned HTML instead of a text file. Please ensure '${fileName}' is in the same folder as index.html.`);
+                }
                 const text = await response.text();
                 const lines = text.split(/\r\n?|\n/).filter(line => line.trim() !== '');
 
@@ -296,7 +302,7 @@
                 return newList;
             } catch (error) {
                 console.error(`Error loading ${fileName}:`, error);
-                showStatusMessage(`Failed to load ${fileName}.`, "error");
+                showStatusMessage(error.message, "error");
                 return [];
             }
         }
