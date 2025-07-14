@@ -901,7 +901,7 @@
                     <!-- Personal Information -->
                     <div class="bg-gray-50 p-4 rounded-lg">
                         <h3 class="text-lg font-semibold text-gray-900 mb-3">Personal Information</h3>
-                        <div class="space-y-3">
+                        <div class="grid grid-cols-1 gap-3">
                             <div>
                                 <label for="display-name" class="block text-sm font-medium text-gray-700 mb-1">Display Name</label>
                                 <input type="text" id="display-name" 
@@ -939,20 +939,20 @@
                     <!-- Emergency Information -->
                     <div class="bg-red-50 p-4 rounded-lg">
                         <h3 class="text-lg font-semibold text-gray-900 mb-3">🚨 Emergency Information</h3>
-                        <div class="space-y-3">
+                        <div class="grid grid-cols-1 gap-3">
                             <div>
                                 <label for="emergency-contact" class="block text-sm font-medium text-gray-700 mb-1">Emergency Contact</label>
                                 <input type="text" id="emergency-contact" 
                                        value="${currentProfile.emergencyContact || ''}"
-                                       placeholder="Name and phone (e.g., John Smith - 07123456789)"
+                                       placeholder="Name and phone number (e.g., John Smith - 07123456789)"
                                        class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm">
                             </div>
                             <div>
                                 <label for="medical-notes" class="block text-sm font-medium text-gray-700 mb-1">Important Medical Notes</label>
                                 <textarea id="medical-notes" rows="2"
-                                          placeholder="Allergies, medications, special instructions..."
+                                          placeholder="Allergies, current medications, medical conditions, special instructions for emergency responders..."
                                           class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm">${currentProfile.medicalNotes || ''}</textarea>
-                                <p class="text-xs text-gray-500 mt-1">Vital information for emergency responders</p>
+                                <p class="text-xs text-gray-500 mt-1">This information could be vital in an emergency</p>
                             </div>
                         </div>
                     </div>
@@ -963,8 +963,8 @@
                     <!-- Condition Tracking -->
                     <div class="bg-blue-50 p-4 rounded-lg">
                         <h3 class="text-lg font-semibold text-gray-900 mb-3">🏥 Condition Tracking</h3>
-                        <p class="text-sm text-gray-600 mb-3">Select conditions you'd like to track:</p>
-                        <div class="grid grid-cols-1 gap-2 max-h-48 overflow-y-auto custom-scrollbar">
+                        <p class="text-sm text-gray-600 mb-3">Select conditions you'd like to track. This enables personalized symptom questions and better analytics.</p>
+                        <div class="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto custom-scrollbar">
                             ${availableConditions.map(condition => {
                 const isSelected = currentProfile.conditions?.includes(condition) || false;
                 const conditionNames = {
@@ -991,39 +991,39 @@
                         </div>
                         <div class="mt-2 p-2 bg-blue-100 border border-blue-200 rounded">
                             <p class="text-xs text-blue-800">
-                                <strong>Privacy:</strong> Your data is secure and never shared.
+                                <strong>Privacy Note:</strong> Your condition data is stored securely and never shared. You can add or remove conditions at any time.
                             </p>
                         </div>
                     </div>
 
                     <!-- Settings & Account Info -->
                     <div class="bg-gray-50 p-4 rounded-lg">
-                        <h3 class="text-lg font-semibold text-gray-900 mb-3">🔒 Settings & Account</h3>
+                        <h3 class="text-lg font-semibold text-gray-900 mb-3">🔒 Privacy & Settings</h3>
                         
                         <!-- Privacy Settings -->
-                        <div class="space-y-2 mb-4">
-                            <label class="flex items-start">
+                        <div class="grid grid-cols-1 gap-2 mb-4">
+                            <label class="flex items-start p-2 border rounded hover:bg-gray-100 cursor-pointer">
                                 <input type="checkbox" id="data-sharing" 
                                        ${currentProfile.dataSharing ? 'checked' : ''}
                                        class="h-3 w-3 text-purple-600 focus:ring-purple-500 border-gray-300 rounded mt-1">
                                 <div class="ml-2">
                                     <span class="text-sm font-medium text-gray-700">Help improve the app</span>
-                                    <p class="text-xs text-gray-500">Anonymous usage analytics only</p>
+                                    <p class="text-xs text-gray-500">Share anonymous usage analytics to help development</p>
                                 </div>
                             </label>
-                            <label class="flex items-start">
+                            <label class="flex items-start p-2 border rounded hover:bg-gray-100 cursor-pointer">
                                 <input type="checkbox" id="onboarding-completed" 
                                        ${currentProfile.onboardingCompleted ? 'checked' : ''}
                                        class="h-3 w-3 text-purple-600 focus:ring-purple-500 border-gray-300 rounded mt-1">
                                 <div class="ml-2">
                                     <span class="text-sm font-medium text-gray-700">Skip onboarding tips</span>
-                                    <p class="text-xs text-gray-500">Hide introductory tutorials</p>
+                                    <p class="text-xs text-gray-500">Hide introductory tutorials and help prompts</p>
                                 </div>
                             </label>
                         </div>
 
                         <!-- Account Info Grid -->
-                        <div class="grid grid-cols-1 gap-2 text-sm">
+                        <div class="grid grid-cols-2 gap-2 text-sm">
                             <div class="bg-white p-2 rounded border">
                                 <p class="font-medium text-gray-700">Account Type</p>
                                 <p class="text-gray-600 text-xs">${user?.isAnonymous ? 'Guest Account' : 'Registered Account'}</p>
@@ -1033,8 +1033,12 @@
                                 <p class="text-gray-600 text-xs">${isSSO ? 'SSO Provider' : 'Email & Password'}</p>
                             </div>
                             <div class="bg-white p-2 rounded border">
-                                <p class="font-medium text-gray-700">Data Entries</p>
-                                <p class="text-gray-600 text-xs">${(localData.medicalRecords?.length || 0) + (localData.symptomTracking?.length || 0)} records</p>
+                                <p class="font-medium text-gray-700">Total Records</p>
+                                <p class="text-gray-600 text-xs">${(localData.medicalRecords?.length || 0) + (localData.symptomTracking?.length || 0)} entries</p>
+                            </div>
+                            <div class="bg-white p-2 rounded border">
+                                <p class="font-medium text-gray-700">Data Storage</p>
+                                <p class="text-gray-600 text-xs">Cloud synchronized</p>
                             </div>
                         </div>
                     </div>
