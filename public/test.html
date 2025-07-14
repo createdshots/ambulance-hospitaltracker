@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Firebase Test</title>
+    <script src="firebase-config.js"></script>
+</head>
+<body>
+    <h1>Firebase Connection Test</h1>
+    <div id="status">Testing...</div>
+    <button id="test-save">Test Save</button>
+    <button id="test-read">Test Read</button>
+    <div id="results"></div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        const statusDiv = document.getElementById('status');
+        const resultsDiv = document.getElementById('results');
+
+        try {
+            console.log("Firebase config:", userFirebaseConfig);
+            const app = initializeApp(userFirebaseConfig);
+            const auth = getAuth(app);
+            const db = getFirestore(app);
+            
+            statusDiv.innerHTML = "✅ Firebase initialized successfully";
+            
+            // Sign in anonymously
+            const userCredential = await signInAnonymously(auth);
+            const user = userCredential.user;
+            console.log("Signed in as:", user.uid);
+            
+            statusDiv.innerHTML += "<br>✅ Authenticated successfully";
+            
+            document.getElementById('test-save').addEventListener('click', async () => {
+                try {
+                    const testDoc = doc(db, "users", user.uid);
+                    await setDoc(testDoc, {
+                        test: true,
+                        timestamp: new Date().toISOString(),
+                        message: "Hello from test!"
+                    }, { merge: true });
+                    resultsDiv.innerHTML = "✅ Save successful!";
+                } catch (error) {
+                    resultsDiv.innerHTML = "❌ Save failed: " + error.message;
+                    console.error(error);
+                }
+            });
+            
+            document.getElementById('test-read').addEventListener('click', async () => {
+                try {
+                    const testDoc = doc(db, "users", user.uid);
+                    const snapshot = await getDoc(testDoc);
+                    if (snapshot.exists()) {
+                        resultsDiv.innerHTML = "✅ Read successful: " + JSON.stringify(snapshot.data());
+                    } else {
+                        resultsDiv.innerHTML = "📄 No document found";
+                    }
+                } catch (error) {
+                    resultsDiv.innerHTML = "❌ Read failed: " + error.message;
+                    console.error(error);
+                }
+            });
+            
+        } catch (error) {
+            statusDiv.innerHTML = "❌ Firebase initialization failed: " + error.message;
+            console.error(error);
+        }
+    </script>
+</body>
+</html>

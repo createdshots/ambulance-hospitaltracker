@@ -286,7 +286,8 @@
                 authSignedInView.style.display = 'flex';
                 notSignedIn.style.display = 'none';
 
-                docRef = doc(db, `artifacts/${appId}/users/${userId}/hospitals-tracker`, "data");
+                docRef = doc(db, "users", userId);
+                console.log("Document reference created for user:", userId);
                 loadingIndicator.classList.remove('loader-hidden');
                 loaderText.textContent = 'Loading data...';
                 setupSnapshotListener();
@@ -891,52 +892,80 @@
                 user.providerData.some(provider => provider.providerId !== 'password');
 
             const modalContent = `
-        <form id="edit-profile-form" class="space-y-6">
-            <!-- Personal Information -->
-            <div>
-                <h3 class="text-lg font-semibold text-gray-900 mb-4">Personal Information</h3>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label for="display-name" class="block text-sm font-medium text-gray-700 mb-2">Display Name</label>
-                        <input type="text" id="display-name" 
-                               value="${currentProfile.displayName || user?.displayName || ''}"
-                               placeholder="How you'd like to be addressed"
-                               class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
-                    </div>
-                    ${!isSSO ? `
-                    <div>
-                        <label for="email" class="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
-                        <input type="email" id="email" 
-                               value="${user?.email || ''}"
-                               placeholder="your.email@example.com"
-                               class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
-                        <p class="text-xs text-gray-500 mt-1">Used for account recovery and important notifications</p>
-                    </div>
-                    ` : `
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
-                        <div class="w-full p-3 border border-gray-200 rounded-lg bg-gray-50 text-gray-600">
-                            ${user?.email || 'Not available'}
+        <form id="edit-profile-form" class="space-y-4">
+            <!-- Main Content Grid -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                
+                <!-- Left Column -->
+                <div class="space-y-4">
+                    <!-- Personal Information -->
+                    <div class="bg-gray-50 p-4 rounded-lg">
+                        <h3 class="text-lg font-semibold text-gray-900 mb-3">Personal Information</h3>
+                        <div class="space-y-3">
+                            <div>
+                                <label for="display-name" class="block text-sm font-medium text-gray-700 mb-1">Display Name</label>
+                                <input type="text" id="display-name" 
+                                       value="${currentProfile.displayName || user?.displayName || ''}"
+                                       placeholder="How you'd like to be addressed"
+                                       class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm">
+                            </div>
+                            ${!isSSO ? `
+                            <div>
+                                <label for="email" class="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
+                                <input type="email" id="email" 
+                                       value="${user?.email || ''}"
+                                       placeholder="your.email@example.com"
+                                       class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm">
+                                <p class="text-xs text-gray-500 mt-1">Used for account recovery</p>
+                            </div>
+                            ` : `
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
+                                <div class="w-full p-2 border border-gray-200 rounded-lg bg-gray-100 text-gray-600 text-sm">
+                                    ${user?.email || 'Not available'}
+                                </div>
+                                <p class="text-xs text-gray-500 mt-1">Managed by sign-in provider</p>
+                            </div>
+                            `}
+                            <div>
+                                <label for="date-of-birth" class="block text-sm font-medium text-gray-700 mb-1">Date of Birth (Optional)</label>
+                                <input type="date" id="date-of-birth" 
+                                       value="${currentProfile.dateOfBirth || ''}"
+                                       class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm">
+                            </div>
                         </div>
-                        <p class="text-xs text-gray-500 mt-1">Email managed by your sign-in provider (Google/Microsoft)</p>
                     </div>
-                    `}
-                </div>
-                <div class="mt-4">
-                    <label for="date-of-birth" class="block text-sm font-medium text-gray-700 mb-2">Date of Birth (Optional)</label>
-                    <input type="date" id="date-of-birth" 
-                           value="${currentProfile.dateOfBirth || ''}"
-                           class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
-                    <p class="text-xs text-gray-500 mt-1">Helps us provide age-appropriate health information</p>
-                </div>
-            </div>
 
-            <!-- Condition Tracking -->
-            <div>
-                <h3 class="text-lg font-semibold text-gray-900 mb-4">🏥 Condition Tracking</h3>
-                <p class="text-sm text-gray-600 mb-4">Select conditions you'd like to track. This enables personalized symptom questions and better analytics.</p>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    ${availableConditions.map(condition => {
+                    <!-- Emergency Information -->
+                    <div class="bg-red-50 p-4 rounded-lg">
+                        <h3 class="text-lg font-semibold text-gray-900 mb-3">🚨 Emergency Information</h3>
+                        <div class="space-y-3">
+                            <div>
+                                <label for="emergency-contact" class="block text-sm font-medium text-gray-700 mb-1">Emergency Contact</label>
+                                <input type="text" id="emergency-contact" 
+                                       value="${currentProfile.emergencyContact || ''}"
+                                       placeholder="Name and phone (e.g., John Smith - 07123456789)"
+                                       class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm">
+                            </div>
+                            <div>
+                                <label for="medical-notes" class="block text-sm font-medium text-gray-700 mb-1">Important Medical Notes</label>
+                                <textarea id="medical-notes" rows="2"
+                                          placeholder="Allergies, medications, special instructions..."
+                                          class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm">${currentProfile.medicalNotes || ''}</textarea>
+                                <p class="text-xs text-gray-500 mt-1">Vital information for emergency responders</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Column -->
+                <div class="space-y-4">
+                    <!-- Condition Tracking -->
+                    <div class="bg-blue-50 p-4 rounded-lg">
+                        <h3 class="text-lg font-semibold text-gray-900 mb-3">🏥 Condition Tracking</h3>
+                        <p class="text-sm text-gray-600 mb-3">Select conditions you'd like to track:</p>
+                        <div class="grid grid-cols-1 gap-2 max-h-48 overflow-y-auto custom-scrollbar">
+                            ${availableConditions.map(condition => {
                 const isSelected = currentProfile.conditions?.includes(condition) || false;
                 const conditionNames = {
                     'epilepsy': '🧠 Epilepsy',
@@ -951,98 +980,73 @@
                     'gastrointestinal': '🫃 Gastrointestinal'
                 };
                 return `
-                            <label class="flex items-center p-3 border rounded-lg hover:bg-gray-50 cursor-pointer transition-colors ${isSelected ? 'border-purple-500 bg-purple-50' : 'border-gray-300'}">
-                                <input type="checkbox" name="conditions" value="${condition}" 
-                                       ${isSelected ? 'checked' : ''}
-                                       class="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded">
-                                <span class="ml-3 text-sm font-medium text-gray-700">${conditionNames[condition] || condition.replace('_', ' ')}</span>
-                            </label>
-                        `;
+                                <label class="flex items-center p-2 border rounded-lg hover:bg-white cursor-pointer transition-colors text-sm ${isSelected ? 'border-purple-500 bg-white' : 'border-gray-300'}">
+                                    <input type="checkbox" name="conditions" value="${condition}" 
+                                           ${isSelected ? 'checked' : ''}
+                                           class="h-3 w-3 text-purple-600 focus:ring-purple-500 border-gray-300 rounded">
+                                    <span class="ml-2 text-sm font-medium text-gray-700">${conditionNames[condition] || condition.replace('_', ' ')}</span>
+                                </label>
+                            `;
             }).join('')}
-                </div>
-                <div class="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                    <p class="text-xs text-blue-800">
-                        <strong>Privacy Note:</strong> Your condition data is stored securely and never shared. 
-                        You can add or remove conditions at any time.
-                    </p>
-                </div>
-            </div>
-
-            <!-- Emergency Information -->
-            <div>
-                <h3 class="text-lg font-semibold text-gray-900 mb-4">🚨 Emergency Information</h3>
-                <div class="space-y-4">
-                    <div>
-                        <label for="emergency-contact" class="block text-sm font-medium text-gray-700 mb-2">Emergency Contact</label>
-                        <input type="text" id="emergency-contact" 
-                               value="${currentProfile.emergencyContact || ''}"
-                               placeholder="Name and phone number (e.g., John Smith - 07123456789)"
-                               class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
+                        </div>
+                        <div class="mt-2 p-2 bg-blue-100 border border-blue-200 rounded">
+                            <p class="text-xs text-blue-800">
+                                <strong>Privacy:</strong> Your data is secure and never shared.
+                            </p>
+                        </div>
                     </div>
-                    <div>
-                        <label for="medical-notes" class="block text-sm font-medium text-gray-700 mb-2">Important Medical Notes</label>
-                        <textarea id="medical-notes" rows="3"
-                                  placeholder="Allergies, current medications, medical conditions, special instructions for emergency responders..."
-                                  class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500">${currentProfile.medicalNotes || ''}</textarea>
-                        <p class="text-xs text-gray-500 mt-1">This information could be vital in an emergency</p>
-                    </div>
-                </div>
-            </div>
 
-            <!-- Privacy & Data Settings -->
-            <div>
-                <h3 class="text-lg font-semibold text-gray-900 mb-4">🔒 Privacy & Data</h3>
-                <div class="space-y-4">
-                    <div class="p-4 border border-gray-200 rounded-lg">
-                        <label class="flex items-start">
-                            <input type="checkbox" id="data-sharing" 
-                                   ${currentProfile.dataSharing ? 'checked' : ''}
-                                   class="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded mt-1">
-                            <div class="ml-3">
-                                <span class="text-sm font-medium text-gray-700">Help improve the app</span>
-                                <p class="text-xs text-gray-500 mt-1">Allow anonymous usage analytics to help us improve the app. No personal health data is shared.</p>
+                    <!-- Settings & Account Info -->
+                    <div class="bg-gray-50 p-4 rounded-lg">
+                        <h3 class="text-lg font-semibold text-gray-900 mb-3">🔒 Settings & Account</h3>
+                        
+                        <!-- Privacy Settings -->
+                        <div class="space-y-2 mb-4">
+                            <label class="flex items-start">
+                                <input type="checkbox" id="data-sharing" 
+                                       ${currentProfile.dataSharing ? 'checked' : ''}
+                                       class="h-3 w-3 text-purple-600 focus:ring-purple-500 border-gray-300 rounded mt-1">
+                                <div class="ml-2">
+                                    <span class="text-sm font-medium text-gray-700">Help improve the app</span>
+                                    <p class="text-xs text-gray-500">Anonymous usage analytics only</p>
+                                </div>
+                            </label>
+                            <label class="flex items-start">
+                                <input type="checkbox" id="onboarding-completed" 
+                                       ${currentProfile.onboardingCompleted ? 'checked' : ''}
+                                       class="h-3 w-3 text-purple-600 focus:ring-purple-500 border-gray-300 rounded mt-1">
+                                <div class="ml-2">
+                                    <span class="text-sm font-medium text-gray-700">Skip onboarding tips</span>
+                                    <p class="text-xs text-gray-500">Hide introductory tutorials</p>
+                                </div>
+                            </label>
+                        </div>
+
+                        <!-- Account Info Grid -->
+                        <div class="grid grid-cols-1 gap-2 text-sm">
+                            <div class="bg-white p-2 rounded border">
+                                <p class="font-medium text-gray-700">Account Type</p>
+                                <p class="text-gray-600 text-xs">${user?.isAnonymous ? 'Guest Account' : 'Registered Account'}</p>
                             </div>
-                        </label>
-                    </div>
-                    <div class="p-4 border border-gray-200 rounded-lg">
-                        <label class="flex items-start">
-                            <input type="checkbox" id="onboarding-completed" 
-                                   ${currentProfile.onboardingCompleted ? 'checked' : ''}
-                                   class="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded mt-1">
-                            <div class="ml-3">
-                                <span class="text-sm font-medium text-gray-700">Mark onboarding as completed</span>
-                                <p class="text-xs text-gray-500 mt-1">Stop showing introductory tips and tutorials</p>
+                            <div class="bg-white p-2 rounded border">
+                                <p class="font-medium text-gray-700">Sign-in Method</p>
+                                <p class="text-gray-600 text-xs">${isSSO ? 'SSO Provider' : 'Email & Password'}</p>
                             </div>
-                        </label>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Account Information -->
-            <div class="border-t pt-4">
-                <h3 class="text-lg font-semibold text-gray-900 mb-4">📊 Account Information</h3>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                    <div class="bg-gray-50 p-3 rounded-lg">
-                        <p class="font-medium text-gray-700">Account Type</p>
-                        <p class="text-gray-600">${user?.isAnonymous ? 'Guest Account' : 'Registered Account'}</p>
-                    </div>
-                    <div class="bg-gray-50 p-3 rounded-lg">
-                        <p class="font-medium text-gray-700">Sign-in Method</p>
-                        <p class="text-gray-600">${isSSO ? 'SSO Provider' : 'Email & Password'}</p>
-                    </div>
-                    <div class="bg-gray-50 p-3 rounded-lg">
-                        <p class="font-medium text-gray-700">Data Entries</p>
-                        <p class="text-gray-600">${(localData.medicalRecords?.length || 0) + (localData.symptomTracking?.length || 0)} records</p>
+                            <div class="bg-white p-2 rounded border">
+                                <p class="font-medium text-gray-700">Data Entries</p>
+                                <p class="text-gray-600 text-xs">${(localData.medicalRecords?.length || 0) + (localData.symptomTracking?.length || 0)} records</p>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
 
             <!-- Action Buttons -->
-            <div class="flex flex-col sm:flex-row justify-between items-center pt-6 border-t gap-4">
+            <div class="flex flex-col sm:flex-row justify-between items-center pt-4 border-t gap-3">
                 <!-- Delete Account -->
                 <div class="order-2 sm:order-1">
                     <button type="button" id="delete-account-btn"
-                            class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium">
+                            class="px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium">
                         🗑️ Delete Account
                     </button>
                     <p class="text-xs text-gray-500 mt-1">This action cannot be undone</p>
@@ -1050,11 +1054,11 @@
                 
                 <!-- Save/Cancel -->
                 <div class="flex space-x-3 order-1 sm:order-2">
-                    <button type="button" class="close-modal-btn px-6 py-2 text-gray-600 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors font-medium">
+                    <button type="button" class="close-modal-btn px-4 py-2 text-gray-600 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors font-medium text-sm">
                         Cancel
                     </button>
                     <button type="submit"
-                            class="px-8 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium">
+                            class="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium text-sm">
                         💾 Save Profile
                     </button>
                 </div>
@@ -1062,7 +1066,7 @@
         </form>
     `;
 
-            const modal = createModal('edit-profile-modal', '✏️ Edit Profile', modalContent, 'max-w-3xl');
+            const modal = createModal('edit-profile-modal', '✏️ Edit Profile', modalContent, 'max-w-5xl');
             openModal(modal);
             setupEditProfileEventListeners(modal);
         }
@@ -1460,45 +1464,149 @@
         function showHelpModal() {
             const userIdText = userId ? userId : 'Not signed in';
             const helpContent = `
-                <div class="space-y-6">
-                    <div class="text-center pb-4 border-b">
+                <div class="space-y-4">
+                    <div class="text-center pb-3 border-b">
                         <h3 class="text-xl font-semibold text-gray-900">Help & Support</h3>
-                        <p class="text-sm text-gray-600 mt-2">Need help with Visit Tracker? Here's everything you need to know.</p>
+                        <p class="text-sm text-gray-600 mt-1">Everything you need to know about Visit Tracker</p>
                     </div>
                     
-                    <!-- Quick Start -->
-                    <div>
-                        <h4 class="font-semibold text-gray-900 mb-3">🚀 Quick Start</h4>
-                        <ul class="text-sm text-gray-700 space-y-2 ml-4">
-                            <li>• Sign in to save your progress across devices</li>
-                            <li>• Check off hospitals and ambulance trusts you've visited</li>
-                            <li>• Use + and - buttons to track multiple visits</li>
-                            <li>• Add detailed medical records with the "Add Record" button</li>
-                            <li>• View your progress and achievements in your profile</li>
-                        </ul>
-                    </div>
-                    
-                    <!-- Support -->
-                    <div class="bg-blue-50 p-4 rounded-lg">
-                        <h4 class="font-semibold text-blue-900 mb-3">📧 Need More Help?</h4>
-                        <p class="text-sm text-blue-800 mb-3">If you need assistance or want to report a bug, please contact support:</p>
-                        <div class="bg-white p-3 rounded border text-xs font-mono text-gray-600">
-                            <p><strong>Your User ID:</strong> ${userIdText}</p>
-                            <p><strong>Email:</strong> <a href="mailto:jack@whitehill.group?subject=Support Request - ${userIdText}" class="text-blue-600 hover:underline">jack@whitehill.group</a></p>
+                    <!-- Main Content Grid -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        
+                        <!-- Left Column: Quick Start & Features -->
+                        <div class="space-y-4">
+                            <!-- Quick Start -->
+                            <div class="bg-green-50 p-4 rounded-lg">
+                                <h4 class="font-semibold text-green-900 mb-3 flex items-center">
+                                    🚀 Quick Start Guide
+                                </h4>
+                                <ul class="text-sm text-green-800 space-y-1.5">
+                                    <li class="flex items-start">
+                                        <span class="text-green-600 mr-2">1.</span>
+                                        <span>Sign in to save progress across devices</span>
+                                    </li>
+                                    <li class="flex items-start">
+                                        <span class="text-green-600 mr-2">2.</span>
+                                        <span>Check off hospitals and trusts you've visited</span>
+                                    </li>
+                                    <li class="flex items-start">
+                                        <span class="text-green-600 mr-2">3.</span>
+                                        <span>Use +/- buttons for multiple visits</span>
+                                    </li>
+                                    <li class="flex items-start">
+                                        <span class="text-green-600 mr-2">4.</span>
+                                        <span>Add detailed records with "Add Record"</span>
+                                    </li>
+                                    <li class="flex items-start">
+                                        <span class="text-green-600 mr-2">5.</span>
+                                        <span>View progress and awards in your profile</span>
+                                    </li>
+                                </ul>
+                            </div>
+
+                            <!-- Features -->
+                            <div class="bg-blue-50 p-4 rounded-lg">
+                                <h4 class="font-semibold text-blue-900 mb-3 flex items-center">
+                                    ✨ Key Features
+                                </h4>
+                                <div class="grid grid-cols-1 gap-2 text-sm text-blue-800">
+                                    <div class="flex items-center">
+                                        <span class="text-blue-600 mr-2">🏥</span>
+                                        <span>Track hospital visits</span>
+                                    </div>
+                                    <div class="flex items-center">
+                                        <span class="text-blue-600 mr-2">🚑</span>
+                                        <span>Monitor ambulance trusts</span>
+                                    </div>
+                                    <div class="flex items-center">
+                                        <span class="text-blue-600 mr-2">📊</span>
+                                        <span>View statistics & maps</span>
+                                    </div>
+                                    <div class="flex items-center">
+                                        <span class="text-blue-600 mr-2">🏆</span>
+                                        <span>Unlock achievements</span>
+                                    </div>
+                                    <div class="flex items-center">
+                                        <span class="text-blue-600 mr-2">📋</span>
+                                        <span>Log medical records</span>
+                                    </div>
+                                    <div class="flex items-center">
+                                        <span class="text-blue-600 mr-2">📈</span>
+                                        <span>Track symptoms</span>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                        <p class="text-xs text-blue-600 mt-2">Include your User ID when contacting support for faster assistance.</p>
+
+                        <!-- Right Column: Support & Account -->
+                        <div class="space-y-4">
+                            <!-- Support Contact -->
+                            <div class="bg-purple-50 p-4 rounded-lg">
+                                <h4 class="font-semibold text-purple-900 mb-3 flex items-center">
+                                    📧 Get Support
+                                </h4>
+                                <p class="text-sm text-purple-800 mb-3">Need help or found a bug? Contact support:</p>
+                                <div class="bg-white p-3 rounded border text-xs font-mono text-gray-600 space-y-1">
+                                    <div class="flex justify-between">
+                                        <span class="font-medium">User ID:</span>
+                                        <span class="text-purple-600">${userIdText}</span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span class="font-medium">Email:</span>
+                                        <a href="mailto:jack@whitehill.group?subject=Support Request - ${userIdText}" 
+                                           class="text-purple-600 hover:underline">jack@whitehill.group</a>
+                                    </div>
+                                </div>
+                                <p class="text-xs text-purple-600 mt-2">
+                                    💡 Include your User ID for faster assistance
+                                </p>
+                            </div>
+
+                            <!-- Privacy & Community -->
+                            <div class="bg-yellow-50 p-4 rounded-lg">
+                                <h4 class="font-semibold text-yellow-900 mb-3 flex items-center">
+                                    🛡️ Privacy & Community
+                                </h4>
+                                <div class="text-sm text-yellow-800 space-y-2">
+                                    <p><strong>Your Privacy:</strong> Health data stays secure and private</p>
+                                    <p><strong>Community Use:</strong> Please don't misuse NHS services for tracking</p>
+                                    <p><strong>Purpose:</strong> Find encouragement in your health journey</p>
+                                </div>
+                            </div>
+
+                            <!-- Keyboard Shortcuts -->
+                            <div class="bg-gray-50 p-4 rounded-lg">
+                                <h4 class="font-semibold text-gray-900 mb-3 flex items-center">
+                                    ⌨️ Tips & Shortcuts
+                                </h4>
+                                <div class="text-sm text-gray-700 space-y-1">
+                                    <div class="flex justify-between">
+                                        <span>Search lists:</span>
+                                        <span class="font-mono bg-gray-200 px-1 rounded text-xs">Type to filter</span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span>Quick add:</span>
+                                        <span class="font-mono bg-gray-200 px-1 rounded text-xs">+ button</span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span>View profile:</span>
+                                        <span class="font-mono bg-gray-200 px-1 rounded text-xs">My Profile button</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                     
                     <!-- Close Button -->
-                    <div class="flex justify-end pt-4 border-t">
-                        <button type="button" class="close-modal-btn px-6 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors">
+                    <div class="flex justify-end pt-3 border-t">
+                        <button type="button" class="close-modal-btn px-6 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors font-medium">
                             Close
                         </button>
                     </div>
                 </div>
             `;
 
-            const modal = createModal('help-modal', 'Help & Support', helpContent, 'max-w-2xl');
+            const modal = createModal('help-modal', 'Help & Support', helpContent, 'max-w-4xl');
             openModal(modal);
         }
 

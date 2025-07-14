@@ -213,6 +213,9 @@
         import { getFirestore, doc, setDoc, onSnapshot, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // --- Firebase Configuration ---
+        console.log("Firebase config check:", typeof userFirebaseConfig !== 'undefined' ? 'Found' : 'Missing');
+        console.log("App ID check:", typeof __app_id !== 'undefined' ? __app_id : 'Missing');
+        
         const firebaseConfig = typeof userFirebaseConfig !== 'undefined' ? userFirebaseConfig : {};
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'local-dev-app';
 
@@ -243,9 +246,11 @@
         };
 
         try {
+            console.log("Initializing Firebase with config:", firebaseConfig);
             app = initializeApp(firebaseConfig);
             db = getFirestore(app);
             auth = getAuth(app);
+            console.log("Firebase initialized successfully");
         } catch (e) {
             console.error("Firebase initialization failed:", e);
             showStatusMessage("Could not connect to the database.", "error");
@@ -275,7 +280,8 @@
                 updateProfileButtonVisibility();
 
                 // Set up Firestore document reference
-                docRef = doc(db, `artifacts/${appId}/users/${userId}/hospitals-tracker`, "data");
+                docRef = doc(db, "users", userId);
+                console.log("Document reference created for user:", userId);
 
                 // Show loading and start listening
                 loadingIndicator.classList.remove('loader-hidden');
@@ -349,13 +355,25 @@
 
         // --- Firestore Data Handling ---
         function setupSnapshotListener() {
-            if (!docRef) return;
+            if (!docRef) {
+                console.log("No docRef available for snapshot listener");
+                return;
+            }
+
+            console.log("Setting up snapshot listener for:", docRef.path);
 
             unsubscribe = onSnapshot(docRef, async (snapshot) => {
                 try {
+                    console.log("Snapshot received:", {
+                        exists: snapshot.exists(),
+                        id: snapshot.id,
+                        metadata: snapshot.metadata
+                    });
+
                     if (snapshot.exists()) {
                         // Merge existing data with loaded data
                         const firestoreData = snapshot.data();
+                        console.log("Firestore data loaded:", Object.keys(firestoreData));
                         localData = {
                             hospitals: [],
                             ambulance: [],
@@ -457,13 +475,30 @@
                 return;
             }
 
+            if (!userId) {
+                console.log("No user ID available, skipping save");
+                return;
+            }
+
             checkAwards();
 
             try {
+                console.log("Attempting to save data to Firestore...", {
+                    userId,
+                    docPath: docRef.path,
+                    dataKeys: Object.keys(localData)
+                });
+                
                 await setDoc(docRef, localData, { merge: true });
                 console.log("Data saved successfully to Firestore");
+                showStatusMessage("Data saved successfully!", "success");
             } catch (error) {
                 console.error("Error saving data to Firestore:", error);
+                console.error("Error details:", {
+                    code: error.code,
+                    message: error.message,
+                    stack: error.stack
+                });
                 showStatusMessage("Error saving data. Your changes may not be saved.", "error");
             }
         }
