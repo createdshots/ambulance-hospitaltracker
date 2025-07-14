@@ -194,7 +194,7 @@
             </button>
 
             <!-- Creator Credit -->
-            <a href="https://github.com/jack-tolley" target="_blank" rel="noopener noreferrer"
+            <a href="https://github.com/createdshots" target="_blank" rel="noopener noreferrer"
                 class="flex items-center text-xs text-gray-400 hover:text-gray-600 bg-white px-2 py-1 rounded shadow">
                 <svg class="w-3 h-3 mr-1" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
                     <path fill-rule="evenodd"
@@ -994,6 +994,183 @@
                 ]
             };
 
+
+            function generateConditionQuestionsForSymptoms(userConditions) {
+                if (!userConditions || userConditions.length === 0) return '';
+
+                const conditionQuestions = {
+                    'epilepsy': [
+                        { id: 'seizure_today', type: 'checkbox', label: 'Did you have a seizure today?' },
+                        { id: 'aura_symptoms', type: 'checkbox', label: 'Did you experience aura symptoms?' },
+                        { id: 'trigger_identified', type: 'text', label: 'Potential trigger (if known)', placeholder: 'e.g., stress, lack of sleep, flashing lights' },
+                        { id: 'medication_taken', type: 'checkbox', label: 'Did you take your medication as prescribed?' }
+                    ],
+                    'autism': [
+                        { id: 'sensory_overload', type: 'select', label: 'Sensory overload level', options: ['None', 'Mild', 'Moderate', 'Severe'] },
+                        { id: 'meltdown_occurred', type: 'checkbox', label: 'Did you experience a meltdown?' },
+                        { id: 'social_fatigue', type: 'select', label: 'Social fatigue level', options: ['None', 'Low', 'Medium', 'High', 'Exhausted'] },
+                        { id: 'stimming_frequency', type: 'select', label: 'Stimming frequency today', options: ['None', 'Occasional', 'Frequent', 'Constant'] }
+                    ],
+                    'diabetes': [
+                        { id: 'blood_sugar_morning', type: 'text', label: 'Morning blood sugar', placeholder: 'e.g., 120 mg/dL' },
+                        { id: 'blood_sugar_evening', type: 'text', label: 'Evening blood sugar', placeholder: 'e.g., 140 mg/dL' },
+                        { id: 'hypo_episode', type: 'checkbox', label: 'Did you have a hypoglycemic episode?' },
+                        { id: 'insulin_doses', type: 'text', label: 'Insulin doses taken', placeholder: 'e.g., 10 units morning, 8 units evening' }
+                    ],
+                    'mental_health': [
+                        { id: 'anxiety_level', type: 'select', label: 'Anxiety level today', options: ['Very Low', 'Low', 'Moderate', 'High', 'Very High'] },
+                        { id: 'panic_attack', type: 'checkbox', label: 'Did you have a panic attack?' },
+                        { id: 'mood_rating', type: 'select', label: 'Overall mood', options: ['Very Low', 'Low', 'Neutral', 'Good', 'Very Good'] },
+                        { id: 'sleep_quality', type: 'select', label: 'Sleep quality last night', options: ['Very Poor', 'Poor', 'Fair', 'Good', 'Excellent'] }
+                    ],
+                    'chronic_pain': [
+                        { id: 'pain_level_morning', type: 'select', label: 'Pain level (morning)', options: ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10'] },
+                        { id: 'pain_level_evening', type: 'select', label: 'Pain level (evening)', options: ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10'] },
+                        { id: 'flare_up', type: 'checkbox', label: 'Did you experience a flare-up?' },
+                        { id: 'medication_effectiveness', type: 'select', label: 'Pain medication effectiveness', options: ['Not effective', 'Slightly effective', 'Moderately effective', 'Very effective', 'Completely effective'] }
+                    ],
+                    'heart_condition': [
+                        { id: 'heart_rate_resting', type: 'text', label: 'Resting heart rate', placeholder: 'e.g., 72 bpm' },
+                        { id: 'blood_pressure', type: 'text', label: 'Blood pressure', placeholder: 'e.g., 120/80' },
+                        { id: 'chest_pain', type: 'checkbox', label: 'Did you experience chest pain?' },
+                        { id: 'palpitations', type: 'checkbox', label: 'Did you notice palpitations?' }
+                    ],
+                    'respiratory': [
+                        { id: 'breathing_difficulty', type: 'select', label: 'Breathing difficulty level', options: ['None', 'Mild', 'Moderate', 'Severe'] },
+                        { id: 'peak_flow', type: 'text', label: 'Peak flow reading', placeholder: 'e.g., 450 L/min' },
+                        { id: 'inhaler_usage', type: 'text', label: 'Inhaler uses today', placeholder: 'e.g., 3 times' },
+                        { id: 'oxygen_saturation', type: 'text', label: 'Oxygen saturation', placeholder: 'e.g., 98%' }
+                    ],
+                    'autoimmune': [
+                        { id: 'flare_severity', type: 'select', label: 'Flare-up severity', options: ['None', 'Mild', 'Moderate', 'Severe'] },
+                        { id: 'fatigue_level', type: 'select', label: 'Fatigue level', options: ['None', 'Mild', 'Moderate', 'Severe', 'Debilitating'] },
+                        { id: 'joint_pain', type: 'select', label: 'Joint pain level', options: ['None', 'Mild', 'Moderate', 'Severe'] },
+                        { id: 'medication_side_effects', type: 'checkbox', label: 'Did you experience medication side effects?' }
+                    ],
+                    'neurological': [
+                        { id: 'migraine_occurred', type: 'checkbox', label: 'Did you have a migraine?' },
+                        { id: 'coordination_issues', type: 'checkbox', label: 'Did you notice coordination problems?' },
+                        { id: 'memory_problems', type: 'checkbox', label: 'Did you experience memory issues?' },
+                        { id: 'speech_difficulties', type: 'checkbox', label: 'Did you have speech difficulties?' }
+                    ],
+                    'gastrointestinal': [
+                        { id: 'symptom_severity', type: 'select', label: 'Symptom severity today', options: ['None', 'Mild', 'Moderate', 'Severe'] },
+                        { id: 'food_triggers', type: 'text', label: 'Food triggers (if any)', placeholder: 'e.g., dairy, gluten' },
+                        { id: 'bathroom_urgency', type: 'select', label: 'Bathroom urgency episodes', options: ['None', '1-2', '3-5', '6-10', 'More than 10'] },
+                        { id: 'medication_response', type: 'select', label: 'Medication effectiveness', options: ['Not taken', 'Not effective', 'Somewhat effective', 'Very effective'] }
+                    ]
+                };
+
+                // Add event listener setup for quick symptom form
+                function setupQuickSymptomEventListeners(modal) {
+                    const form = modal.querySelector('#quick-symptom-form');
+                    const cancelBtn = modal.querySelector('.cancel-btn');
+
+                    // Cancel button
+                    cancelBtn.addEventListener('click', () => {
+                        closeModal(modal);
+                    });
+
+                    // Form submission
+                    form.addEventListener('submit', async (e) => {
+                        e.preventDefault();
+
+                        // Collect condition-specific data
+                        const conditionData = {};
+                        const formData = new FormData(form);
+
+                        for (let [key, value] of formData.entries()) {
+                            if (key.startsWith('condition_')) {
+                                const parts = key.split('_');
+                                const condition = parts[1];
+                                const field = parts.slice(2).join('_');
+
+                                if (!conditionData[condition]) conditionData[condition] = {};
+
+                                // Handle checkboxes
+                                if (form.querySelector(`[name="${key}"]`).type === 'checkbox') {
+                                    conditionData[condition][field] = true;
+                                } else if (value) {
+                                    conditionData[condition][field] = value;
+                                }
+                            }
+                        }
+
+                        const symptomData = {
+                            id: `${new Date().toISOString()}_${Math.random().toString(36).substr(2, 9)}`,
+                            timestamp: new Date().toISOString(),
+                            date: modal.querySelector('#symptom-date').value,
+                            conditions: conditionData,
+                            notes: modal.querySelector('#symptom-notes').value || null,
+                            isSymptomOnly: true,
+                            type: 'symptom_log'
+                        };
+
+                        if (!localData.symptomTracking) localData.symptomTracking = [];
+                        localData.symptomTracking.unshift(symptomData);
+
+                        await saveData();
+
+                        closeModal(modal);
+
+                        if (localData.userProfile?.conditions?.length > 0) {
+                            addSymptomTrackingSection();
+                        }
+
+                        showStatusMessage('Symptoms logged successfully!', 'success');
+                    });
+                }
+
+                let questionsHTML = '';
+
+                userConditions.forEach(condition => {
+                    const questions = conditionQuestions[condition];
+                    if (questions) {
+                        questionsHTML += `
+                <div class="mb-4 p-3 bg-white rounded-lg border border-gray-200">
+                    <h5 class="font-medium text-gray-900 mb-3 capitalize">${condition.replace('_', ' ')} Tracking</h5>
+                    <div class="space-y-3">
+                        ${questions.map(q => {
+                            switch (q.type) {
+                                case 'checkbox':
+                                    return `
+                                        <label class="flex items-center">
+                                            <input type="checkbox" name="condition_${condition}_${q.id}" 
+                                                   class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                                            <span class="ml-2 text-sm text-gray-700">${q.label}</span>
+                                        </label>
+                                    `;
+                                case 'select':
+                                    return `
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 mb-1">${q.label}</label>
+                                            <select name="condition_${condition}_${q.id}" 
+                                                    class="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                                <option value="">Select...</option>
+                                                ${q.options.map(opt => `<option value="${opt}">${opt}</option>`).join('')}
+                                            </select>
+                                        </div>
+                                    `;
+                                default: // text
+                                    return `
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 mb-1">${q.label}</label>
+                                            <input type="text" name="condition_${condition}_${q.id}" 
+                                                   placeholder="${q.placeholder || ''}"
+                                                   class="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                        </div>
+                                    `;
+                            }
+                        }).join('')}
+                    </div>
+                </div>
+            `;
+                    }
+                });
+
+                return questionsHTML;
+            }
+
             let questionsHTML = '';
 
             userConditions.forEach(condition => {
@@ -1152,198 +1329,118 @@
             });
         }
 
-        // Update the showEditProfileModal function in profile.html
-        function showEditProfileModal() {
-            const conditions = [
-                { id: 'epilepsy', name: 'Epilepsy', trackable: ['Seizures', 'Medication times', 'Triggers', 'Aura symptoms'] },
-                { id: 'autism', name: 'Autism/ADHD', trackable: ['Sensory overload', 'Meltdowns', 'Stimming episodes', 'Social fatigue'] },
-                { id: 'diabetes', name: 'Diabetes', trackable: ['Blood sugar levels', 'Insulin doses', 'Hypoglycemic episodes', 'HbA1c results'] },
-                { id: 'mental_health', name: 'Mental Health', trackable: ['Panic attacks', 'Anxiety episodes', 'Mood changes', 'Therapy sessions'] },
-                { id: 'chronic_pain', name: 'Chronic Pain', trackable: ['Pain levels', 'Flare-ups', 'Medication effectiveness', 'Activity tolerance'] },
-                { id: 'heart_condition', name: 'Heart Condition', trackable: ['Heart rate', 'Blood pressure', 'Chest pain episodes', 'Palpitations'] },
-                { id: 'respiratory', name: 'Respiratory Conditions', trackable: ['Breathing difficulties', 'Peak flow readings', 'Inhaler usage', 'Oxygen levels'] },
-                { id: 'autoimmune', name: 'Autoimmune Disorders', trackable: ['Flare-ups', 'Fatigue levels', 'Joint pain', 'Medication side effects'] },
-                { id: 'neurological', name: 'Neurological Conditions', trackable: ['Migraines', 'Coordination issues', 'Memory problems', 'Speech difficulties'] },
-                { id: 'gastrointestinal', name: 'Gastrointestinal Issues', trackable: ['Symptoms severity', 'Food triggers', 'Bathroom urgency', 'Medication response'] }
-            ];
-
+        // Replace the placeholder function with this full implementation
+        function showQuickSymptomForm() {
             const userConditions = localData.userProfile?.conditions || [];
 
+            if (userConditions.length === 0) {
+                showStatusMessage('Please set up condition tracking in your profile first.', 'error');
+                return;
+            }
+
+            const conditionQuestions = generateConditionQuestionsForSymptoms(userConditions);
+
             const modalContent = `
-                <form id="edit-profile-form" class="space-y-6">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div>
-                            <h4 class="font-semibold text-lg mb-4">Medical Conditions</h4>
-                            <p class="text-sm text-gray-600 mb-4">Select conditions you'd like to track in your medical records.</p>
-                            
-                            <div class="space-y-3 max-h-80 overflow-y-auto custom-scrollbar">
-                                ${conditions.map(condition => `
-                                    <label class="flex items-start cursor-pointer p-3 border border-gray-200 rounded-lg hover:bg-gray-50">
-                                        <input type="checkbox" name="conditions" value="${condition.id}" 
-                                               ${userConditions.includes(condition.id) ? 'checked' : ''}
-                                               class="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded mt-1">
-                                        <div class="ml-3 flex-grow">
-                                            <div class="font-medium text-gray-900 text-sm">${condition.name}</div>
-                                            <div class="text-xs text-gray-500 mt-1">
-                                                ${condition.trackable.slice(0, 2).join(', ')}${condition.trackable.length > 2 ? '...' : ''}
-                                            </div>
-                                        </div>
-                                    </label>
-                                `).join('')}
-                            </div>
-                        </div>
-                        
-                        <div>
-                            <h4 class="font-semibold text-lg mb-4">Profile Information</h4>
-                            
-                            <div class="space-y-4">
-                                <div>
-                                    <label for="emergency-contact" class="block text-sm font-medium text-gray-700 mb-2">Emergency Contact (Optional)</label>
-                                    <input type="text" id="emergency-contact" 
-                                           value="${localData.userProfile?.emergencyContact || ''}"
-                                           placeholder="Name and phone number"
-                                           class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
-                                </div>
-                                
-                                <div>
-                                    <label for="allergies" class="block text-sm font-medium text-gray-700 mb-2">Allergies/Important Medical Info</label>
-                                    <textarea id="allergies" rows="3" 
-                                              placeholder="List any allergies, medications, or important medical information..."
-                                              class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500">${localData.userProfile?.allergies || ''}</textarea>
-                                </div>
-                                
-                                <div>
-                                    <label for="preferred-hospital" class="block text-sm font-medium text-gray-700 mb-2">Preferred Hospital (Optional)</label>
-                                    <select id="preferred-hospital" 
-                                            class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
-                                        <option value="">Select preferred hospital...</option>
-                                        ${localData.hospitals.map(h => `
-                                            <option value="${h.name}" ${localData.userProfile?.preferredHospital === h.name ? 'selected' : ''}>
-                                                ${h.name}${h.city ? ` - ${h.city}` : ''}
-                                            </option>
-                                        `).join('')}
-                                    </select>
-                                </div>
-                                
-                                <!-- Account Deletion Section -->
-                                <div class="mt-8 pt-6 border-t border-red-200">
-                                    <h5 class="font-semibold text-red-800 mb-2">⚠️ Danger Zone</h5>
-                                    <p class="text-sm text-red-600 mb-4">This action cannot be undone. This will permanently delete your account and all associated data.</p>
-                                    <button type="button" id="delete-account-btn" 
-                                            class="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors text-sm">
-                                        Delete My Account
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
+                <form id="quick-symptom-form" class="space-y-6">
+                    <!-- Date Selection -->
+                    <div>
+                        <label for="symptom-date" class="block text-sm font-medium text-gray-700 mb-2">Date</label>
+                        <input type="date" id="symptom-date" required
+                            class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            value="${new Date().toISOString().split('T')[0]}">
                     </div>
-                    
+
+                    <!-- Condition-Specific Questions -->
+                    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                        <h4 class="font-semibold text-gray-900 mb-3">📋 Symptom Questions</h4>
+                        <p class="text-sm text-gray-600 mb-4">Based on your tracked conditions:</p>
+                        ${conditionQuestions}
+                    </div>
+
+                    <!-- General Notes -->
+                    <div>
+                        <label for="symptom-notes" class="block text-sm font-medium text-gray-700 mb-2">Additional Notes (Optional)</label>
+                        <textarea id="symptom-notes" rows="3"
+                            placeholder="Any additional symptoms or notes..."
+                            class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"></textarea>
+                    </div>
+
+                    <!-- Submit Button -->
                     <div class="flex justify-end space-x-3 pt-4 border-t">
-                        <button type="button" class="close-modal-btn px-4 py-2 text-gray-600 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors">
+                        <button type="button" class="cancel-btn px-4 py-2 text-gray-600 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors">
                             Cancel
                         </button>
-                        <button type="submit" 
-                                class="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors">
-                            Save Changes
+                        <button type="submit"
+                            class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                            Log Symptoms
                         </button>
                     </div>
                 </form>
             `;
 
-            const modal = createModal('edit-profile-modal', 'Edit Profile', modalContent, 'max-w-4xl');
+            const modal = createModal('quick-symptom-modal', 'Log Symptoms', modalContent, 'max-w-2xl');
             openModal(modal);
+            setupQuickSymptomEventListeners(modal);
+        }
 
-            // Handle account deletion
-            document.getElementById('delete-account-btn').addEventListener('click', showDeleteAccountConfirmation);
+        // Add this function to handle quick symptom form submission
+        function setupQuickSymptomEventListeners(modal) {
+            const form = modal.querySelector('#quick-symptom-form');
+            const cancelBtn = modal.querySelector('.cancel-btn');
 
-            // Handle form submission
-            document.getElementById('edit-profile-form').addEventListener('submit', async (e) => {
+            // Cancel button
+            cancelBtn.addEventListener('click', () => {
+                closeModal(modal);
+            });
+
+            // Form submission
+            form.addEventListener('submit', async (e) => {
                 e.preventDefault();
 
-                const selectedConditions = Array.from(document.querySelectorAll('input[name="conditions"]:checked'))
-                    .map(checkbox => checkbox.value);
+                const symptomData = {
+                    id: `${new Date().toISOString()}_${Math.random().toString(36).substr(2, 9)}`,
+                    timestamp: new Date().toISOString(),
+                    date: form.querySelector('#symptom-date').value,
+                    conditions: {},
+                    notes: form.querySelector('#symptom-notes').value || null
+                };
 
-                if (!localData.userProfile) localData.userProfile = {};
+                // Collect condition-specific data
+                const formData = new FormData(form);
 
-                localData.userProfile.conditions = selectedConditions;
-                localData.userProfile.emergencyContact = document.getElementById('emergency-contact').value;
-                localData.userProfile.allergies = document.getElementById('allergies').value;
-                localData.userProfile.preferredHospital = document.getElementById('preferred-hospital').value;
-                localData.userProfile.lastUpdated = new Date().toISOString();
+                for (let [key, value] of formData.entries()) {
+                    if (key.startsWith('condition_')) {
+                        const parts = key.split('_');
+                        const condition = parts[1];
+                        const field = parts.slice(2).join('_');
 
-                await saveData();
-                renderProfile();
-                closeModal(modal);
-                showStatusMessage('Profile updated successfully!', 'success');
-            });
-        }
+                        if (!symptomData.conditions[condition]) symptomData.conditions[condition] = {};
 
-        // Add account deletion confirmation
-        function showDeleteAccountConfirmation() {
-            const confirmContent = `
-                <div class="text-center space-y-4">
-                    <div class="text-red-500 text-6xl">⚠️</div>
-                    <h3 class="text-xl font-bold text-red-800">Delete Account</h3>
-                    <p class="text-gray-700">Are you absolutely sure you want to delete your account?</p>
-                    <p class="text-sm text-red-600 bg-red-50 p-3 rounded-lg">
-                        This will permanently delete:
-                        <br>• All your medical records
-                        <br>• All symptom tracking data
-                        <br>• Your visit history
-                        <br>• Your profile information
-                        <br>• All tracked conditions
-                    </p>
-                    <p class="text-sm text-gray-600">This action cannot be undone.</p>
-                    
-                    <div class="flex justify-center space-x-3 pt-4">
-                        <button onclick="closeModal(document.getElementById('delete-confirm-modal'))" 
-                                class="px-6 py-2 text-gray-600 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors">
-                            Cancel
-                        </button>
-                        <button onclick="confirmDeleteAccount()" 
-                                class="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors">
-                            Yes, Delete My Account
-                        </button>
-                    </div>
-                </div>
-            `;
-
-            const modal = createModal('delete-confirm-modal', 'Confirm Account Deletion', confirmContent, 'max-w-md');
-            openModal(modal);
-        }
-
-        async function confirmDeleteAccount() {
-            try {
-                // Delete all user data from Firestore
-                if (docRef) {
-                    await deleteDoc(docRef);
+                        // Handle checkboxes
+                        if (form.querySelector(`[name="${key}"]`).type === 'checkbox') {
+                            symptomData.conditions[condition][field] = true;
+                        } else if (value) {
+                            symptomData.conditions[condition][field] = value;
+                        }
+                    }
                 }
 
-                // Sign out user
-                await signOut(auth);
+                // Add to symptom tracking
+                if (!localData.symptomTracking) localData.symptomTracking = [];
+                localData.symptomTracking.unshift(symptomData);
 
-                // Reset local data
-                localData = { hospitals: [], ambulance: [], awards: [], visitHistory: [], medicalRecords: [] };
+                // Save data
+                await saveData();
 
-                // Close all modals
-                document.querySelectorAll('.modal-backdrop').forEach(modal => modal.remove());
+                // Close modal
+                closeModal(modal);
 
-                // Show success message and redirect
-                showStatusMessage('Account deleted successfully. You have been signed out.', 'success');
+                // Re-render lists
+                renderAll();
 
-                // Redirect to home page after a delay
-                setTimeout(() => {
-                    window.location.href = '/';
-                }, 2000);
-
-            } catch (error) {
-                console.error('Error deleting account:', error);
-                showStatusMessage('Error deleting account. Please try again.', 'error');
-            }
+                showStatusMessage('Symptoms logged successfully!', 'success');
+            });
         }
-
-        // Make function available globally
-        window.confirmDeleteAccount = confirmDeleteAccount;
 
         // Help Modal
         document.getElementById('help-btn').addEventListener('click', showHelpModal);
@@ -1399,7 +1496,7 @@
                         <p class="text-sm text-blue-800 mb-3">If you need assistance or want to report a bug, please contact support:</p>
                         <div class="bg-white p-3 rounded border text-xs font-mono text-gray-600">
                             <p><strong>Your User ID:</strong> ${userIdText}</p>
-                            <p><strong>Email:</strong> <a href="mailto:support@visittracker.app?subject=Support Request - ${userIdText}" class="text-blue-600 hover:underline">support@visittracker.app</a></p>
+                            <p><strong>Email:</strong> <a href="mailto:jack@whitehill.group?subject=Support Request - ${userIdText}" class="text-blue-600 hover:underline">support@visittracker.app</a></p>
                         </div>
                         <p class="text-xs text-blue-600 mt-2">Include your User ID when contacting support for faster assistance.</p>
                     </div>
@@ -1520,10 +1617,65 @@
 
             // Add placeholder function for showQuickSymptomForm
             function showQuickSymptomForm() {
-                showStatusMessage('Quick symptom form coming soon!', 'success');
+                const userConditions = localData.userProfile?.conditions || [];
+
+                if (userConditions.length === 0) {
+                    showStatusMessage('Please set up condition tracking in your profile first.', 'error');
+                    return;
+                }
+
+                const conditionQuestions = generateConditionQuestionsForSymptoms(userConditions);
+
+                const modalContent = `
+                    <form id="quick-symptom-form" class="space-y-6">
+                        <!-- Date Selection -->
+                        <div>
+                            <label for="symptom-date" class="block text-sm font-medium text-gray-700 mb-2">Date</label>
+                            <input type="date" id="symptom-date" required
+                                class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                value="${new Date().toISOString().split('T')[0]}">
+                        </div>
+
+                        <!-- Condition-Specific Questions -->
+                        <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                            <h4 class="font-semibold text-gray-900 mb-3">📋 Symptom Questions</h4>
+                            <p class="text-sm text-gray-600 mb-4">Based on your tracked conditions:</p>
+                            ${conditionQuestions}
+                        </div>
+
+                        <!-- General Notes -->
+                        <div>
+                            <label for="symptom-notes" class="block text-sm font-medium text-gray-700 mb-2">Additional Notes (Optional)</label>
+                            <textarea id="symptom-notes" rows="3"
+                                placeholder="Any additional symptoms or notes..."
+                                class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"></textarea>
+                        </div>
+
+                        <!-- Submit Button -->
+                        <div class="flex justify-end space-x-3 pt-4 border-t">
+                            <button type="button" class="cancel-btn px-4 py-2 text-gray-600 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors">
+                                Cancel
+                            </button>
+                            <button type="submit"
+                                class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                                Log Symptoms
+                            </button>
+                        </div>
+                    </form>
+                `;
+
+
+
+                const modal = createModal('help-modal', 'Help & Support', helpContent, 'max-w-2xl');
+                openModal(modal);
             }
-        }
+
+            // Make functions globally available
+            window.showAddRecordModal = showAddRecordModal;
+
+            // Initialize event listeners for static elements
+            document.getElementById('add-record-btn').addEventListener('click', showAddRecordModal);
+            document.getElementById('help-btn').addEventListener('click', showHelpModal);
     </script>
 </body>
-
 </html>
