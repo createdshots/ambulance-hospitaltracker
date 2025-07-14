@@ -1511,12 +1511,16 @@
             
             // Add event listener for quick symptom button
             setTimeout(() => {
+                const quickSymptomBtn = document.getElementById('quick-symptom-btn');
+                if (quickSymptomBtn) {
+                    quickSymptomBtn.addEventListener('click', showQuickSymptomForm);
+                }
+            }, 100);
 
-        
-
-        // Add placeholder function for showQuickSymptomForm
-        function showQuickSymptomForm() {
-            showStatusMessage('Quick symptom form coming soon!', 'success');
+            // Add placeholder function for showQuickSymptomForm
+            function showQuickSymptomForm() {
+                showStatusMessage('Quick symptom form coming soon!', 'success');
+            }
         }
     </script>
 </body>
