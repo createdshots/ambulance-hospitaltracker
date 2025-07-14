@@ -280,43 +280,6 @@
                 renderAll();
             }
         }
-
-          function setupSnapshotListener() {
-            if (!docRef) return;
-            let initialLoadComplete = false;
-
-            unsubscribe = onSnapshot(docRef, async (snapshot) => {
-                try {
-                    let needsSave = false;
-                    if (snapshot.exists()) {
-                        localData = { ...localData, ...snapshot.data() };
-                    } else {
-                        // Document doesn't exist, initialize with default data
-                        console.log("No existing document found, initializing with default data");
-                        await initializeDefaultData();
-                        needsSave = true;
-                    }
-                    
-                    if (!initialLoadComplete) {
-                        renderAll();
-                        loadingIndicator.classList.add('loader-hidden');
-                        initialLoadComplete = true;
-                        
-                        if (needsSave) {
-                            await saveData();
-                        }
-                    }
-                } catch (error) {
-                    console.error("Error processing snapshot:", error);
-                    showStatusMessage("Error loading data.", "error");
-                    loadingIndicator.classList.add('loader-hidden');
-                }
-            }, (error) => {
-                console.error("Snapshot listener error:", error);
-                showStatusMessage("Error connecting to database.", "error");
-                loadingIndicator.classList.add('loader-hidden');
-            });
-        }
         
         async function initializeDefaultData() {
             if (!localData.hospitals || localData.hospitals.length === 0) {
