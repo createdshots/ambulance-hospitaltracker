@@ -195,6 +195,8 @@
             if (unsubscribe) unsubscribe();
 
             if (user) {
+                console.log('User signed in:', user.uid, user.email || 'Anonymous');
+
                 if (typeof userFirebaseConfig === 'undefined') {
                     showStatusMessage("FATAL: firebase-config.js not found. App cannot start.", "error");
                     loadingIndicator.classList.add('loader-hidden');
@@ -206,11 +208,13 @@
                 authSignedInView.style.display = 'flex';
                 notSignedIn.style.display = 'none';
 
+                // Set up document reference
                 docRef = doc(db, `artifacts/${appId}/users/${userId}/hospitals-tracker`, "data");
 
                 loadingIndicator.classList.remove('loader-hidden');
                 loaderText.textContent = 'Loading data...';
 
+                // This is the critical missing call!
                 setupSnapshotListener();
             } else {
                 userId = null;
@@ -229,18 +233,43 @@
         // --- Data Handling ---
         function setupSnapshotListener() {
             if (!docRef) return;
-            let initialLoadComplete = false;
 
-            unsubscribe = onSnapshot(docRef, (snapshot) => {
-                if (snapshot.exists()) {
-                    localData = { ...localData, ...snapshot.data() };
-                }
-                
-                if (!initialLoadComplete) {
+            unsubscribe = onSnapshot(docRef, async (snapshot) => {
+                try {
+                    if (snapshot.exists()) {
+                        // Merge existing data with loaded data
+                        const firestoreData = snapshot.data();
+                        localData = { 
+                            hospitals: [], 
+                            ambulance: [], 
+                            awards: [], 
+                            visitHistory: [], 
+                            medicalRecords: [],
+                            symptomTracking: [],
+                            userProfile: {},
+                            ...firestoreData 
+                        };
+                    } else {
+                        // Document doesn't exist, initialize with empty data
+                        console.log("No existing document found, using empty data");
+                        localData = { 
+                            hospitals: [], 
+                            ambulance: [], 
+                            awards: [], 
+                            visitHistory: [], 
+                            medicalRecords: [],
+                            symptomTracking: [],
+                            userProfile: {}
+                        };
+                    }
+                    
                     renderProfile();
                     profileContent.style.display = 'block';
                     loadingIndicator.classList.add('loader-hidden');
-                    initialLoadComplete = true;
+                } catch (error) {
+                    console.error("Error processing snapshot:", error);
+                    showStatusMessage("Error loading data.", "error");
+                    loadingIndicator.classList.add('loader-hidden');
                 }
             }, (error) => {
                 console.error("Snapshot listener error:", error);
@@ -738,8 +767,7 @@
                         <p class="text-gray-500 mb-6">Use the "Add Record" button to start tracking your medical visits!</p>
                         <button class="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition-colors" onclick="document.getElementById('add-record-btn').click()">
                             Add First Record
-                        </button>
-                    </div>
+                        </div>
                 `;
             }
 
@@ -1290,6 +1318,9 @@
         // Make functions available globally for onclick handlers
         window.saveEntryNotes = saveEntryNotes;
         window.deleteHistoryEntry = deleteHistoryEntry;
+        window.showSymptomDetails = showSymptomDetails;
+        window.saveSymptomNotes = saveSymptomNotes;
+        window.deleteSymptomEntry = deleteSymptomEntry;
 
         // Add these missing functions to profile.html
 
@@ -1403,8 +1434,6 @@
             const date = new Date(entry.date);
 
             const content = `
-                <div class="space-y-4">
-                    <div class="bg-gray-50 rounded-lg p-4">
                         <div class="flex items-center">
                             <div class="text-3xl mr-4">
                                 ${entry.isSymptomOnly ? '🩺' : '🚑'}
@@ -1480,7 +1509,7 @@
             await saveData();
             renderProfile();
             showStatusMessage('Notes saved successfully!', 'success');
-        }
+               }
 
         async function deleteSymptomEntry(entryId) {
             if (!confirm('Are you sure you want to delete this symptom log?')) {
