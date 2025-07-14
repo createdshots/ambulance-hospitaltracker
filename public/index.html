@@ -232,6 +232,7 @@
             document.getElementById('anon-signin-btn').addEventListener('click', () => {
                 signInAnonymously(auth).catch(error => showStatusMessage(error.message, 'error'));
             });
+        }
 
         function initializeAppLogic() {
             // Check for config files first
