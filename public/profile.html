@@ -159,7 +159,7 @@
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'local-dev-app';
 
         let app, db, auth, userId, docRef;
-        let localData = { hospitals: [], ambulance: [], awards: [], visitHistory: [], medicalRecords: [] };
+        let localData = { hospitals: [], ambulance: [], awards: [], visitHistory: [], medicalRecords: [], userProfile: {} };
         let unsubscribe; // To hold the onSnapshot listener
 
         // DOM element references for easy access throughout the script.
@@ -206,7 +206,6 @@
                 authSignedInView.style.display = 'flex';
                 notSignedIn.style.display = 'none';
 
-                // Set up document reference
                 docRef = doc(db, `artifacts/${appId}/users/${userId}/hospitals-tracker`, "data");
 
                 loadingIndicator.classList.remove('loader-hidden');
@@ -218,7 +217,7 @@
                 authSignedInView.style.display = 'none';
                 notSignedIn.style.display = 'block';
                 loadingIndicator.classList.add('loader-hidden');
-                localData = { hospitals: [], ambulance: [], awards: [], visitHistory: [], medicalRecords: [] };
+                localData = { hospitals: [], ambulance: [], awards: [], visitHistory: [], medicalRecords: [], userProfile: {} };
                 renderProfile();
             }
         });
@@ -242,6 +241,12 @@
                     profileContent.style.display = 'block';
                     loadingIndicator.classList.add('loader-hidden');
                     initialLoadComplete = true;
+                    
+                    if (!localData.userProfile?.onboardingCompleted) {
+                        setTimeout(() => {
+                            showOnboardingQuestionnaire();
+                        }, 500);
+                    }
                 }
             }, (error) => {
                 console.error("Snapshot listener error:", error);
@@ -249,7 +254,7 @@
                 loadingIndicator.classList.add('loader-hidden');
             });
         }
-
+        
         async function saveData() {
             if (!docRef) return;
             try {
@@ -403,8 +408,6 @@
             setupProfileEventListeners();
         }
 
-        // --- Start of functions to be added ---
-        
         function createHistoryTab(history) {
             if (history.length === 0) {
                 return `
