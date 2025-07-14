@@ -4,6 +4,652 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hospital & Ambulance Trust Tracker</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Leaflet CSS for maps -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <!-- External Config File -->
+    <script src="firebase-config.js"></script>
+    <script src="hospital_data.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        .list-item:hover { background-color: #f9fafb; }
+        .progress-bar-fill { transition: width 0.5s ease-in-out; }
+        .custom-scrollbar::-webkit-scrollbar { width: 8px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #888; border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #555; }
+        .status-message, .modal-backdrop, .modal-content { transition: all 0.3s ease-in-out; }
+        #map { height: 80vh; border-radius: 0.75rem; }
+        .award { filter: grayscale(1); opacity: 0.5; }
+        .award.unlocked { filter: grayscale(0); opacity: 1; }
+        .loader-hidden { opacity: 0; pointer-events: none; }
+    </style>
+</head>
+
+<body class="bg-gray-50 text-gray-800">
+
+    <!-- Full Page Loader -->
+    <div id="full-page-loader"
+        class="fixed inset-0 bg-gray-900 bg-opacity-75 flex flex-col items-center justify-center z-50 transition-opacity duration-500 loader-hidden">
+        <svg class="animate-spin h-10 w-10 text-white mb-4" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor"
+                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+            </path>
+        </svg>
+        <p id="loader-text" class="text-white text-lg">Loading data...</p>
+    </div>
+    
+    <!-- Auth Buttons -->
+    <div class="fixed top-4 right-4 z-20">
+        <div id="auth-signed-out-view" class="flex flex-col items-end space-y-2">
+            <button id="google-signin-btn"
+                class="bg-white text-gray-700 font-semibold py-2 px-4 border border-gray-300 rounded-lg shadow-md hover:bg-gray-50 transition-colors flex items-center w-full justify-center">
+                <svg class="w-5 h-5 mr-2" viewBox="0 0 48 48"><path fill="#4285F4" d="M43.611 20.083H42V20H24v8h11.303c-1.649 4.657-6.08 8-11.303 8c-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4C12.955 4 4 12.955 4 24s8.955 20 20 20s20-8.955 20-20c0-1.341-.138-2.65-.389-3.917z"></path><path fill="#34A853" d="M6.306 14.691l6.571 4.819C14.655 15.108 18.961 12 24 12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4C16.318 4 9.656 8.337 6.306 14.691z"></path><path fill="#FBBC05" d="M27.461 44.5l5.657-5.657C30.485 41.658 27.214 44 24 44c-5.166 0-9.558-2.922-11.481-7.281l-6.571 4.819C9.656 40.663 16.318 44 24 44z"></path><path fill="#EA4335" d="M43.611 20.083H42V20H24v8h11.303c-.792 2.237-2.231 4.166-4.087 5.571l5.657 5.657C42.485 36.678 44 31.888 44 24c0-1.341-.138-2.65-.389-3.917z"></path></svg>
+                Sign in with Google
+            </button>
+            <button id="anon-signin-btn"
+                class="bg-gray-600 text-white font-semibold py-2 px-4 border border-gray-600 rounded-lg shadow-md hover:bg-gray-700 transition-colors w-full">Continue
+                as Guest</button>
+        </div>
+        <div id="auth-signed-in-view" class="hidden items-center">
+            <span id="user-id-display" class="text-sm text-gray-600 bg-white p-2 rounded-l-lg border-r-0 border"></span>
+            <button id="signout-btn"
+                class="bg-red-500 text-white font-semibold py-2 px-4 rounded-r-lg shadow-md hover:bg-red-600 transition-colors">Sign
+                Out</button>
+        </div>
+    </div>
+
+
+    <div class="container mx-auto p-4 md:p-8 max-w-7xl">
+
+        <header class="text-center mb-8">
+            <h1 class="text-4xl font-bold text-gray-900">Visit Tracker</h1>
+            <p class="text-lg text-gray-600 mt-2">Check off hospitals and ambulance trusts you've visited.</p>
+
+            <div
+                class="mt-6 p-4 bg-yellow-100 border-l-4 border-yellow-500 text-yellow-800 rounded-r-lg text-left max-w-4xl mx-auto">
+                <p class="font-bold">A Note for Our Community</p>
+                <p>This is a personal project designed for the chronically ill community to find a little bit of fun and
+                    a sense of accomplishment in their health journey. <strong>Please do not misuse health services for
+                        the purpose of checking off locations.</strong> Your health and the resources of the NHS are
+                    paramount.</p>
+            </div>
+
+            <!-- Update the button section -->
+            <div class="mt-6 flex justify-center space-x-2 flex-wrap">
+                <button id="show-stats-btn"
+                    class="bg-indigo-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-indigo-700 transition-colors">Show
+                    Charts</button>
+                <button id="show-map-btn"
+                    class="bg-teal-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-teal-700 transition-colors">Show
+                    Map</button>
+                <button id="show-awards-btn"
+                    class="bg-amber-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-amber-600 transition-colors">Show
+                    Awards</button>
+                <button id="add-record-btn"
+                    class="bg-green-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-700 transition-colors hidden">Add
+                    Record</button>
+                <button id="show-profile-btn"
+                    class="bg-purple-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-purple-700 transition-colors hidden">My
+                    Profile</button>
+            </div>
+            <div id="status-message-area" class="mt-4 h-6"></div>
+        </header>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <!-- Hospitals Column -->
+            <div class="bg-white p-6 rounded-xl shadow-md flex flex-col">
+                <h2 class="text-2xl font-semibold mb-4 text-gray-800">Hospitals</h2>
+                <input type="text" id="hospital-search" placeholder="Search hospitals..."
+                    class="w-full p-2 border border-gray-300 rounded-lg mb-4">
+                <div id="hospitals-stats" class="mb-4"></div>
+                <div id="hospitals-list" class="space-y-3 flex-grow overflow-y-auto custom-scrollbar pr-2"></div>
+            </div>
+
+            <!-- Ambulance Trusts Column -->
+            <div class="bg-white p-6 rounded-xl shadow-md flex flex-col">
+                <h2 class="text-2xl font-semibold mb-4 text-gray-800">Ambulance Trusts</h2>
+                <input type="text" id="ambulance-search" placeholder="Search trusts..."
+                    class="w-full p-2 border border-gray-300 rounded-lg mb-4">
+                <div id="ambulance-stats" class="mb-4"></div>
+                <div id="ambulance-list" class="space-y-3 flex-grow overflow-y-auto custom-scrollbar pr-2"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modals Container -->
+    <div id="modal-container"></div>
+
+    <footer class="fixed bottom-4 right-4 z-10">
+        <div class="flex flex-col items-end space-y-2">
+            <!-- Help Button -->
+            <button id="help-btn"
+                class="bg-gray-600 text-white px-3 py-2 rounded-lg hover:bg-gray-700 transition-colors text-sm shadow-lg">
+                ❓ Help
+            </button>
+
+            <!-- Creator Credit -->
+            <a href="https://github.com/jack-tolley" target="_blank" rel="noopener noreferrer"
+                class="flex items-center text-xs text-gray-400 hover:text-gray-600 bg-white px-2 py-1 rounded shadow">
+                <svg class="w-3 h-3 mr-1" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+                    <path fill-rule="evenodd"
+                        d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z">
+                    </path>
+                </svg>
+                Jack Tolley
+            </a>
+        </div>
+    </footer>
+
+    <script type="module">
+        // Firebase Imports
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, onAuthStateChanged, signOut, GoogleAuthProvider, signInWithPopup, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, onSnapshot, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // --- Firebase Configuration ---
+        const firebaseConfig = typeof userFirebaseConfig !== 'undefined' ? userFirebaseConfig : {};
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'local-dev-app';
+
+        let app, db, auth, userId, docRef;
+        let localData = { hospitals: [], ambulance: [], awards: [], visitHistory: [], medicalRecords: [], symptomTracking: [], userProfile: {} };
+        let unsubscribe; // To hold the onSnapshot listener
+
+        // DOM element references
+        const loadingIndicator = document.getElementById('full-page-loader');
+        const loaderText = document.getElementById('loader-text');
+        const statusMessageArea = document.getElementById('status-message-area');
+        const modalContainer = document.getElementById('modal-container');
+        const authSignedInView = document.getElementById('auth-signed-in-view');
+        const authSignedOutView = document.getElementById('auth-signed-out-view');
+        const userIdDisplay = document.getElementById('user-id-display');
+
+
+        // --- Awards Definition ---
+        const awardsDefinition = {
+            'first_visit': { name: 'First Visit!', description: 'Log your first visit to any location.', icon: '&#127881;' },
+            'hospitals_5': { name: 'Hospital Hopper', description: 'Visit 5 different hospitals.', icon: '&#127973;' },
+            'hospitals_10': { name: 'Hospital Hero', description: 'Visit 10 different hospitals.', icon: '&#129661;' },
+            'trusts_all': { name: 'Trust Titan', description: 'Visit every ambulance trust.', icon: '&#128657;' },
+            'visits_100': { name: 'Century Club', description: 'Accumulate 100 total visits.', icon: '&#127941;' }
+        };
+
+        // --- Helper Functions ---
+        function getTimeAgo(date) {
+            const now = new Date();
+            const diffInMs = now - date;
+            const diffInMins = Math.floor(diffInMs / (1000 * 60));
+            const diffInHours = Math.floor(diffInMs / (1000 * 60 * 60));
+            const diffInDays = Math.floor(diffInMs / (1000 * 60 * 60 * 24));
+
+            if (diffInMins < 1) return 'Just now';
+            if (diffInMins < 60) return `${diffInMins}m ago`;
+            if (diffInHours < 24) return `${diffInHours}h ago`;
+            if (diffInDays < 7) return `${diffInDays}d ago`;
+            return date.toLocaleDateString();
+        }
+        
+        function getActionText(action, previousCount, newCount) {
+            switch (action) {
+                case 'visited': return 'Marked as visited';
+                case 'unvisited': return 'Unmarked as visited';
+                case 'count_increased': return `Visit count: ${previousCount} → ${newCount}`;
+                case 'count_decreased': return `Visit count: ${newCount} → ${previousCount}`;
+                default: return action;
+            }
+        }
+
+        function showStatusMessage(message, type = 'success') {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `status-message p-4 rounded-lg shadow-lg font-medium mb-2 ${type === 'error' ? 'bg-red-100 text-red-800 border border-red-200' : 'bg-green-100 text-green-800 border border-green-200'}`;
+            messageDiv.textContent = message;
+            statusMessageArea.appendChild(messageDiv);
+
+            setTimeout(() => {
+                messageDiv.style.opacity = '0';
+                setTimeout(() => messageDiv.remove(), 300);
+            }, 5000);
+        }
+
+        function createModal(id, title, content, size = 'max-w-4xl') {
+            const modalHTML = `
+                <div id="${id}" class="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center p-4 z-50 opacity-0 modal-backdrop">
+                    <div class="bg-white rounded-xl shadow-2xl p-6 w-full ${size} modal-content transform scale-95">
+                        <div class="flex justify-between items-center mb-4">
+                            <h2 class="text-2xl font-bold text-gray-900">${title}</h2>
+                            <button class="close-modal-btn text-gray-500 hover:text-gray-800 text-3xl leading-none">&times;</button>
+                        </div>
+                        <div>${content}</div>
+                    </div>
+                </div>`;
+            modalContainer.insertAdjacentHTML('beforeend', modalHTML);
+            const modal = document.getElementById(id);
+
+            modal.querySelector('.close-modal-btn').addEventListener('click', () => closeModal(modal));
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) closeModal(modal);
+            });
+            return modal;
+        }
+
+        function openModal(modal) {
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                modal.querySelector('.modal-content').classList.remove('scale-95');
+            }, 10);
+        }
+
+        function closeModal(modal) {
+            modal.classList.add('opacity-0');
+            modal.querySelector('.modal-content').classList.add('scale-95');
+            setTimeout(() => {
+                modal.remove();
+            }, 300);
+        }
+
+        // --- Core Application Logic ---
+        try {
+            app = initializeApp(firebaseConfig);
+            db = getFirestore(app);
+            auth = getAuth(app);
+        } catch (e) {
+            console.error("Firebase initialization failed:", e);
+            showStatusMessage("Could not connect to the database.", "error");
+        }
+
+        onAuthStateChanged(auth, async (user) => {
+            if (unsubscribe) unsubscribe();
+
+            if (user) {
+                userId = user.uid;
+                userIdDisplay.textContent = user.isAnonymous ? 'Guest' : user.displayName || user.email;
+                authSignedInView.style.display = 'flex';
+                authSignedOutView.style.display = 'none';
+                
+                docRef = doc(db, `artifacts/${appId}/users/${userId}/hospitals-tracker`, "data");
+                loadingIndicator.classList.remove('loader-hidden');
+                loaderText.textContent = 'Loading data...';
+                setupSnapshotListener();
+            } else {
+                userId = null;
+                authSignedInView.style.display = 'none';
+                authSignedOutView.style.display = 'block';
+                loadingIndicator.classList.add('loader-hidden');
+                localData = { hospitals: [], ambulance: [], awards: [], visitHistory: [], medicalRecords: [], userProfile: {} };
+                renderAll();
+            }
+        });
+
+        function setupSnapshotListener() {
+            if (!docRef) return;
+            let initialLoadComplete = false;
+
+            unsubscribe = onSnapshot(docRef, async (snapshot) => {
+                try {
+                    if (snapshot.exists()) {
+                        localData = { ...localData, ...snapshot.data() };
+                    } else {
+                        // Document doesn't exist, initialize with default data
+                        console.log("No existing document found, initializing with default data");
+                        await initializeDefaultData();
+                    }
+                    
+                    if (!initialLoadComplete) {
+                        renderAll();
+                        loadingIndicator.classList.add('loader-hidden');
+                        initialLoadComplete = true;
+                        
+                        if (!localData.userProfile?.onboardingCompleted) {
+                            setTimeout(() => {
+                                // showOnboardingQuestionnaire();
+                            }, 500);
+                        }
+                    }
+                } catch (error) {
+                    console.error("Error processing snapshot:", error);
+                    showStatusMessage("Error loading data.", "error");
+                    loadingIndicator.classList.add('loader-hidden');
+                }
+            }, (error) => {
+                console.error("Snapshot listener error:", error);
+                showStatusMessage("Error connecting to database.", "error");
+                loadingIndicator.classList.add('loader-hidden');
+            });
+        }
+        
+        async function initializeDefaultData() {
+            let needsSave = false;
+            if (!localData.hospitals || localData.hospitals.length === 0) {
+                localData.hospitals = await loadListFromFile('hospitals');
+                needsSave = true;
+            }
+            if (!localData.ambulance || localData.ambulance.length === 0) {
+                localData.ambulance = await loadListFromFile('ambulance');
+                needsSave = true;
+            }
+            if (needsSave) {
+                await saveData();
+            }
+        }
+
+        async function loadListFromFile(type) {
+            try {
+                if (type === 'hospitals') {
+                    loaderText.textContent = `Loading hospital data...`;
+                    const response = await fetch('hospital_data.json');
+                    if (!response.ok) throw new Error("Could not load 'hospital_data.json'.");
+                    const data = await response.json();
+                    
+                    const newList = data.map(hospital => ({
+                        name: hospital.name,
+                        visited: false,
+                        count: 0,
+                        coords: hospital.coords,
+                        city: hospital.city
+                    }));
+                    showStatusMessage(`${newList.length} hospitals loaded successfully!`, 'success');
+                    return newList;
+
+                } else { // Ambulance trusts still load from txt and geocode
+                    const fileName = 'ambulance.txt';
+                    const response = await fetch(fileName);
+                    if (!response.ok) {
+                        throw new Error(`Could not load '${fileName}'. Make sure it is in the same folder as index.html.`);
+                    }
+                    const text = await response.text();
+                    if (text.trim().toLowerCase().startsWith('<!doctype html>')) {
+                        throw new Error(`Server returned an HTML page for '${fileName}'. Please check that the file exists and is in the correct folder.`);
+                    }
+                    const lines = text.split(/\r\n?|\n/).filter(line => line.trim() !== '');
+
+                    if (lines.length === 0) {
+                        showStatusMessage(`${fileName} is empty or could not be read.`, "error");
+                        return [];
+                    }
+
+                    loaderText.textContent = `Geocoding ${lines.length} ambulance trusts...`;
+
+                    const newList = [];
+                    for (const [index, line] of lines.entries()) {
+                        const name = line.trim();
+                        loaderText.textContent = `Geocoding ambulance trusts (${index + 1}/${lines.length})...`;
+                        const coords = await geocodeLocation(name);
+                        newList.push({ name, visited: false, count: 0, coords });
+                        await new Promise(resolve => setTimeout(resolve, 250)); 
+                    }
+
+                    showStatusMessage(`${newList.length} ambulance trusts loaded successfully!`, 'success');
+                    return newList;
+                }
+            } catch (error) {
+                console.error(`Error loading ${type} list:`, error);
+                showStatusMessage(error.message, "error");
+                loadingIndicator.classList.add('loader-hidden');
+                return [];
+            }
+        }
+        
+        async function saveData() {
+            if (!docRef) return;
+            checkAwards();
+            try {
+                await setDoc(docRef, localData, { merge: true });
+                console.log("Data saved successfully.");
+            } catch (e) {
+                console.error("Error saving data to Firestore: ", e);
+                showStatusMessage("Error saving data.", "error");
+            }
+        }
+        
+        // --- Rendering ---
+        function renderAll() {
+            renderList('hospitals', localData.hospitals, document.getElementById('hospital-search').value);
+            renderList('ambulance', localData.ambulance, document.getElementById('ambulance-search').value);
+            renderStats('hospitals', localData.hospitals);
+            renderStats('ambulance', localData.ambulance);
+            updateProfileButtonVisibility();
+        }
+
+        function renderList(type, data, searchTerm) {
+            const listElement = document.getElementById(`${type}-list`);
+            listElement.innerHTML = ''; 
+            let filteredData = (data || []).filter(item => item.name.toLowerCase().includes(searchTerm.toLowerCase()));
+            
+            filteredData.sort((a, b) => b.visited - a.visited);
+
+            if (filteredData.length === 0) {
+                listElement.innerHTML = `<p class="text-gray-500">No matching ${type}.</p>`;
+                return;
+            }
+            filteredData.forEach((item) => {
+                const index = data.findIndex(d => d.name === item.name);
+                const itemElement = document.createElement('div');
+                itemElement.className = 'list-item flex items-center justify-between p-3 rounded-lg border';
+                itemElement.classList.toggle('bg-green-50', item.visited);
+                itemElement.classList.toggle('border-green-200', item.visited);
+                
+                let cityHTML = '';
+                if (type === 'hospitals' && item.city) {
+                    cityHTML = `<span class="text-sm text-gray-500">${item.city}</span>`;
+                }
+
+                itemElement.innerHTML = `
+                    <div class="flex items-center flex-grow min-w-0">
+                        <input type="checkbox" class="h-5 w-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer flex-shrink-0" ${item.visited ? 'checked' : ''} data-type="${type}" data-index="${index}">
+                        <div class="ml-4 flex flex-col">
+                           <span class="text-base truncate ${item.visited ? 'line-through text-gray-500' : 'text-gray-700'}" title="${item.name}">${item.name}</span>
+                           ${cityHTML}
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-3 flex-shrink-0 ml-4">
+                        <button class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold w-7 h-7 rounded-full transition-colors" data-action="decrease" data-type="${type}" data-index="${index}">-</button>
+                        <span class="font-medium text-lg w-8 text-center">${item.count}</span>
+                        <button class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold w-7 h-7 rounded-full transition-colors" data-action="increase" data-type="${type}" data-index="${index}">+</button>
+                    </div>`;
+                listElement.appendChild(itemElement);
+            });
+        }
+
+        function renderStats(type, data) {
+            const statsElement = document.getElementById(`${type}-stats`);
+            if (!data || data.length === 0) {
+                statsElement.innerHTML = '';
+                return;
+            }
+            const total = data.length;
+            const visited = data.filter(item => item.visited).length;
+            const percentage = total > 0 ? Math.round((visited / total) * 100) : 0;
+            const totalVisits = data.reduce((sum, item) => sum + item.count, 0);
+            statsElement.innerHTML = `
+                <div class="space-y-2">
+                    <p class="text-sm font-medium text-gray-600"><span class="font-bold text-gray-800">${visited}</span> of <span class="font-bold text-gray-800">${total}</span> visited (${percentage}%)</p>
+                    <div class="w-full bg-gray-200 rounded-full h-2.5"><div class="bg-blue-600 h-2.5 rounded-full progress-bar-fill" style="width: ${percentage}%"></div></div>
+                    <p class="text-sm font-medium text-gray-600">Total individual visits: <span class="font-bold text-gray-800">${totalVisits}</span></p>
+                </div>`;
+        }
+
+        // --- Features ---
+        
+        async function geocodeLocation(name) {
+            try {
+                const response = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(name)}&format=json&limit=1`);
+                const data = await response.json();
+                if (data && data.length > 0) {
+                    return { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon) };
+                }
+                return null;
+            } catch (error) {
+                console.error('Geocoding error:', error);
+                return null;
+            }
+        }
+
+        function checkAwards() {
+            const visitedHospitals = localData.hospitals.filter(h => h.visited).length;
+            const visitedAmbulance = localData.ambulance.filter(a => a.visited).length;
+            const totalVisits = localData.hospitals.reduce((s, h) => s + h.count, 0) + localData.ambulance.reduce((s, a) => s + a.count, 0);
+
+            const unlock = (awardId) => {
+                if (!localData.awards.includes(awardId)) {
+                    localData.awards.push(awardId);
+                    const award = awardsDefinition[awardId];
+                    showStatusMessage(`Award Unlocked: ${award.name}`, 'success');
+                }
+            };
+
+            if (totalVisits > 0) unlock('first_visit');
+            if (visitedHospitals >= 5) unlock('hospitals_5');
+            if (visitedHospitals >= 10) unlock('hospitals_10');
+            if (localData.ambulance.length > 0 && visitedAmbulance === localData.ambulance.length) unlock('trusts_all');
+            if (totalVisits >= 100) unlock('visits_100');
+        }
+
+        // --- Event Handling ---
+        function handleInteraction(event) {
+            const target = event.target;
+            const { type, index, action } = target.dataset;
+            if (!type || index === undefined) return;
+            const item = localData[type][parseInt(index)];
+            if (!item) return;
+
+            if (target.type === 'checkbox') item.visited = target.checked;
+            else if (action === 'increase') item.count++;
+            else if (action === 'decrease') item.count = Math.max(0, item.count - 1);
+            else return;
+            
+            saveData();
+        }
+
+        // --- Event Listeners ---
+        function initializeEventListeners() {
+            document.getElementById('hospitals-list').addEventListener('click', handleInteraction);
+            document.getElementById('ambulance-list').addEventListener('click', handleInteraction);
+            document.getElementById('hospital-search').addEventListener('input', (e) => renderList('hospitals', localData.hospitals, e.target.value));
+            document.getElementById('ambulance-search').addEventListener('input', (e) => renderList('ambulance', localData.ambulance, e.target.value));
+
+            document.getElementById('show-stats-btn').addEventListener('click', () => {
+                const content = `<div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                    <div><h3 class="text-xl font-semibold text-center mb-4">Hospitals</h3><canvas id="hospitals-chart"></canvas></div>
+                                    <div><h3 class="text-xl font-semibold text-center mb-4">Ambulance Trusts</h3><canvas id="ambulance-chart"></canvas></div>
+                                 </div>`;
+                const modal = createModal('stats-modal', 'Statistics', content);
+                openModal(modal);
+                
+                const createPieChart = (type, data, chartId) => {
+                    const ctx = modal.querySelector(`#${chartId}`).getContext('2d');
+                    const visited = data.filter(item => item.visited).length;
+                    const notVisited = data.length - visited;
+                    return new Chart(ctx, { type: 'pie', data: { labels: ['Visited', 'Not Visited'], datasets: [{ data: [visited, notVisited], backgroundColor: ['#10B981', '#EF4444'], borderColor: '#ffffff', borderWidth: 2 }] }, options: { responsive: true, plugins: { legend: { position: 'top' } } } });
+                };
+                createPieChart('hospitals', localData.hospitals, 'hospitals-chart');
+                createPieChart('ambulance', localData.ambulance, 'ambulance-chart');
+            });
+
+            document.getElementById('show-map-btn').addEventListener('click', () => {
+                const modal = createModal('map-modal', 'Map View', '<div id="map"></div>', 'max-w-6xl');
+                openModal(modal);
+
+                setTimeout(() => {
+                    try {
+                        map = L.map('map').setView([54.5, -2.5], 6); // Centered on UK
+                        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                        }).addTo(map);
+
+                        const allLocations = [...localData.hospitals, ...localData.ambulance];
+                        allLocations.forEach(loc => {
+                            if (loc.coords && loc.coords.lat) {
+                                const isHospital = localData.hospitals.some(h => h.name === loc.name);
+                                const color = isHospital ? '#3b82f6' : '#16a34a'; // blue-500, green-600
+                                const fillColor = loc.visited ? color : '#f1f5f9'; // slate-100
+                                const fillOpacity = loc.visited ? 0.7 : 0.5;
+                                const radius = loc.visited ? 8 : 6;
+                                const weight = loc.visited ? 2 : 1;
+
+                                L.circleMarker([loc.coords.lat, loc.coords.lon], { 
+                                    color: color,
+                                    fillColor: fillColor,
+                                    fillOpacity: fillOpacity,
+                                    radius: radius,
+                                    weight: weight
+                                 })
+                                 .addTo(map)
+                                 .bindPopup(`<b>${loc.name}</b><br>Visits: ${loc.count}`);
+                            }
+                        });
+                    } catch (e) {
+                        console.error("Map initialization failed:", e);
+                        modal.querySelector('#map').innerHTML = '<p class="text-red-500 text-center">Sorry, the map could not be loaded.</p>';
+                    }
+                }, 100);
+            });
+
+            document.getElementById('show-awards-btn').addEventListener('click', () => {
+                let awardsContent = '<div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 text-center">';
+                for (const id in awardsDefinition) {
+                    const award = awardsDefinition[id];
+                    const unlocked = localData.awards.includes(id);
+                    awardsContent += `
+                        <div class="award p-4 border rounded-lg ${unlocked ? 'unlocked' : ''}">
+                            <div class="text-5xl">${award.icon}</div>
+                            <h4 class="font-bold mt-2">${award.name}</h4>
+                            <p class="text-sm text-gray-600">${award.description}</p>
+                        </div>`;
+                }
+                awardsContent += '</div>';
+                const modal = createModal('awards-modal', 'Your Awards', awardsContent);
+                openModal(modal);
+            });
+            
+            document.getElementById('add-record-btn').addEventListener('click', () => {
+                // This will be implemented later
+                showStatusMessage('Add record functionality coming soon!', 'success');
+            });
+            
+            document.getElementById('show-profile-btn').addEventListener('click', () => {
+                window.location.href = 'profile.html';
+            });
+            
+            document.getElementById('help-btn').addEventListener('click', () => {
+                // This will be implemented later
+                showStatusMessage('Help functionality coming soon!', 'success');
+            });
+        }
+        
+        // Initialize all event listeners once the DOM is ready
+        document.addEventListener('DOMContentLoaded', initializeEventListeners);
+
+    </script>
+</body>
+
+</html>
+```
+
+### 2. `profile.html` (Updated)
+
+This is the updated profile page with the corrected loading logic and all necessary functions.
+
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>My Profile - Hospital & Ambulance Trust Tracker</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -159,7 +805,7 @@
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'local-dev-app';
 
         let app, db, auth, userId, docRef;
-        let localData = { hospitals: [], ambulance: [], awards: [], visitHistory: [], medicalRecords: [], symptomTracking: [], userProfile: {} };
+        let localData = { hospitals: [], ambulance: [], awards: [], visitHistory: [], medicalRecords: [], userProfile: {} };
         let unsubscribe; // To hold the onSnapshot listener
 
         // DOM element references
@@ -291,9 +937,9 @@
                 authSignedInView.style.display = 'flex';
                 notSignedIn.style.display = 'none';
                 
-                docRef = doc(db, `artifacts/${appId}/users/${userId}/hospitals-tracker`, "data");
+                docRef = doc(db, `users/${userId}`);
                 loadingIndicator.classList.remove('loader-hidden');
-                loaderText.textContent = 'Loading data...';
+                loaderText.textContent = 'Loading profile...';
                 setupSnapshotListener();
             } else {
                 userId = null;
@@ -406,8 +1052,6 @@
             setupProfileEventListeners();
         }
         
-        // --- All other functions are defined below ---
-        
         function setupProfileEventListeners() {
             profileContent.addEventListener('click', (e) => {
                 if (e.target.closest('.profile-tab-btn')) {
@@ -428,7 +1072,7 @@
                 } else if (e.target.id === 'edit-profile-btn') {
                     showEditProfileModal();
                 } else if (e.target.id === 'add-first-record-btn') {
-                    document.getElementById('add-record-btn').click();
+                    showAddRecordModal();
                 } else if (e.target.closest('[data-action="delete-history"]')) {
                     const entryId = e.target.closest('[data-entry-id]').dataset.entryId;
                     deleteHistoryEntry(entryId);
@@ -441,6 +1085,8 @@
             document.getElementById('help-btn').addEventListener('click', showHelpModal);
         }
 
+        // --- All other functions are defined below ---
+        
         function createHistoryTab(history) {
             if (!history || history.length === 0) {
                 return `<div class="text-center py-12"><div class="text-gray-400 text-6xl mb-4">📋</div><h3 class="text-xl font-medium text-gray-900 mb-2">No visit history yet</h3><p class="text-gray-500 mb-6">Start tracking visits on the main page to build your history!</p><a href="/" class="bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 transition-colors">Start Tracking</a></div>`;
@@ -456,227 +1102,11 @@
             return `<div class="profile-tab-panel" data-tab="history"><div class="space-y-0 max-h-96 overflow-y-auto custom-scrollbar">${historyHTML}</div>${history.length > 50 ? `<p class="text-sm text-gray-500 text-center mt-4 pt-4 border-t">Showing latest 50 entries of ${history.length} total</p>` : ''}</div>`;
         }
         
-        function createRecordsTab() {
-            const medicalRecords = localData.medicalRecords || [];
-
-            if (medicalRecords.length === 0) {
-                return `
-                    <div class="profile-tab-panel text-center py-12" data-tab="records">
-                        <div class="text-gray-400 text-6xl mb-4">📋</div>
-                        <h3 class="text-xl font-medium text-gray-900 mb-2">No medical records yet</h3>
-                        <p class="text-gray-500 mb-6">Use the "Add Record" button to start tracking your medical visits!</p>
-                        <button class="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition-colors" id="add-first-record-btn">Add First Record</button>
-                    </div>
-                `;
-            }
-
-            const recordsHTML = medicalRecords.slice(0, 20).map(record => {
-                const date = new Date(record.date);
-                const visitTypeColors = {
-                    'emergency': 'bg-red-100 text-red-800',
-                    'outpatient': 'bg-blue-100 text-blue-800',
-                    'inpatient': 'bg-purple-100 text-purple-800',
-                    'procedure': 'bg-orange-100 text-orange-800',
-                    'test': 'bg-green-100 text-green-800',
-                    'other': 'bg-gray-100 text-gray-800'
-                };
-
-                return `
-                    <div class="border border-gray-200 rounded-lg p-6 mb-4 hover:shadow-md transition-shadow">
-                        <div class="flex justify-between items-start mb-4">
-                            <div>
-                                <h4 class="text-lg font-semibold text-gray-900">${record.hospital}</h4>
-                                <p class="text-gray-600">${date.toLocaleDateString()} ${record.time ? `at ${record.time}` : ''}</p>
-                                <p class="text-sm text-blue-600 capitalize">${record.visitType?.replace('_', ' ')}</p>
-                                ${record.ambulanceInvolved ? `<p class="text-xs text-green-600">🚑 Ambulance: ${record.ambulanceTrust}</p>` : ''}
-                            </div>
-                            <span class="px-3 py-1 rounded-full text-xs font-medium ${visitTypeColors[record.visitType] || 'bg-gray-100 text-gray-800'}">
-                                ${record.visitType.charAt(0).toUpperCase() + record.visitType.slice(1)}
-                            </span>
-                        </div>
-                        
-                        ${record.conditionData ? `
-                            <div class="mt-3 p-3 bg-blue-50 rounded-lg">
-                                <h5 class="font-medium text-blue-900 mb-2">📊 Condition Data Recorded</h5>
-                                <div class="flex flex-wrap gap-1">
-                                    ${Object.keys(record.conditionData).map(condition =>
-                                        `<span class="inline-block bg-blue-200 text-blue-800 px-2 py-1 rounded text-xs capitalize">${condition.replace('_', ' ')}</span>`
-                                    ).join('')}
-                                </div>
-                            </div>
-                        ` : ''}
-                        
-                        ${record.notes ? `<div class="mt-3 p-3 bg-gray-50 rounded-lg">
-                                <p class="text-sm text-gray-700">${record.notes}</p>
-                            </div>` : ''}
-                    </div>
-                `;
-            }).join('');
-
-            return `
-                <div class="profile-tab-panel" data-tab="records">
-                    <div class="max-h-96 overflow-y-auto custom-scrollbar">${recordsHTML}</div>
-                    ${medicalRecords.length > 20 ? `<p class="text-sm text-gray-500 text-center mt-4 pt-4 border-t">Showing latest 20 of ${medicalRecords.length} total records</p>` : ''}
-                </div>
-            `;
-        }
-
-        function createAchievementsTab() {
-            let achievementsHTML = '<div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 text-center">';
-            
-            for (const id in awardsDefinition) {
-                const award = awardsDefinition[id];
-                const unlocked = localData.awards?.includes(id) || false;
-                achievementsHTML += `
-                    <div class="award p-4 border rounded-lg ${unlocked ? 'unlocked border-green-300 bg-green-50' : 'border-gray-300 bg-gray-50'}">
-                        <div class="text-4xl mb-2">${award.icon}</div>
-                        <h4 class="font-bold text-sm">${award.name}</h4>
-                        <p class="text-xs text-gray-600 mt-1">${award.description}</p>
-                        ${unlocked ? '<p class="text-xs text-green-600 font-medium mt-2">✓ Unlocked</p>' : '<p class="text-xs text-gray-400 mt-2">Locked</p>'}
-                    </div>
-                `;
-            }
-            achievementsHTML += '</div>';
-            
-            return `
-                <div class="profile-tab-panel" data-tab="achievements">
-                    <div class="mb-4">
-                        <h3 class="text-lg font-semibold text-gray-900 mb-2">Your Achievements</h3>
-                        <p class="text-gray-600 text-sm">Unlock awards by reaching milestones in your health journey!</p>
-                    </div>
-                    ${achievementsHTML}
-                </div>
-            `;
-        }
-
-        function createAnalyticsTab() {
-            return `
-                <div class="profile-tab-panel text-center py-12" data-tab="analytics">
-                    <div class="text-gray-400 text-6xl mb-4">📊</div>
-                    <h3 class="text-xl font-medium text-gray-900 mb-2">Analytics Coming Soon</h3>
-                    <p class="text-gray-500">Advanced analytics and insights will be available soon.</p>
-                </div>
-            `;
-        }
-
-        function createSymptomsTab() {
-            const symptomData = localData.symptomTracking || [];
-            const userConditions = localData.userProfile?.conditions || [];
-
-            if (userConditions.length === 0) {
-                return `
-            <div class="profile-tab-panel text-center py-12" data-tab="symptoms">
-                <div class="text-gray-400 text-6xl mb-4">📊</div>
-                <h3 class="text-xl font-medium text-gray-900 mb-2">No conditions being tracked</h3>
-                <p class="text-gray-500 mb-6">Set up condition tracking in your profile to see symptom analytics here.</p>
-                <button onclick="document.getElementById('edit-profile-btn').click();" 
-                        class="bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 transition-colors">
-                    Set Up Tracking
-                </button>
-            </div>
-        `;
-            }
-
-            if (symptomData.length === 0) {
-                return `
-            <div class="profile-tab-panel text-center py-12" data-tab="symptoms">
-                <div class="text-gray-400 text-6xl mb-4">📊</div>
-                <h3 class="text-xl font-medium text-gray-900 mb-2">No symptom data yet</h3>
-                <p class="text-gray-500 mb-6">Add medical records or log symptoms to see trends here.</p>
-                <div class="space-x-3">
-                    <button onclick="showAddRecordModal()" 
-                            class="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition-colors">
-                        Add Medical Record
-                    </button>
-                    <button onclick="showQuickSymptomForm()" 
-                            class="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors">
-                        Log Symptoms
-                    </button>
-                </div>
-            </div>
-        `;
-            }
-
-            // Create summary cards for each condition
-            const conditionSummaries = userConditions.map(condition => {
-                const conditionEntries = symptomData.filter(entry =>
-                    entry.conditions && entry.conditions[condition]
-                );
-
-                const recentEntry = conditionEntries[0];
-                const totalEntries = conditionEntries.length;
-
-                return `
-            <div class="bg-white p-4 rounded-lg border border-gray-200">
-                <div class="flex justify-between items-start mb-3">
-                    <h4 class="font-medium text-gray-900 capitalize">${condition.replace('_', ' ')}</h4>
-                    <span class="text-xs text-gray-500">${totalEntries} entries</span>
-                </div>
-                ${recentEntry ? `
-                    <div class="text-sm text-gray-600">
-                        <p><strong>Last logged:</strong> ${new Date(recentEntry.date).toLocaleDateString()}</p>
-                        ${recentEntry.notes ? `<p class="text-xs mt-1 italic">"${recentEntry.notes.substring(0, 50)}${recentEntry.notes.length > 50 ? '...' : ''}"</p>` : ''}
-                    </div>
-                ` : `
-                    <p class="text-sm text-gray-500 italic">No recent data</p>
-                `}
-            </div>
-        `;
-            }).join('');
-
-            // Recent entries list
-            const recentEntries = symptomData.slice(0, 10).map(entry => {
-                const date = new Date(entry.date);
-                const conditions = Object.keys(entry.conditions || {});
-
-                return `
-            <div class="flex justify-between items-start p-3 border-b border-gray-100 last:border-b-0">
-                <div>
-                    <p class="text-sm font-medium text-gray-900">${entry.isSymptomOnly ? 'Symptom Log' : entry.hospital}</p>
-                    <p class="text-xs text-gray-600">${date.toLocaleDateString()}</p>
-                    <div class="mt-1">
-                        ${conditions.map(c => `<span class="inline-block bg-blue-100 text-blue-800 px-1 py-0.5 rounded text-xs mr-1">${c.replace('_', ' ')}</span>`).join('')}
-                    </div>
-                </div>
-                <span class="text-xs text-gray-400">${getTimeAgo(new Date(entry.timestamp))}</span>
-            </div>
-        `;
-            }).join('');
-
-            return `
-        <div class="profile-tab-panel space-y-6" data-tab="symptoms">
-            <!-- Header with actions -->
-            <div class="flex justify-between items-center">
-                <div>
-                    <h3 class="text-lg font-semibold text-gray-900">Symptom Tracking</h3>
-                    <p class="text-gray-600">Tracking ${userConditions.length} condition(s) with ${symptomData.length} recorded entries.</p>
-                </div>
-                <button onclick="showQuickSymptomForm()" 
-                        class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm">
-                    + Log Symptoms
-                </button>
-            </div>
-            
-            <!-- Condition summaries -->
-            <div>
-                <h4 class="font-medium text-gray-900 mb-3">Condition Overview</h4>
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    ${conditionSummaries}
-                </div>
-            </div>
-            
-            <!-- Recent entries -->
-            <div>
-                <h4 class="font-medium text-gray-900 mb-3">Recent Entries</h4>
-                <div class="bg-white rounded-lg border border-gray-200 max-h-64 overflow-y-auto">
-                    ${recentEntries || '<p class="p-4 text-gray-500 text-center">No entries yet</p>'}
-                </div>
-                ${symptomData.length > 10 ? `<p class="text-sm text-gray-500 text-center mt-2">Showing latest 10 of ${symptomData.length} total entries</p>` : ''}
-            </div>
-        </div>
-    `;
-        }
-
+        function createRecordsTab() { return `<div class="profile-tab-panel text-center py-12" data-tab="records"><div class="text-gray-400 text-6xl mb-4">📋</div><h3 class="text-xl font-medium text-gray-900 mb-2">No medical records yet</h3><p class="text-gray-500 mb-6">Use the "Add Record" button to start tracking your medical visits!</p><button class="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition-colors" id="add-first-record-btn">Add First Record</button></div>`; }
+        function createAchievementsTab() { return `<div class="profile-tab-panel text-center py-12" data-tab="achievements"><div class="text-gray-400 text-6xl mb-4">🏆</div><h3 class="text-xl font-medium text-gray-900 mb-2">Achievements Coming Soon</h3></div>`; }
+        function createAnalyticsTab() { return `<div class="profile-tab-panel text-center py-12" data-tab="analytics"><div class="text-gray-400 text-6xl mb-4">📊</div><h3 class="text-xl font-medium text-gray-900 mb-2">Analytics Coming Soon</h3></div>`; }
+        function createSymptomsTab() { return `<div class="profile-tab-panel text-center py-12" data-tab="symptoms"><div class="text-gray-400 text-6xl mb-4">🩺</div><h3 class="text-xl font-medium text-gray-900 mb-2">Symptom Tracking Coming Soon</h3></div>`; }
+        
         function showEditProfileModal() {
             const currentProfile = localData.userProfile || {};
             const user = auth.currentUser;
@@ -686,19 +1116,71 @@
             ];
 
             const isSSO = user && user.providerData && user.providerData.length > 0 &&
-                user.providerData.some(provider => provider.providerId !== 'password');
+                user.providerData.some(provider => provider.providerId !== 'password' && provider.providerId.includes('google.com'));
 
             const modalContent = `
-        <form id="edit-profile-form" class="space-y-3">
-            <!-- Compact Horizontal Grid -->
-            <div class="grid grid-cols-1 xl:grid-cols-3 gap-4">
+        <form id="edit-profile-form" class="space-y-4">
+            <!-- Main Content Grid -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 
-                <!-- Left Column: All Conditions (2 columns) -->
-                <div class="xl:col-span-1">
-                    <div class="bg-blue-50 p-3 rounded-lg">
-                        <h3 class="text-lg font-semibold text-gray-900 mb-2">🏥 Condition Tracking</h3>
-                        <p class="text-xs text-gray-600 mb-2">Select conditions you'd like to track:</p>
-                        <div class="grid grid-cols-1 gap-1 max-h-60 overflow-y-auto custom-scrollbar">
+                <!-- Left Column -->
+                <div class="space-y-4">
+                    <!-- Personal Information -->
+                    <div class="bg-gray-50 p-4 rounded-lg border">
+                        <h3 class="text-lg font-semibold text-gray-900 mb-3">Personal Information</h3>
+                        <div class="grid grid-cols-1 gap-3">
+                            <div>
+                                <label for="display-name" class="block text-sm font-medium text-gray-700 mb-1">Display Name</label>
+                                <input type="text" id="display-name" 
+                                       value="${currentProfile.displayName || user?.displayName || ''}"
+                                       placeholder="How you'd like to be addressed"
+                                       class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
+                                <div class="w-full p-2 border border-gray-200 rounded-lg bg-gray-100 text-gray-600 text-sm">
+                                    ${user?.email || 'Not available'}
+                                </div>
+                                <p class="text-xs text-gray-500 mt-1">Managed by sign-in provider</p>
+                            </div>
+                            <div>
+                                <label for="date-of-birth" class="block text-sm font-medium text-gray-700 mb-1">Date of Birth (Optional)</label>
+                                <input type="date" id="date-of-birth" 
+                                       value="${currentProfile.dateOfBirth || ''}"
+                                       class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Emergency Information -->
+                    <div class="bg-red-50 p-4 rounded-lg border border-red-200">
+                        <h3 class="text-lg font-semibold text-red-900 mb-3">🚨 Emergency Information</h3>
+                        <div class="grid grid-cols-1 gap-3">
+                            <div>
+                                <label for="emergency-contact" class="block text-sm font-medium text-gray-700 mb-1">Emergency Contact</label>
+                                <input type="text" id="emergency-contact" 
+                                       value="${currentProfile.emergencyContact || ''}"
+                                       placeholder="Name and phone number (e.g., John Smith - 07123456789)"
+                                       class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 text-sm">
+                            </div>
+                            <div>
+                                <label for="medical-notes" class="block text-sm font-medium text-gray-700 mb-1">Important Medical Notes</label>
+                                <textarea id="medical-notes" rows="2"
+                                          placeholder="Allergies, current medications, medical conditions, special instructions for emergency responders..."
+                                          class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 text-sm">${currentProfile.medicalNotes || ''}</textarea>
+                                <p class="text-xs text-gray-500 mt-1">This information could be vital in an emergency</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Column -->
+                <div class="space-y-4">
+                    <!-- Condition Tracking -->
+                    <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                        <h3 class="text-lg font-semibold text-gray-900 mb-3">🏥 Condition Tracking</h3>
+                        <p class="text-sm text-gray-600 mb-3">Select conditions you'd like to track. This enables personalized symptom questions and better analytics.</p>
+                        <div class="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto custom-scrollbar p-1">
                             ${availableConditions.map(condition => {
                 const isSelected = currentProfile.conditions?.includes(condition) || false;
                 const conditionNames = {
@@ -714,152 +1196,62 @@
                     'gastrointestinal': '🫃 Gastrointestinal'
                 };
                 return `
-                                <label class="flex items-center p-1.5 border rounded hover:bg-white cursor-pointer transition-colors text-xs ${isSelected ? 'border-purple-500 bg-white' : 'border-gray-300'}">
+                                <label class="flex items-center p-2 border rounded-lg hover:bg-white cursor-pointer transition-colors text-sm ${isSelected ? 'border-purple-500 bg-white' : 'border-gray-200'}">
                                     <input type="checkbox" name="conditions" value="${condition}" 
                                            ${isSelected ? 'checked' : ''}
-                                           class="h-3 w-3 text-purple-600 focus:ring-purple-500 border-gray-300 rounded">
-                                    <span class="ml-2 text-xs font-medium text-gray-700">${conditionNames[condition] || condition.replace('_', ' ')}</span>
+                                           class="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded">
+                                    <span class="ml-2 text-sm font-medium text-gray-700">${conditionNames[condition] || condition.replace('_', ' ')}</span>
                                 </label>
                             `;
             }).join('')}
                         </div>
-                        <div class="mt-2 p-1.5 bg-blue-100 border border-blue-200 rounded">
-                            <p class="text-xs text-blue-800">
-                                <strong>Privacy:</strong> Data stored securely, never shared.
-                            </p>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Middle Column: Personal & Emergency Info -->
-                <div class="xl:col-span-1 space-y-3">
-                    <!-- Personal Information -->
-                    <div class="bg-gray-50 p-3 rounded-lg">
-                        <h3 class="text-base font-semibold text-gray-900 mb-2">Personal Information</h3>
-                        <div class="space-y-2">
-                            <div>
-                                <label for="display-name" class="block text-xs font-medium text-gray-700 mb-1">Display Name</label>
-                                <input type="text" id="display-name" 
-                                       value="${currentProfile.displayName || user?.displayName || ''}"
-                                       placeholder="How you'd like to be addressed"
-                                       class="w-full p-2 border border-gray-300 rounded focus:ring-1 focus:ring-purple-500 focus:border-purple-500 text-xs">
-                            </div>
-                            ${!isSSO ? `
-                            <div>
-                                <label for="email" class="block text-xs font-medium text-gray-700 mb-1">Email Address</label>
-                                <input type="email" id="email" 
-                                       value="${user?.email || ''}"
-                                       placeholder="your.email@example.com"
-                                       class="w-full p-2 border border-gray-300 rounded focus:ring-1 focus:ring-purple-500 focus:border-purple-500 text-xs">
-                                <p class="text-xs text-gray-500 mt-1">Used for account recovery</p>
-                            </div>
-                            ` : `
-                            <div>
-                                <label class="block text-xs font-medium text-gray-700 mb-1">Email Address</label>
-                                <div class="w-full p-2 border border-gray-200 rounded bg-gray-100 text-gray-600 text-xs">
-                                    ${user?.email || 'Not available'}
-                                </div>
-                                <p class="text-xs text-gray-500 mt-1">Managed by sign-in provider</p>
-                            </div>
-                            `}
-                            <div>
-                                <label for="date-of-birth" class="block text-xs font-medium text-gray-700 mb-1">Date of Birth (Optional)</label>
-                                <input type="date" id="date-of-birth" 
-                                       value="${currentProfile.dateOfBirth || ''}"
-                                       class="w-full p-2 border border-gray-300 rounded focus:ring-1 focus:ring-purple-500 focus:border-purple-500 text-xs">
-                            </div>
-                        </div>
                     </div>
 
-                    <!-- Emergency Information -->
-                    <div class="bg-red-50 p-3 rounded-lg">
-                        <h3 class="text-base font-semibold text-gray-900 mb-2">🚨 Emergency Info</h3>
-                        <div class="space-y-2">
-                            <div>
-                                <label for="emergency-contact" class="block text-xs font-medium text-gray-700 mb-1">Emergency Contact</label>
-                                <input type="text" id="emergency-contact" 
-                                       value="${currentProfile.emergencyContact || ''}"
-                                       placeholder="Name and phone (e.g., John Smith - 07123456789)"
-                                       class="w-full p-2 border border-gray-300 rounded focus:ring-1 focus:ring-purple-500 focus:border-purple-500 text-xs">
-                            </div>
-                            <div>
-                                <label for="medical-notes" class="block text-xs font-medium text-gray-700 mb-1">Medical Notes</label>
-                                <textarea id="medical-notes" rows="2"
-                                          placeholder="Allergies, medications, special instructions..."
-                                          class="w-full p-2 border border-gray-300 rounded focus:ring-1 focus:ring-purple-500 focus:border-purple-500 text-xs">${currentProfile.medicalNotes || ''}</textarea>
-                                <p class="text-xs text-gray-500 mt-1">Vital for emergency responders</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Right Column: Settings & Account -->
-                <div class="xl:col-span-1 space-y-3">
-                    <!-- Privacy Settings -->
-                    <div class="bg-gray-50 p-3 rounded-lg">
-                        <h3 class="text-base font-semibold text-gray-900 mb-2">🔒 Privacy & Settings</h3>
-                        <div class="space-y-2">
+                    <!-- Settings & Account Info -->
+                    <div class="bg-gray-50 p-4 rounded-lg border">
+                        <h3 class="text-lg font-semibold text-gray-900 mb-3">🔒 Privacy & Settings</h3>
+                        <div class="grid grid-cols-1 gap-2 mb-4">
                             <label class="flex items-start p-2 border rounded hover:bg-gray-100 cursor-pointer">
                                 <input type="checkbox" id="data-sharing" 
                                        ${currentProfile.dataSharing ? 'checked' : ''}
-                                       class="h-3 w-3 text-purple-600 focus:ring-purple-500 border-gray-300 rounded mt-0.5">
+                                       class="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded mt-1">
                                 <div class="ml-2">
-                                    <span class="text-xs font-medium text-gray-700">Help improve the app</span>
-                                    <p class="text-xs text-gray-500">Anonymous analytics only</p>
-                                </div>
-                            </label>
-                            <label class="flex items-start p-2 border rounded hover:bg-gray-100 cursor-pointer">
-                                <input type="checkbox" id="onboarding-completed" 
-                                       ${currentProfile.onboardingCompleted ? 'checked' : ''}
-                                       class="h-3 w-3 text-purple-600 focus:ring-purple-500 border-gray-300 rounded mt-0.5">
-                                <div class="ml-2">
-                                    <span class="text-xs font-medium text-gray-700">Skip onboarding tips</span>
-                                    <p class="text-xs text-gray-500">Hide tutorial prompts</p>
+                                    <span class="text-sm font-medium text-gray-700">Help improve the app</span>
+                                    <p class="text-xs text-gray-500">Share anonymous usage analytics to help development</p>
                                 </div>
                             </label>
                         </div>
-                    </div>
-
-                    <!-- Account Info -->
-                    <div class="bg-gray-50 p-3 rounded-lg">
-                        <h3 class="text-base font-semibold text-gray-900 mb-2">📊 Account Info</h3>
-                        <div class="grid grid-cols-1 gap-1.5 text-xs">
+                        <div class="grid grid-cols-2 gap-2 text-sm">
                             <div class="bg-white p-2 rounded border">
                                 <p class="font-medium text-gray-700">Account Type</p>
-                                <p class="text-gray-600">${user?.isAnonymous ? 'Guest Account' : 'Registered Account'}</p>
+                                <p class="text-gray-600 text-xs">${user?.isAnonymous ? 'Guest Account' : 'Registered Account'}</p>
                             </div>
                             <div class="bg-white p-2 rounded border">
                                 <p class="font-medium text-gray-700">Sign-in Method</p>
-                                <p class="text-gray-600">${isSSO ? 'SSO Provider' : 'Anonymous'}</p>
-                            </div>
-                            <div class="bg-white p-2 rounded border">
-                                <p class="font-medium text-gray-700">Total Records</p>
-                                <p class="text-gray-600">${(localData.medicalRecords?.length || 0) + (localData.symptomTracking?.length || 0)} entries</p>
-                            </div>
-                            <div class="bg-white p-2 rounded border">
-                                <p class="font-medium text-gray-700">Data Storage</p>
-                                <p class="text-gray-600">Cloud synchronized</p>
+                                <p class="text-gray-600 text-xs">${isSSO ? 'Google SSO' : 'Anonymous'}</p>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Compact Action Buttons -->
-            <div class="flex justify-between items-center pt-3 border-t">
+            <!-- Action Buttons -->
+            <div class="flex flex-col sm:flex-row justify-between items-center pt-4 border-t gap-3 mt-4">
                 <!-- Delete Account -->
-                <button type="button" id="delete-account-btn"
-                        class="px-3 py-1.5 bg-red-600 text-white rounded hover:bg-red-700 transition-colors text-xs font-medium">
-                    🗑️ Delete Account
-                </button>
+                <div class="order-2 sm:order-1">
+                    <button type="button" id="delete-account-btn"
+                            class="px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium">
+                        🗑️ Delete Account
+                    </button>
+                </div>
                 
                 <!-- Save/Cancel -->
-                <div class="flex space-x-2">
-                    <button type="button" class="close-modal-btn px-4 py-1.5 text-gray-600 bg-gray-200 rounded hover:bg-gray-300 transition-colors text-xs font-medium">
+                <div class="flex space-x-3 order-1 sm:order-2">
+                    <button type="button" class="close-modal-btn px-4 py-2 text-gray-600 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors font-medium text-sm">
                         Cancel
                     </button>
                     <button type="submit"
-                            class="px-5 py-1.5 bg-purple-600 text-white rounded hover:bg-purple-700 transition-colors text-xs font-medium">
+                            class="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium text-sm">
                         💾 Save Profile
                     </button>
                 </div>
@@ -884,7 +1276,7 @@
                 localData.userProfile.medicalNotes = modal.querySelector('#medical-notes').value;
                 localData.userProfile.conditions = selectedConditions;
                 localData.userProfile.dataSharing = modal.querySelector('#data-sharing').checked;
-                localData.userProfile.onboardingCompleted = modal.querySelector('#onboarding-completed').checked;
+                localData.userProfile.onboardingCompleted = true; // Mark as completed
                 
                 await saveData();
                 closeModal(modal);
@@ -892,550 +1284,87 @@
             });
         }
 
-        function setupEditProfileEventListeners(modal) {
-            const form = modal.querySelector('#edit-profile-form');
-            const deleteBtn = modal.querySelector('#delete-account-btn');
-            const user = auth.currentUser;
-            const isSSO = user && user.providerData && user.providerData.length > 0 &&
-                user.providerData.some(provider => provider.providerId !== 'password');
-
-            // Handle form submission
-            form.addEventListener('submit', async (e) => {
-                e.preventDefault();
-
-                try {
-                    // Show loading state
-                    const submitBtn = form.querySelector('button[type="submit"]');
-                    const originalText = submitBtn.innerHTML;
-                    submitBtn.innerHTML = '💾 Saving...';
-                    submitBtn.disabled = true;
-
-                    const selectedConditions = Array.from(form.querySelectorAll('input[name="conditions"]:checked'))
-                        .map(input => input.value);
-
-                    const updatedProfile = {
-                        ...localData.userProfile,
-                        displayName: form.querySelector('#display-name').value.trim(),
-                        dateOfBirth: form.querySelector('#date-of-birth').value || null,
-                        conditions: selectedConditions,
-                        emergencyContact: form.querySelector('#emergency-contact').value.trim() || null,
-                        medicalNotes: form.querySelector('#medical-notes').value.trim() || null,
-                        dataSharing: form.querySelector('#data-sharing').checked,
-                        onboardingCompleted: form.querySelector('#onboarding-completed').checked,
-                        lastUpdated: new Date().toISOString()
-                    };
-
-                    // Handle email update for non-SSO users
-                    if (!isSSO) {
-                        const newEmail = form.querySelector('#email').value.trim();
-                        if (newEmail && newEmail !== user.email) {
-                            // Note: Email updates require re-authentication in Firebase
-                            // For now, we'll just show a message about this
-                            showStatusMessage('Email updates require re-authentication. Please contact support if you need to change your email.', 'error');
-                            submitBtn.innerHTML = originalText;
-                            submitBtn.disabled = false;
-                            return;
-                        }
-                    }
-
-                    // Save profile data
-                    localData.userProfile = updatedProfile;
-                    await saveData();
-
-                    // Update display name in Firebase if it changed
-                    if (updatedProfile.displayName && updatedProfile.displayName !== user.displayName) {
-                        try {
-                            await user.updateProfile({
-                                displayName: updatedProfile.displayName
-                            });
-                            userIdDisplay.textContent = updatedProfile.displayName;
-                        } catch (error) {
-                            console.warn('Could not update Firebase display name:', error);
-                        }
-                    }
-
-                    closeModal(modal);
-                    renderProfile();
-                    showStatusMessage('Profile updated successfully! 🎉', 'success');
-
-                } catch (error) {
-                    console.error('Error updating profile:', error);
-                    showStatusMessage('Error updating profile. Please try again.', 'error');
-
-                    // Reset button state
-                    const submitBtn = form.querySelector('button[type="submit"]');
-                    submitBtn.innerHTML = '💾 Save Profile';
-                    submitBtn.disabled = false;
-                }
-            });
-
-            // Handle account deletion with enhanced confirmation
-            deleteBtn.addEventListener('click', async () => {
-                const dataCount = (localData.medicalRecords?.length || 0) +
-                    (localData.symptomTracking?.length || 0) +
-                    (localData.visitHistory?.length || 0);
-
-                if (!confirm(`⚠️ DELETE ACCOUNT CONFIRMATION\n\nThis will permanently delete:\n• Your profile and settings\n• ${dataCount} health records and entries\n• All visit history and achievements\n\nThis action CANNOT be undone.\n\nAre you sure you want to continue?`)) {
-                    return;
-                }
-
-                // Second confirmation with typing requirement
-                const confirmText = prompt(`To confirm deletion, please type "DELETE MY ACCOUNT" exactly:\n\n(This will permanently delete all your data)`);
-
-                if (confirmText !== 'DELETE MY ACCOUNT') {
-                    showStatusMessage('Account deletion cancelled. The confirmation text did not match.', 'error');
-                    return;
-                }
-
-                try {
-                    // Show deletion progress
-                    deleteBtn.innerHTML = '🗑️ Deleting...';
-                    deleteBtn.disabled = true;
-
-                    // Delete Firestore data
-                    await deleteDoc(docRef);
-
-                    // Delete Firebase Auth account
-                    await user.delete();
-
-                    showStatusMessage('Account deleted successfully. You will be signed out.', 'success');
-
-                    // Redirect after a delay
-                    setTimeout(() => {
-                        window.location.href = '/';
-                    }, 2000);
-
-                } catch (error) {
-                    console.error('Error deleting account:', error);
-
-                    if (error.code === 'auth/requires-recent-login') {
-                        showStatusMessage('For security, please sign out and sign back in, then try deleting your account again.', 'error');
-                    } else {
-                        showStatusMessage('Error deleting account. Please try again or contact support.', 'error');
-                    }
-
-                    // Reset button state
-                    deleteBtn.innerHTML = '🗑️ Delete Account';
-                    deleteBtn.disabled = false;
-                }
-            });
-
-            // Add dynamic condition counter
-            const conditionCheckboxes = modal.querySelectorAll('input[name="conditions"]');
-            const updateConditionCount = () => {
-                const checkedCount = modal.querySelectorAll('input[name="conditions"]:checked').length;
-                let countDisplay = modal.querySelector('#condition-count');
-
-                if (!countDisplay) {
-                    countDisplay = document.createElement('p');
-                    countDisplay.id = 'condition-count';
-                    countDisplay.className = 'text-sm font-medium text-purple-600 mt-2';
-                    modal.querySelector('h3').parentNode.appendChild(countDisplay);
-                }
-
-                countDisplay.textContent = `${checkedCount} condition${checkedCount !== 1 ? 's' : ''} selected`;
-            };
-
-            conditionCheckboxes.forEach(checkbox => {
-                checkbox.addEventListener('change', updateConditionCount);
-            });
-            updateConditionCount(); // Initial count
-        }
-
-        function setupAddRecordEventListeners(modal) {
-            const form = modal.querySelector('#add-record-form');
-
-            // Form submission
-            form.addEventListener('submit', async (e) => {
-                e.preventDefault();
-
-                // Collect condition-specific data
-                const conditionData = {};
-                const formData = new FormData(form);
-
-                for (let [key, value] of formData.entries()) {
-                    if (key.startsWith('condition_')) {
-                        const parts = key.split('_');
-                        const condition = parts[1];
-                        const field = parts.slice(2).join('_');
-
-                        if (!conditionData[condition]) conditionData[condition] = {};
-
-                        // Handle checkboxes
-                        if (form.querySelector(`[name="${key}"]`).type === 'checkbox') {
-                            conditionData[condition][field] = true;
-                        } else if (value) {
-                            conditionData[condition][field] = value;
-                        }
-                    }
-                }
-
-                const recordData = {
-                    id: `${new Date().toISOString()}_${Math.random().toString(36).substr(2, 9)}`,
-                    timestamp: new Date().toISOString(),
-                    date: modal.querySelector('#visit-date').value,
-                    time: modal.querySelector('#visit-time').value || null,
-                    hospital: modal.querySelector('#hospital-select').value,
-                    visitType: modal.querySelector('#visit-type').value,
-                    notes: modal.querySelector('#visit-notes').value || null,
-                    conditionData: Object.keys(conditionData).length > 0 ? conditionData : null
-                };
-
-                if (!localData.medicalRecords) localData.medicalRecords = [];
-                localData.medicalRecords.unshift(recordData);
-
-                if (recordData.conditionData) {
-                    if (!localData.symptomTracking) localData.symptomTracking = [];
-                    const symptomEntry = {
-                        id: recordData.id,
-                        date: recordData.date,
-                        timestamp: recordData.timestamp,
-                        hospital: recordData.hospital,
-                        visitType: recordData.visitType,
-                        conditions: recordData.conditionData,
-                        isSymptomOnly: false
-                    };
-                    localData.symptomTracking.unshift(symptomEntry);
-                }
-
-                const hospitalIndex = (localData.hospitals || []).findIndex(h => h.name === recordData.hospital);
-                if (hospitalIndex !== -1) {
-                    localData.hospitals[hospitalIndex].visited = true;
-                    localData.hospitals[hospitalIndex].count++;
-                }
-
-                await saveData();
-
-                closeModal(modal);
-
-                renderProfile();
-
-                showStatusMessage('Medical record added successfully!', 'success');
-            });
-        }
-
-        function generateConditionQuestionsForRecord(userConditions) {
-            if (!userConditions || userConditions.length === 0) return '';
-
-            const conditionQuestions = {
-                'epilepsy': [
-                    { id: 'seizure_occurred', type: 'checkbox', label: 'Did you have a seizure during this visit?' },
-                    { id: 'seizure_frequency', type: 'text', label: 'Recent seizure frequency', placeholder: 'e.g., 2 this week' }
-                ],
-                'autism': [
-                    { id: 'sensory_issues', type: 'checkbox', label: 'Did you experience sensory overload?' },
-                    { id: 'anxiety_level', type: 'select', label: 'Anxiety level during visit', options: ['Low', 'Medium', 'High', 'Severe'] }
-                ],
-                'diabetes': [
-                    { id: 'blood_sugar_check', type: 'text', label: 'Blood sugar level (if checked)', placeholder: 'e.g., 120 mg/dL' },
-                    { id: 'hypo_symptoms', type: 'checkbox', label: 'Did you experience hypoglycemic symptoms?' }
-                ],
-                'mental_health': [
-                    { id: 'panic_attack', type: 'checkbox', label: 'Did you have a panic attack?' },
-                    { id: 'mood_rating', type: 'select', label: 'Overall mood during visit', options: ['Very Low', 'Low', 'Neutral', 'Good', 'Very Good'] }
-                ],
-                'chronic_pain': [
-                    { id: 'pain_level', type: 'select', label: 'Pain level (1-10)', options: ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10'] }
-                ]
-            };
-
-            let questionsHTML = '';
-
-            userConditions.forEach(condition => {
-                const questions = conditionQuestions[condition];
-                if (questions) {
-                    questionsHTML += `
-                <div class="mb-4 p-3 bg-white rounded-lg border border-gray-200">
-                    <h5 class="font-medium text-gray-900 mb-3 capitalize">${condition.replace('_', ' ')} Related</h5>
-                    <div class="space-y-3">
-                        ${questions.map(q => {
-                        switch (q.type) {
-                            case 'checkbox':
-                                return `
-                                        <label class="flex items-center">
-                                            <input type="checkbox" name="condition_${condition}_${q.id}" 
-                                                   class="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded">
-                                            <span class="ml-2 text-sm text-gray-700">${q.label}</span>
-                                        </label>
-                                    `;
-                            case 'select':
-                                return `
-                                        <div>
-                                            <label class="block text-sm font-medium text-gray-700 mb-1">${q.label}</label>
-                                            <select name="condition_${condition}_${q.id}" 
-                                                    class="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
-                                                <option value="">Select...</option>
-                                                ${q.options.map(opt => `<option value="${opt}">${opt}</option>`).join('')}
-                                            </select>
-                                        </div>
-                                    `;
-                            default: // text
-                                return `
-                                        <div>
-                                            <label class="block text-sm font-medium text-gray-700 mb-1">${q.label}</label>
-                                            <input type="text" name="condition_${condition}_${q.id}" 
-                                                   placeholder="${q.placeholder || ''}"
-                                                   class="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
-                                        </div>
-                                    `;
-                        }
-                    }).join('')}
+        function showDeleteAccountConfirmation() {
+            const confirmContent = `
+                <div class="text-center space-y-4">
+                    <div class="text-red-500 text-6xl">⚠️</div>
+                    <h3 class="text-xl font-bold text-red-800">Delete Account</h3>
+                    <p class="text-gray-700">Are you absolutely sure you want to delete your account?</p>
+                    <p class="text-sm text-red-600 bg-red-50 p-3 rounded-lg">
+                        This will permanently delete all your data. This action cannot be undone.
+                    </p>
+                    <div class="flex justify-center space-x-3 pt-4">
+                        <button class="cancel-btn px-6 py-2 text-gray-600 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors">Cancel</button>
+                        <button id="confirm-delete-btn" class="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors">Yes, Delete My Account</button>
                     </div>
                 </div>
             `;
-                }
-            });
-
-            return questionsHTML;
-        }
-
-        function showHistoryDetails(entryId) {
-            const historyEntry = localData.visitHistory?.find(h => h.id === entryId);
-            if (!historyEntry) return;
-
-            const date = new Date(historyEntry.timestamp);
-            const icon = historyEntry.type === 'hospitals' ? '🏥' : '🚑';
-
-            const content = `
-                <div class="space-y-4">
-                    <div class="flex items-start space-x-4 p-4 bg-gray-50 rounded-lg">
-                        <div class="text-3xl">${icon}</div>
-                        <div class="flex-grow">
-                            <h3 class="text-lg font-semibold text-gray-900">${historyEntry.name}</h3>
-                            ${historyEntry.city ? `<p class="text-sm text-gray-600">${historyEntry.city}</p>` : ''}
-                            <p class="text-sm text-gray-500 mt-1">${date.toLocaleString()}</p>
-                        </div>
-                    </div>
-                    
-                    <div class="grid grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Type</label>
-                            <p class="text-sm text-gray-900 capitalize">${historyEntry.type.replace('s', '')}</p>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Action</label>
-                            <p class="text-sm text-gray-900">${getActionText(historyEntry.action, historyEntry.previousCount, historyEntry.newCount)}</p>
-                        </div>
-                    </div>
-                    
-                    <!-- Notes Section -->
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Notes</label>
-                        <textarea id="entry-notes" rows="3" 
-                                  placeholder="Add notes about this visit..."
-                                  class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500">${historyEntry.notes || ''}</textarea>
-                    </div>
-                    
-                    <div class="flex justify-between pt-4 border-t">
-                        <button id="save-notes-btn" 
-                                class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
-                            Save Notes
-                        </button>
-                        <div class="space-x-3">
-                            <button class="close-modal-btn px-4 py-2 text-gray-600 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors">
-                                Close
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            `;
-
-            const modal = createModal('history-detail-modal', 'Visit History Details', content, 'max-w-lg');
+            const modal = createModal('delete-confirm-modal', 'Confirm Account Deletion', confirmContent, 'max-w-md');
             openModal(modal);
-
-            modal.querySelector('#save-notes-btn').addEventListener('click', () => saveEntryNotes(entryId));
+            
+            modal.querySelector('.cancel-btn').addEventListener('click', () => closeModal(modal));
+            modal.querySelector('#confirm-delete-btn').addEventListener('click', confirmDeleteAccount);
         }
 
-        async function saveEntryNotes(entryId) {
-            const notesTextarea = document.getElementById('entry-notes');
-            if (!notesTextarea) return;
-
-            const entryIndex = localData.visitHistory?.findIndex(h => h.id === entryId);
-            if (entryIndex === -1) return;
-
-            localData.visitHistory[entryIndex].notes = notesTextarea.value;
-
-            await saveData();
-            renderProfile();
-            closeModal(document.getElementById('history-detail-modal'));
-            showStatusMessage('Notes saved successfully!', 'success');
-        }
-
-        async function deleteHistoryEntry(entryId) {
-            if (!confirm('Are you sure you want to delete this history entry?')) {
-                return;
+        async function confirmDeleteAccount() {
+            try {
+                if (docRef) {
+                    await deleteDoc(docRef);
+                }
+                const user = auth.currentUser;
+                if (user) {
+                    await user.delete();
+                }
+                closeModal(document.getElementById('delete-confirm-modal'));
+                showStatusMessage('Account deleted successfully.', 'success');
+            } catch (error) {
+                console.error('Error deleting account:', error);
+                showStatusMessage('Error deleting account. Please sign out and sign back in to try again.', 'error');
             }
-
-            const entryIndex = localData.visitHistory?.findIndex(h => h.id === entryId);
-            if (entryIndex === -1) return;
-
-            localData.visitHistory.splice(entryIndex, 1);
-
-            await saveData();
-            renderProfile();
-
-            const detailModal = document.getElementById('history-detail-modal');
-            if (detailModal) {
-                closeModal(detailModal);
-            }
-
-            showStatusMessage('History entry deleted successfully!', 'success');
         }
-
+        
         function showHelpModal() {
             const userIdText = userId ? userId : 'Not signed in';
             const helpContent = `
-                <div class="space-y-4">
-                    <div class="text-center pb-3 border-b">
+                <div class="space-y-6">
+                    <div class="text-center pb-4 border-b">
                         <h3 class="text-xl font-semibold text-gray-900">Help & Support</h3>
-                        <p class="text-sm text-gray-600 mt-1">Everything you need to know about Visit Tracker</p>
+                        <p class="text-sm text-gray-600 mt-2">Need help with Visit Tracker? Here's everything you need to know.</p>
                     </div>
                     
-                    <!-- Main Content Grid -->
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        
-                        <!-- Left Column: Quick Start & Features -->
-                        <div class="space-y-4">
-                            <!-- Quick Start -->
-                            <div class="bg-green-50 p-4 rounded-lg">
-                                <h4 class="font-semibold text-green-900 mb-3 flex items-center">
-                                    🚀 Quick Start Guide
-                                </h4>
-                                <ul class="text-sm text-green-800 space-y-1.5">
-                                    <li class="flex items-start">
-                                        <span class="text-green-600 mr-2">1.</span>
-                                        <span>Sign in to save progress across devices</span>
-                                    </li>
-                                    <li class="flex items-start">
-                                        <span class="text-green-600 mr-2">2.</span>
-                                        <span>Check off hospitals and trusts you've visited</span>
-                                    </li>
-                                    <li class="flex items-start">
-                                        <span class="text-green-600 mr-2">3.</span>
-                                        <span>Use +/- buttons for multiple visits</span>
-                                    </li>
-                                    <li class="flex items-start">
-                                        <span class="text-green-600 mr-2">4.</span>
-                                        <span>Add detailed records with "Add Record"</span>
-                                    </li>
-                                    <li class="flex items-start">
-                                        <span class="text-green-600 mr-2">5.</span>
-                                        <span>View progress and awards in your profile</span>
-                                    </li>
-                                </ul>
-                            </div>
-
-                            <!-- Features -->
-                            <div class="bg-blue-50 p-4 rounded-lg">
-                                <h4 class="font-semibold text-blue-900 mb-3 flex items-center">
-                                    ✨ Key Features
-                                </h4>
-                                <div class="grid grid-cols-1 gap-2 text-sm text-blue-800">
-                                    <div class="flex items-center">
-                                        <span class="text-blue-600 mr-2">🏥</span>
-                                        <span>Track hospital visits</span>
-                                    </div>
-                                    <div class="flex items-center">
-                                        <span class="text-blue-600 mr-2">🚑</span>
-                                        <span>Monitor ambulance trusts</span>
-                                    </div>
-                                    <div class="flex items-center">
-                                        <span class="text-blue-600 mr-2">📊</span>
-                                        <span>View statistics & maps</span>
-                                    </div>
-                                    <div class="flex items-center">
-                                        <span class="text-blue-600 mr-2">🏆</span>
-                                        <span>Unlock achievements</span>
-                                    </div>
-                                    <div class="flex items-center">
-                                        <span class="text-blue-600 mr-2">📋</span>
-                                        <span>Log medical records</span>
-                                    </div>
-                                    <div class="flex items-center">
-                                        <span class="text-blue-600 mr-2">📈</span>
-                                        <span>Track symptoms</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Right Column: Support & Account -->
-                        <div class="space-y-4">
-                            <!-- Support Contact -->
-                            <div class="bg-purple-50 p-4 rounded-lg">
-                                <h4 class="font-semibold text-purple-900 mb-3 flex items-center">
-                                    📧 Get Support
-                                </h4>
-                                <p class="text-sm text-purple-800 mb-3">Need help or found a bug? Contact support:</p>
-                                <div class="bg-white p-3 rounded border text-xs font-mono text-gray-600 space-y-1">
-                                    <div class="flex justify-between">
-                                        <span class="font-medium">User ID:</span>
-                                        <span class="text-purple-600">${userIdText}</span>
-                                    </div>
-                                    <div class="flex justify-between">
-                                        <span class="font-medium">Email:</span>
-                                        <a href="mailto:jack@whitehill.group?subject=Support Request - ${userIdText}" 
-                                           class="text-purple-600 hover:underline">jack@whitehill.group</a>
-                                    </div>
-                                </div>
-                                <p class="text-xs text-purple-600 mt-2">
-                                    💡 Include your User ID for faster assistance
-                                </p>
-                            </div>
-
-                            <!-- Privacy & Community -->
-                            <div class="bg-yellow-50 p-4 rounded-lg">
-                                <h4 class="font-semibold text-yellow-900 mb-3 flex items-center">
-                                    🛡️ Privacy & Community
-                                </h4>
-                                <div class="text-sm text-yellow-800 space-y-2">
-                                    <p><strong>Your Privacy:</strong> Health data stays secure and private</p>
-                                    <p><strong>Community Use:</strong> Please don't misuse NHS services for tracking</p>
-                                    <p><strong>Purpose:</strong> Find encouragement in your health journey</p>
-                                </div>
-                            </div>
-
-                            <!-- Keyboard Shortcuts -->
-                            <div class="bg-gray-50 p-4 rounded-lg">
-                                <h4 class="font-semibold text-gray-900 mb-3 flex items-center">
-                                    ⌨️ Tips & Shortcuts
-                                </h4>
-                                <div class="text-sm text-gray-700 space-y-1">
-                                    <div class="flex justify-between">
-                                        <span>Search lists:</span>
-                                        <span class="font-mono bg-gray-200 px-1 rounded text-xs">Type to filter</span>
-                                    </div>
-                                    <div class="flex justify-between">
-                                        <span>Quick add:</span>
-                                        <span class="font-mono bg-gray-200 px-1 rounded text-xs">+ button</span>
-                                    </div>
-                                    <div class="flex justify-between">
-                                        <span>View profile:</span>
-                                        <span class="font-mono bg-gray-200 px-1 rounded text-xs">My Profile button</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+                    <!-- Quick Start -->
+                    <div>
+                        <h4 class="font-semibold text-gray-900 mb-3">🚀 Quick Start</h4>
+                        <ul class="text-sm text-gray-700 space-y-2 ml-4">
+                            <li>• Sign in to save your progress across devices</li>
+                            <li>• Check off hospitals and ambulance trusts you've visited</li>
+                            <li>• Use + and - buttons to track multiple visits</li>
+                            <li>• Add detailed medical records with the "Add Record" button</li>
+                            <li>• View your progress and achievements in your profile</li>
+                        </ul>
                     </div>
                     
-                    <!-- Close Button -->
-                    <div class="flex justify-end pt-3 border-t">
-                        <button type="button" class="close-modal-btn px-6 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors font-medium">
-                            Close
-                        </button>
+                    <!-- Support -->
+                    <div class="bg-blue-50 p-4 rounded-lg">
+                        <h4 class="font-semibold text-blue-900 mb-3">📧 Need More Help?</h4>
+                        <p class="text-sm text-blue-800 mb-3">If you need assistance or want to report a bug, please contact support:</p>
+                        <div class="bg-white p-3 rounded border text-xs font-mono text-gray-600">
+                            <p><strong>Your User ID:</strong> ${userIdText}</p>
+                            <p><strong>Email:</strong> <a href="mailto:support@visittracker.app?subject=Support Request - ${userIdText}" class="text-blue-600 hover:underline">support@visittracker.app</a></p>
+                        </div>
+                        <p class="text-xs text-blue-600 mt-2">Include your User ID when contacting support for faster assistance.</p>
                     </div>
                 </div>
             `;
 
-            const modal = createModal('help-modal', 'Help & Support', helpContent, 'max-w-4xl');
+            const modal = createModal('help-modal', 'Help & Support', helpContent, 'max-w-2xl');
             openModal(modal);
         }
 
-        // Make functions globally available
-        window.showAddRecordModal = showAddRecordModal;
-
         // Initialize event listeners for static elements
-        document.getElementById('add-record-btn').addEventListener('click', showAddRecordModal);
+        document.getElementById('add-record-btn').addEventListener('click', () => {
+            showStatusMessage('Add record functionality coming soon!', 'success');
+        });
         document.getElementById('help-btn').addEventListener('click', showHelpModal);
     </script>
 </body>
