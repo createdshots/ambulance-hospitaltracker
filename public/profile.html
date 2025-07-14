@@ -423,44 +423,52 @@
 
         function setupProfileEventListeners() {
             profileContent.addEventListener('click', (e) => {
-                if (e.target.closest('.profile-tab-btn')) {
-                    const targetTab = e.target.closest('.profile-tab-btn').dataset.tab;
+                const target = e.target;
+
+                // Handle Tab Clicks
+                if (target.closest('.profile-tab-btn')) {
+                    const tabButton = target.closest('.profile-tab-btn');
+                    const targetTab = tabButton.dataset.tab;
                     document.querySelectorAll('.profile-tab-btn').forEach(b => {
                         b.className = 'profile-tab-btn border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm';
                     });
-                    e.target.closest('.profile-tab-btn').className = 'profile-tab-btn border-purple-500 text-purple-600 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm';
+                    tabButton.className = 'profile-tab-btn border-purple-500 text-purple-600 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm';
 
                     const contentArea = document.getElementById('profile-tab-content');
                     switch (targetTab) {
-                        case 'history':
-                            contentArea.innerHTML = createHistoryTab(localData.visitHistory || []);
-                            break;
-                        case 'records':
-                            contentArea.innerHTML = createRecordsTab();
-                            break;
-                        case 'achievements':
-                            contentArea.innerHTML = createAchievementsTab();
-                            break;
-                        case 'analytics':
-                            contentArea.innerHTML = createAnalyticsTab();
-                            break;
-                        case 'symptoms':
-                            contentArea.innerHTML = createSymptomsTab();
-                            break;
+                        case 'history': contentArea.innerHTML = createHistoryTab(localData.visitHistory || []); break;
+                        case 'records': contentArea.innerHTML = createRecordsTab(); break;
+                        case 'achievements': contentArea.innerHTML = createAchievementsTab(); break;
+                        case 'analytics': contentArea.innerHTML = createAnalyticsTab(); break;
+                        case 'symptoms': contentArea.innerHTML = createSymptomsTab(); break;
                     }
-                } else if (e.target.id === 'edit-profile-btn') {
+                }
+
+                // Handle Edit Profile Button
+                if (target.id === 'edit-profile-btn') {
                     showEditProfileModal();
-                } else if (e.target.id === 'add-first-record-btn') {
-                    showAddRecordModal();
-                } else if (e.target.closest('[data-action="delete-history"]')) {
-                    const entryId = e.target.closest('[data-entry-id]').dataset.entryId;
-                    deleteHistoryEntry(entryId);
-                } else if (e.target.closest('.history-entry')) {
-                    const entryId = e.target.closest('.history-entry').dataset.entryId;
-                    showHistoryDetails(entryId);
+                }
+
+                // Handle "Add First Record" button inside an empty tab
+                if (target.id === 'add-first-record-btn') {
+                    document.getElementById('add-record-btn').click();
+                }
+
+                // Handle History Entry Clicks (for details or deletion)
+                if (target.closest('.history-entry')) {
+                    const entryElement = target.closest('.history-entry');
+                    const entryId = entryElement.dataset.entryId;
+                    if (target.dataset.action === 'delete-history') {
+                        deleteHistoryEntry(entryId);
+                    } else {
+                        showHistoryDetails(entryId);
+                    }
                 }
             });
+            document.getElementById('add-record-btn').addEventListener('click', showAddRecordModal);
+            document.getElementById('help-btn').addEventListener('click', showHelpModal);
         }
+
 
         // Tab creation functions
         function createHistoryTab(history) {
