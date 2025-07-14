@@ -236,6 +236,16 @@
             'visits_100': { name: 'Century Club', description: 'Accumulate 100 total visits.', icon: '&#127941;' }
         };
 
+        function setupEventListeners() {
+            document.getElementById('signout-btn').addEventListener('click', () => signOut(auth));
+            document.getElementById('google-signin-btn').addEventListener('click', () => {
+                const provider = new GoogleAuthProvider();
+                signInWithPopup(auth, provider).catch(error => showStatusMessage(error.message, 'error'));
+            });
+            document.getElementById('anon-signin-btn').addEventListener('click', () => {
+                signInAnonymously(auth).catch(error => showStatusMessage(error.message, 'error'));
+            });
+
         function initializeAppLogic() {
             // Check for config files first
             if (typeof userFirebaseConfig === 'undefined') {
