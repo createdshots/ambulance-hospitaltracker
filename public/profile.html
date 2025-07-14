@@ -1567,7 +1567,7 @@
             // Setup event listeners for this modal
             setupAddRecordEventListeners(modal);
         };
-        window.showAddRecordModal = showAddRecordModal;
+        document.getElementById('addRecordBtn').addEventListener('click', showAddRecordModal);
 
         // Initialize event listeners for static elements after DOM is ready
         document.addEventListener('DOMContentLoaded', () => {
