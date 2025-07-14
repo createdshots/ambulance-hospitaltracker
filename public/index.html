@@ -265,13 +265,6 @@
                 loadingIndicator.classList.remove('loader-hidden');
                 loaderText.textContent = 'Loading data...';
                 setupSnapshotListener();
-
-                // Check for onboarding after data loads
-                setTimeout(() => {
-                    if (!localData.userProfile?.onboardingCompleted) {
-                        showOnboardingQuestionnaire();
-                    }
-                }, 2000);
             } else {
                 userId = null;
                 authSignedInView.style.display = 'none';
@@ -327,47 +320,24 @@
         // --- Firestore Data Handling ---
         function setupSnapshotListener() {
             if (!docRef) return;
-            let initialLoadComplete = false;
 
-            unsubscribe = onSnapshot(docRef, async (snapshot) => {
-                if (initialLoadComplete) {
-                    if (snapshot.exists()) {
-                        localData = snapshot.data();
-                    } else {
-                        localData = { hospitals: [], ambulance: [], awards: [] };
-                    }
-                    renderAll();
-                    return;
+            unsubscribe = onSnapshot(docRef, (snapshot) => {
+                if (snapshot.exists()) {
+                    localData = { ...localData, ...snapshot.data() };
                 }
-
-                let needsSave = false;
-                const data = snapshot.exists() ? snapshot.data() : {};
-                localData = { hospitals: [], ambulance: [], awards: [], ...data };
-
-                // Load hospital data from file if we don't have the expected amount
-                if (!localData.hospitals || localData.hospitals.length < 100) { // Assuming you should have hundreds of hospitals
-                    localData.hospitals = await loadListFromFile('hospitals');
-                    needsSave = true;
-                }
-
-                // Load ambulance data from file if we don't have the expected amount
-                if (!localData.ambulance || localData.ambulance.length < 10) { // You have 12 ambulance trusts in your txt file
-                    localData.ambulance = await loadListFromFile('ambulance');
-                    needsSave = true;
-                }
-
+                
+                renderAll();
                 loadingIndicator.classList.add('loader-hidden');
-                initialLoadComplete = true;
-
-                if (needsSave) {
-                    await saveData();
-                } else {
-                    renderAll();
+                
+                // NOW check for onboarding after data is loaded and user is authenticated
+                if (!localData.userProfile?.onboardingCompleted) {
+                    setTimeout(() => {
+                        showOnboardingQuestionnaire();
+                    }, 500); // Small delay to ensure UI is ready
                 }
-
             }, (error) => {
                 console.error("Snapshot listener error:", error);
-                showStatusMessage("Error connecting to data sync.", "error");
+                showStatusMessage("Error loading data.", "error");
                 loadingIndicator.classList.add('loader-hidden');
             });
         }
@@ -492,10 +462,13 @@
 
         // --- Rendering ---
         function renderAll() {
-            renderList('hospitals', localData.hospitals, document.getElementById('hospital-search').value);
-            renderList('ambulance', localData.ambulance, document.getElementById('ambulance-search').value);
-            renderStats('hospitals', localData.hospitals);
-            renderStats('ambulance', localData.ambulance);
+            renderHospitals();
+            renderAmbulance();
+            
+            // Add symptom tracking section if user has conditions
+            if (localData.userProfile?.conditions?.length > 0) {
+                addSymptomTrackingSection();
+            }
         }
 
         function renderList(type, data, searchTerm) {
@@ -571,8 +544,6 @@
                 return null;
             }
         }
-
-        // ...existing code...
 
         function checkAwards() {
             const visitedHospitals = localData.hospitals.filter(h => h.visited).length;
@@ -1055,6 +1026,252 @@
                     closeModal(modal);
                 });
             }, 50); // Small delay to ensure DOM is ready
+        }
+
+        // --- Symptom Tracking ---
+        function addSymptomTrackingSection() {
+            const container = document.querySelector('.container');
+            const existingSection = document.getElementById('symptom-tracking-section');
+            
+            // Remove existing section if it exists
+            if (existingSection) {
+                existingSection.remove();
+            }
+            
+            const symptomSection = document.createElement('div');
+            symptomSection.id = 'symptom-tracking-section';
+            symptomSection.className = 'mt-8 p-6 bg-blue-50 border border-blue-200 rounded-xl';
+            
+            const recentSymptoms = localData.symptomTracking?.slice(0, 3) || [];
+            
+            symptomSection.innerHTML = `
+                <div class="flex justify-between items-center mb-4">
+                    <div>
+                        <h3 class="text-lg font-semibold text-blue-900">📊 Symptom Tracking</h3>
+                        <p class="text-sm text-blue-700">Quick access to log your symptoms and view recent entries</p>
+                    </div>
+                    <div class="space-x-2">
+                        <button id="quick-symptom-btn" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
+                            Log Symptoms
+                        </button>
+                        <a href="/profile.html" class="bg-blue-100 text-blue-800 px-4 py-2 rounded-lg hover:bg-blue-200 transition-colors">
+                            View All
+                        </a>
+                    </div>
+                </div>
+                
+                ${recentSymptoms.length > 0 ? `
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        ${recentSymptoms.map(entry => {
+                            const date = new Date(entry.date);
+                            return `
+                                <div class="bg-white p-3 rounded-lg border border-blue-200">
+                                    <p class="font-medium text-gray-900 text-sm">${entry.hospital}</p>
+                                    <p class="text-xs text-gray-600">${date.toLocaleDateString()}</p>
+                                    <div class="mt-1">
+                                        ${Object.keys(entry.conditions || {}).map(condition => 
+                                            `<span class="inline-block bg-blue-100 text-blue-800 px-1 py-0.5 rounded text-xs mr-1">${condition}</span>`
+                                        ).join('')}
+                                    </div>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                ` : `
+                    <div class="text-center py-4">
+                        <p class="text-blue-700 text-sm">No symptoms logged yet. Click "Log Symptoms" to get started!</p>
+                    </div>
+                `}
+            `;
+            
+            // Insert after the warning message but before the buttons
+            const warningMessage = document.querySelector('.bg-yellow-100');
+            if (warningMessage) {
+                warningMessage.parentNode.insertBefore(symptomSection, warningMessage.nextSibling);
+            }
+            
+            // Add event listener for quick symptom button
+            document.getElementById('quick-symptom-btn').addEventListener('click', showQuickSymptomForm);
+        }
+
+        function showQuickSymptomForm() {
+            const userConditions = localData.userProfile?.conditions || [];
+            
+            const modalContent = `
+                <form id="quick-symptom-form" class="space-y-4">
+                    <div class="text-center mb-4">
+                        <h3 class="text-lg font-semibold text-gray-900">Quick Symptom Log</h3>
+                        <p class="text-sm text-gray-600">Log symptoms without a hospital visit</p>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label for="symptom-date" class="block text-sm font-medium text-gray-700 mb-2">Date</label>
+                            <input type="date" id="symptom-date" required 
+                                   value="${new Date().toISOString().split('T')[0]}"
+                                   class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                        <div>
+                            <label for="symptom-time" class="block text-sm font-medium text-gray-700 mb-2">Time (Optional)</label>
+                            <input type="time" id="symptom-time" 
+                                   class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <label for="symptom-location" class="block text-sm font-medium text-gray-700 mb-2">Location (Optional)</label>
+                        <input type="text" id="symptom-location" placeholder="e.g., Home, Work, School" 
+                               class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    
+                    <!-- Condition-Specific Quick Questions -->
+                    <div class="space-y-4">
+                        ${userConditions.map(condition => {
+                            return generateQuickConditionQuestions(condition);
+                        }).join('')}
+                    </div>
+                    
+                    <div>
+                        <label for="symptom-notes" class="block text-sm font-medium text-gray-700 mb-2">Additional Notes</label>
+                        <textarea id="symptom-notes" rows="3" 
+                                  placeholder="Any additional details about your symptoms..."
+                                  class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"></textarea>
+                    </div>
+                    
+                    <div class="flex justify-end space-x-3 pt-4 border-t">
+                        <button type="button" class="close-modal-btn px-4 py-2 text-gray-600 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors">
+                            Cancel
+                        </button>
+                        <button type="submit" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                            Log Symptoms
+                        </button>
+                    </div>
+                </form>
+            `;
+            
+            const modal = createModal('quick-symptom-modal', 'Quick Symptom Log', modalContent, 'max-w-2xl');
+            openModal(modal);
+            
+            // Handle form submission
+            document.getElementById('quick-symptom-form').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                
+                // Collect condition data
+                const conditionData = {};
+                const formData = new FormData(e.target);
+                
+                for (let [key, value] of formData.entries()) {
+                    if (key.startsWith('condition_')) {
+                        const parts = key.split('_');
+                        const condition = parts[1];
+                        const field = parts.slice(2).join('_');
+                        
+                        if (!conditionData[condition]) conditionData[condition] = {};
+                        
+                        if (e.target.querySelector(`[name="${key}"]`).type === 'checkbox') {
+                            conditionData[condition][field] = true;
+                        } else if (value) {
+                            conditionData[condition][field] = value;
+                        }
+                    }
+                }
+                
+                const symptomEntry = {
+                    id: `symptom_${new Date().toISOString()}_${Math.random().toString(36).substr(2, 9)}`,
+                    date: document.getElementById('symptom-date').value,
+                    time: document.getElementById('symptom-time').value || null,
+                    timestamp: new Date().toISOString(),
+                    location: document.getElementById('symptom-location').value || 'Not specified',
+                    hospital: 'Symptom Log',
+                    visitType: 'symptom_tracking',
+                    conditions: conditionData,
+                    notes: document.getElementById('symptom-notes').value || null,
+                    isSymptomOnly: true
+                };
+                
+                // Add to symptom tracking
+                if (!localData.symptomTracking) localData.symptomTracking = [];
+                localData.symptomTracking.unshift(symptomEntry);
+                
+                // Keep only last 500 entries
+                if (localData.symptomTracking.length > 500) {
+                    localData.symptomTracking = localData.symptomTracking.slice(0, 500);
+                }
+                
+                await saveData();
+                renderAll(); // This will update the symptom section
+                closeModal(modal);
+                showStatusMessage('Symptoms logged successfully!', 'success');
+            });
+        }
+
+        // Add this function for quick condition questions
+        function generateQuickConditionQuestions(condition) {
+            const quickQuestions = {
+                'epilepsy': [
+                    { id: 'seizure_occurred', type: 'checkbox', label: 'Had a seizure?' },
+                    { id: 'aura_symptoms', type: 'checkbox', label: 'Experienced aura symptoms?' }
+                ],
+                'diabetes': [
+                    { id: 'blood_sugar', type: 'text', label: 'Blood sugar level', placeholder: 'mg/dL' },
+                    { id: 'hypo_symptoms', type: 'checkbox', label: 'Hypoglycemic symptoms?' }
+                ],
+                'chronic_pain': [
+                    { id: 'pain_level', type: 'select', label: 'Pain level (1-10)', options: ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10'] }
+                ],
+                'mental_health': [
+                    { id: 'anxiety_level', type: 'select', label: 'Anxiety level', options: ['Low', 'Medium', 'High', 'Severe'] },
+                    { id: 'panic_attack', type: 'checkbox', label: 'Panic attack?' }
+                ],
+                'autism': [
+                    { id: 'sensory_overload', type: 'checkbox', label: 'Sensory overload?' },
+                    { id: 'meltdown', type: 'checkbox', label: 'Meltdown occurred?' }
+                ]
+            };
+            
+            const questions = quickQuestions[condition] || [];
+            
+            if (questions.length === 0) return '';
+            
+            return `
+                <div class="p-3 bg-gray-50 rounded-lg border border-gray-200">
+                    <h4 class="font-medium text-gray-900 mb-2 capitalize">${condition.replace('_', ' ')}</h4>
+                    <div class="space-y-2">
+                        ${questions.map(q => {
+                            switch (q.type) {
+                                case 'checkbox':
+                                    return `
+                                        <label class="flex items-center">
+                                            <input type="checkbox" name="condition_${condition}_${q.id}" 
+                                                   class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                                            <span class="ml-2 text-sm text-gray-700">${q.label}</span>
+                                        </label>
+                                    `;
+                                case 'select':
+                                    return `
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 mb-1">${q.label}</label>
+                                            <select name="condition_${condition}_${q.id}" 
+                                                    class="w-full p-1 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                                <option value="">Select...</option>
+                                                ${q.options.map(opt => `<option value="${opt}">${opt}</option>`).join('')}
+                                            </select>
+                                        </div>
+                                    `;
+                                default: // text
+                                    return `
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 mb-1">${q.label}</label>
+                                            <input type="text" name="condition_${condition}_${q.id}" 
+                                                   placeholder="${q.placeholder || ''}"
+                                                   class="w-full p-1 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                        </div>
+                                    `;
+                            }
+                        }).join('')}
+                    </div>
+                </div>
+            `;
         }
     </script>
 </body>

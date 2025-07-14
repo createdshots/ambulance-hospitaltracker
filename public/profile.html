@@ -719,6 +719,35 @@
 
             // Set up initial history listeners
             setupHistoryEventListeners();
+
+            // Add symptom subtab handling
+            document.addEventListener('click', (e) => {
+                if (e.target.classList.contains('symptom-subtab-btn')) {
+                    const subtab = e.target.dataset.subtab;
+                    
+                    // Update subtab buttons
+                    document.querySelectorAll('.symptom-subtab-btn').forEach(btn => {
+                        btn.className = 'symptom-subtab-btn border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm';
+                    });
+                    e.target.className = 'symptom-subtab-btn border-blue-500 text-blue-600 whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm';
+                    
+                    // Update content
+                    const content = document.getElementById('symptom-subtab-content');
+                    const symptomData = localData.symptomTracking || [];
+                    
+                    switch (subtab) {
+                        case 'all':
+                            content.innerHTML = createSymptomList(symptomData, 'All Symptoms');
+                            break;
+                        case 'visits':
+                            content.innerHTML = createSymptomList(symptomData.filter(e => !e.isSymptomOnly), 'Medical Visit Symptoms');
+                            break;
+                        case 'standalone':
+                            content.innerHTML = createSymptomList(symptomData.filter(e => e.isSymptomOnly), 'Symptom Logs');
+                            break;
+                    }
+                }
+            });
         }
 
         // Add this after the setupProfileEventListeners function
@@ -1263,7 +1292,7 @@
                         <div class="text-gray-400 text-6xl mb-4">📊</div>
                         <h3 class="text-xl font-medium text-gray-900 mb-2">No conditions being tracked</h3>
                         <p class="text-gray-500 mb-6">Set up condition tracking in your profile to see symptom analytics here.</p>
-                        <button onclick="document.querySelector('[data-tab=\\"symptoms\\"]').click(); setTimeout(() => document.getElementById('edit-profile-btn').click(), 100);" 
+                        <button onclick="document.getElementById('edit-profile-btn').click();" 
                                 class="bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 transition-colors">
                             Set Up Tracking
                         </button>
@@ -1276,47 +1305,63 @@
                     <div class="profile-tab-panel text-center py-12" data-tab="symptoms">
                         <div class="text-gray-400 text-6xl mb-4">📊</div>
                         <h3 class="text-xl font-medium text-gray-900 mb-2">No symptom data yet</h3>
-                        <p class="text-gray-500 mb-6">Add medical records with condition-specific information to see trends here.</p>
-                        <button onclick="document.getElementById('add-record-btn').click()" 
-                                class="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition-colors">
-                            Add First Record
-                        </button>
+                        <p class="text-gray-500 mb-6">Add medical records with condition-specific information or use the quick symptom tracker on the main page.</p>
+                        <div class="space-x-3">
+                            <button class="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition-colors" onclick="document.getElementById('add-record-btn').click()">
+                                Add Medical Record
+                            </button>
+                            <a href="/" class="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors inline-block">
+                                Quick Symptom Log
+                            </a>
+                        </div>
                     </div>
                 `;
             }
 
+            // Separate medical visit symptoms from standalone logs
+            const medicalVisitSymptoms = symptomData.filter(entry => !entry.isSymptomOnly);
+            const standaloneSymptoms = symptomData.filter(entry => entry.isSymptomOnly);
+            
             // Generate analytics for each condition
             const conditionAnalytics = generateConditionAnalytics(symptomData, userConditions);
             
             return `
                 <div class="profile-tab-panel" data-tab="symptoms">
                     <div class="space-y-6">
+                        <!-- Quick Actions -->
+                        <div class="flex justify-between items-center">
+                            <h3 class="text-lg font-semibold text-gray-900">Symptom Analytics</h3>
+                            <div class="space-x-2">
+                                <a href="/" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm">
+                                    Quick Log
+                                </a>
+                                <button onclick="document.getElementById('add-record-btn').click()" 
+                                        class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors text-sm">
+                                    Add Visit
+                                </button>
+                            </div>
+                        </div>
+                        
                         ${conditionAnalytics}
                         
-                        <!-- Recent Symptom Entries -->
-                        <div class="bg-white rounded-lg border border-gray-200 p-6">
-                            <h4 class="font-semibold text-lg mb-4">Recent Symptom Records</h4>
-                            <div class="space-y-3 max-h-64 overflow-y-auto custom-scrollbar">
-                                ${symptomData.slice(0, 10).map(entry => {
-                                    const date = new Date(entry.date);
-                                    return `
-                                        <div class="flex justify-between items-start p-3 bg-gray-50 rounded-lg">
-                                            <div>
-                                                <p class="font-medium text-gray-900">${entry.hospital}</p>
-                                                <p class="text-sm text-gray-600">${date.toLocaleDateString()} - ${entry.visitType}</p>
-                                                <div class="text-xs text-gray-500 mt-1">
-                                                    ${Object.keys(entry.conditions || {}).map(condition => 
-                                                        `<span class="inline-block bg-blue-100 text-blue-800 px-2 py-1 rounded mr-1">${condition}</span>`
-                                                    ).join('')}
-                                                </div>
-                                            </div>
-                                            <button onclick="showSymptomDetails('${entry.id}')" 
-                                                    class="text-blue-600 hover:text-blue-800 text-sm">
-                                                View Details
-                                            </button>
-                                        </div>
-                                    `;
-                                }).join('')}
+                        <!-- Symptom Logs Tabs -->
+                        <div class="bg-white rounded-lg border border-gray-200">
+                            <div class="border-b border-gray-200">
+                                <nav class="-mb-px flex space-x-8 px-6">
+                                    <button class="symptom-subtab-btn border-blue-500 text-blue-600 whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm" data-subtab="all">
+                                        All Symptoms (${symptomData.length})
+                                    </button>
+                                    <button class="symptom-subtab-btn border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm" data-subtab="visits">
+                                        Medical Visits (${medicalVisitSymptoms.length})
+                                    </button>
+                                    <button class="symptom-subtab-btn border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm" data-subtab="standalone">
+                                        Symptom Logs (${standaloneSymptoms.length})
+                                    </button>
+                                </nav>
+                            </div>
+                            
+                            <div id="symptom-subtab-content" class="p-6">
+                                ${createSymptomList(symptomData, 'All Symptoms')}
                             </div>
                         </div>
                     </div>
@@ -1324,137 +1369,49 @@
             `;
         }
 
-        function generateConditionAnalytics(symptomData, userConditions) {
-            return userConditions.map(condition => {
-                const conditionEntries = symptomData.filter(entry => 
-                    entry.conditions && entry.conditions[condition]
-                );
-                
-                if (conditionEntries.length === 0) {
-                    return `
-                        <div class="bg-white rounded-lg border border-gray-200 p-6">
-                            <h4 class="font-semibold text-lg mb-2 capitalize">${condition.replace('_', ' ')} Tracking</h4>
-                            <p class="text-gray-500">No data recorded yet for this condition.</p>
-                        </div>
-                    `;
-                }
-
-                // Generate analytics based on condition type
-                const analytics = analyzeConditionData(condition, conditionEntries);
-                
-                return `
-                    <div class="bg-white rounded-lg border border-gray-200 p-6">
-                        <h4 class="font-semibold text-lg mb-4 capitalize">${condition.replace('_', ' ')} Analytics</h4>
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                            <div class="text-center p-3 bg-blue-50 rounded-lg">
-                                <div class="text-2xl font-bold text-blue-600">${conditionEntries.length}</div>
-                                <div class="text-sm text-gray-600">Total Records</div>
-                            </div>
-                            ${analytics.map(stat => `
-                                <div class="text-center p-3 bg-gray-50 rounded-lg">
-                                    <div class="text-2xl font-bold text-gray-800">${stat.value}</div>
-                                    <div class="text-sm text-gray-600">${stat.label}</div>
-                                </div>
-                            `).join('')}
-                        </div>
-                        
-                        <!-- Recent trend -->
-                        <div class="mt-4">
-                            <h5 class="font-medium text-gray-900 mb-2">Recent Trend (Last 5 Records)</h5>
-                            <div class="space-y-2">
-                                ${conditionEntries.slice(0, 5).map((entry, index) => {
-                                    const date = new Date(entry.date);
-                                    const conditionInfo = entry.conditions[condition];
-                                    return `
-                                        <div class="flex justify-between items-center p-2 ${index === 0 ? 'bg-blue-50' : 'bg-gray-50'} rounded">
-                                            <span class="text-sm text-gray-600">${date.toLocaleDateString()}</span>
-                                            <div class="text-xs">
-                                                ${Object.entries(conditionInfo).map(([key, value]) => 
-                                                    `<span class="inline-block bg-white px-2 py-1 rounded mr-1">${key}: ${value === true ? '✓' : value}</span>`
-                                                ).join('')}
-                                            </div>
-                                        </div>
-                                    `;
-                                }).join('')}
-                            </div>
-                        </div>
-                    </div>
-                `;
-            }).join('');
-        }
-
-        function analyzeConditionData(condition, entries) {
-            const analytics = [];
-            
-            switch (condition) {
-                case 'epilepsy':
-                    const seizureCount = entries.filter(e => e.conditions[condition]?.seizure_occurred).length;
-                    analytics.push({ label: 'Seizure Episodes', value: seizureCount });
-                    break;
-                case 'diabetes':
-                    const hypoCount = entries.filter(e => e.conditions[condition]?.hypo_symptoms).length;
-                    analytics.push({ label: 'Hypo Episodes', value: hypoCount });
-                    break;
-                case 'chronic_pain':
-                    const avgPain = entries.reduce((sum, e) => {
-                        const pain = parseInt(e.conditions[condition]?.pain_level) || 0;
-                        return sum + pain;
-                    }, 0) / entries.length;
-                    analytics.push({ label: 'Avg Pain Level', value: avgPain.toFixed(1) });
-                    break;
-                case 'mental_health':
-                    const panicCount = entries.filter(e => e.conditions[condition]?.panic_attack).length;
-                    analytics.push({ label: 'Panic Episodes', value: panicCount });
-                    break;
-                default:
-                    analytics.push({ label: 'Last Updated', value: new Date(entries[0].date).toLocaleDateString() });
+        // Add this function to handle symptom list display
+        function createSymptomList(symptoms, title) {
+            if (symptoms.length === 0) {
+                return `<p class="text-gray-500 text-center py-8">No ${title.toLowerCase()} recorded yet.</p>`;
             }
             
-            return analytics;
-        }
-
-        function showSymptomDetails(entryId) {
-            const entry = localData.symptomTracking.find(e => e.id === entryId);
-            if (!entry) return;
-
-            const date = new Date(entry.date);
-            
-            const content = `
-                <div class="space-y-4">
-                    <div class="bg-gray-50 rounded-lg p-4">
-                        <h3 class="font-semibold text-gray-900">${entry.hospital}</h3>
-                        <p class="text-gray-600">${date.toLocaleDateString()} - ${entry.visitType}</p>
-                    </div>
-                    
-                    ${Object.entries(entry.conditions || {}).map(([condition, data]) => `
-                        <div class="border border-gray-200 rounded-lg p-4">
-                            <h4 class="font-medium text-gray-900 mb-3 capitalize">${condition.replace('_', ' ')}</h4>
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                ${Object.entries(data).map(([key, value]) => `
-                                    <div class="flex justify-between">
-                                        <span class="text-sm text-gray-600 capitalize">${key.replace('_', ' ')}:</span>
-                                        <span class="text-sm font-medium text-gray-900">${value === true ? '✓ Yes' : value}</span>
+            return `
+                <div class="space-y-3 max-h-96 overflow-y-auto custom-scrollbar">
+                    ${symptoms.slice(0, 20).map(entry => {
+                        const date = new Date(entry.date);
+                        const isStandalone = entry.isSymptomOnly;
+                        return `
+                            <div class="flex justify-between items-start p-4 ${isStandalone ? 'bg-blue-50' : 'bg-gray-50'} rounded-lg border">
+                                <div>
+                                    <div class="flex items-center space-x-2">
+                                        ${isStandalone ? 
+                                            `<span class="text-blue-600">📝</span>
+                                             <p class="font-medium text-gray-900">Symptom Log</p>` :
+                                            `<span class="text-green-600">🏥</span>
+                                             <p class="font-medium text-gray-900">${entry.hospital}</p>`
+                                        }
                                     </div>
-                                `).join('')}
+                                    <p class="text-sm text-gray-600">${date.toLocaleDateString()} ${entry.time ? `at ${entry.time}` : ''}</p>
+                                    ${entry.location && entry.location !== 'Not specified' ? 
+                                        `<p class="text-xs text-gray-500">📍 ${entry.location}</p>` : ''
+                                    }
+                                    <div class="text-xs text-gray-500 mt-1">
+                                        ${Object.keys(entry.conditions || {}).map(condition => 
+                                            `<span class="inline-block ${isStandalone ? 'bg-blue-200 text-blue-800' : 'bg-green-200 text-green-800'} px-2 py-1 rounded mr-1">${condition.replace('_', ' ')}</span>`
+                                        ).join('')}
+                                    </div>
+                                </div>
+                                <button onclick="showSymptomDetails('${entry.id}')" 
+                                        class="text-blue-600 hover:text-blue-800 text-sm">
+                                    View Details
+                                </button>
                             </div>
-                        </div>
-                    `).join('')}
-                    
-                    <div class="flex justify-end pt-4 border-t">
-                        <button onclick="closeModal(document.getElementById('symptom-detail-modal'))" 
-                                class="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors">
-                            Close
-                        </button>
-                    </div>
+                        `;
+                    }).join('')}
                 </div>
+                ${symptoms.length > 20 ? `<p class="text-sm text-gray-500 text-center mt-4 pt-4 border-t">Showing latest 20 of ${symptoms.length} total entries</p>` : ''}
             `;
-
-            const modal = createModal('symptom-detail-modal', 'Symptom Record Details', content, 'max-w-2xl');
-            openModal(modal);
         }
-
-        // Make function available globally
-        window.showSymptomDetails = showSymptomDetails;
     </script>
 
 </body>
