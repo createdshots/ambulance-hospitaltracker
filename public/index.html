@@ -187,7 +187,7 @@
 
         // --- Authentication ---
         onAuthStateChanged(auth, async (user) => {
-            if (unsubscribe) unsubscribe(); // Detach old listener
+            if (unsubscribe) unsubscribe(); 
             initialLoadComplete = false; 
             
             if (user) {
@@ -283,17 +283,15 @@
 
                 loaderText.textContent = `Geocoding ${lines.length} ${type}...`;
 
-                const promises = lines.map((line, index) => {
-                    return new Promise(resolve => {
-                        setTimeout(async () => {
-                            const name = line.trim();
-                            const coords = await geocodeLocation(name);
-                            resolve({ name, visited: false, count: 0, coords });
-                        }, index * 100); 
-                    });
-                });
+                const newList = [];
+                for (const [index, line] of lines.entries()) {
+                    const name = line.trim();
+                    loaderText.textContent = `Geocoding ${type} (${index + 1}/${lines.length})...`;
+                    const coords = await geocodeLocation(name);
+                    newList.push({ name, visited: false, count: 0, coords });
+                    await new Promise(resolve => setTimeout(resolve, 250)); // Delay to avoid rate-limiting
+                }
 
-                const newList = await Promise.all(promises);
                 showStatusMessage(`${newList.length} ${type} loaded successfully!`, 'success');
                 return newList;
             } catch (error) {
@@ -366,7 +364,7 @@
         function renderList(type, data, searchTerm) {
             const listElement = document.getElementById(`${type}-list`);
             listElement.innerHTML = ''; 
-            let filteredData = data.filter(item => item.name.toLowerCase().includes(searchTerm.toLowerCase()));
+            let filteredData = (data || []).filter(item => item.name.toLowerCase().includes(searchTerm.toLowerCase()));
             
             // Sort to put visited items at the top
             filteredData.sort((a, b) => b.visited - a.visited);
@@ -384,13 +382,13 @@
                 
                 let cityHTML = '';
                 if (type === 'hospitals' && typeof hospitalCities !== 'undefined' && hospitalCities[item.name]) {
-                    cityHTML = `<span class="text-xs text-gray-500 ml-4">${hospitalCities[item.name]}</span>`;
+                    cityHTML = `<span class="text-sm text-gray-500">${hospitalCities[item.name]}</span>`;
                 }
 
                 itemElement.innerHTML = `
                     <div class="flex items-center flex-grow min-w-0">
                         <input type="checkbox" class="h-5 w-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer flex-shrink-0" ${item.visited ? 'checked' : ''} data-type="${type}" data-index="${index}">
-                        <div class="ml-4">
+                        <div class="ml-4 flex flex-col">
                            <span class="text-base truncate ${item.visited ? 'line-through text-gray-500' : 'text-gray-700'}" title="${item.name}">${item.name}</span>
                            ${cityHTML}
                         </div>
@@ -502,23 +500,39 @@
             const modal = createModal('map-modal', 'Map View', '<div id="map"></div>', 'max-w-6xl');
             openModal(modal);
 
-            map = L.map('map').setView([54.5, -2.5], 6); // Centered on UK
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-            }).addTo(map);
+            setTimeout(() => {
+                try {
+                    map = L.map('map').setView([54.5, -2.5], 6); // Centered on UK
+                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                    }).addTo(map);
 
-            const allLocations = [...localData.hospitals, ...localData.ambulance];
-            allLocations.forEach(loc => {
-                if (loc.coords && loc.coords.lat) {
-                    const isHospital = localData.hospitals.some(h => h.name === loc.name);
-                    const color = isHospital ? 'blue' : 'green';
-                    const radius = loc.visited ? 8 : 5;
-                    const opacity = loc.visited ? 1 : 0.7;
-                    L.circleMarker([loc.coords.lat, loc.coords.lon], { color, radius, opacity, fillOpacity: opacity })
-                     .addTo(map)
-                     .bindPopup(`<b>${loc.name}</b><br>Visits: ${loc.count}`);
+                    const allLocations = [...localData.hospitals, ...localData.ambulance];
+                    allLocations.forEach(loc => {
+                        if (loc.coords && loc.coords.lat) {
+                            const isHospital = localData.hospitals.some(h => h.name === loc.name);
+                            const color = isHospital ? '#3b82f6' : '#16a34a'; // blue-500, green-600
+                            const fillColor = loc.visited ? color : '#f1f5f9'; // slate-100
+                            const fillOpacity = loc.visited ? 0.7 : 0.5;
+                            const radius = loc.visited ? 8 : 6;
+                            const weight = loc.visited ? 2 : 1;
+
+                            L.circleMarker([loc.coords.lat, loc.coords.lon], { 
+                                color: color,
+                                fillColor: fillColor,
+                                fillOpacity: fillOpacity,
+                                radius: radius,
+                                weight: weight
+                             })
+                             .addTo(map)
+                             .bindPopup(`<b>${loc.name}</b><br>Visits: ${loc.count}`);
+                        }
+                    });
+                } catch (e) {
+                    console.error("Map initialization failed:", e);
+                    modal.querySelector('#map').innerHTML = '<p class="text-red-500 text-center">Sorry, the map could not be loaded.</p>';
                 }
-            });
+            }, 100);
         });
 
         document.getElementById('show-awards-btn').addEventListener('click', () => {

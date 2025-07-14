@@ -21,6 +21,7 @@ const hospitalCities = {
   "Bedford Hospital South Wing": "Bedford",
   "Birmingham Children": "Birmingham",
   "Birmingham Women's NHS Foundation Trust": "Birmingham",
+  "Midland Metropolitan University Hospital": "Smethwick",
   "Bispham Hospital Rehabilitation Unit": "Blackpool",
   "Clifton Hospital": "Lytham St. Annes",
   "Fleetwood Hospital": "Fleetwood",
