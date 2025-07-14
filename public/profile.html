@@ -297,6 +297,9 @@
                             <button class="profile-tab-btn border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm" data-tab="analytics">
                                 Analytics
                             </button>
+                            <button class="profile-tab-btn border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm" data-tab="symptoms">
+                                Symptoms
+                            </button>
                         </nav>
                     </div>
                     
@@ -650,6 +653,17 @@
                                 <span>Ambulance: ${record.ambulanceTrust}</span>
                             </div>
                         ` : ''}
+
+                        ${record.conditionData ? `
+                            <div class="mt-3 p-3 bg-blue-50 rounded-lg">
+                                <h5 class="font-medium text-blue-900 mb-2">📊 Condition Data Recorded</h5>
+                                <div class="flex flex-wrap gap-1">
+                                    ${Object.keys(record.conditionData).map(condition => 
+                                        `<span class="inline-block bg-blue-200 text-blue-800 px-2 py-1 rounded text-xs capitalize">${condition.replace('_', ' ')}</span>`
+                                    ).join('')}
+                                </div>
+                            </div>
+                        ` : ''}
                         
                         ${record.notes ? `
                             <div class="mt-3 p-3 bg-gray-50 rounded-lg">
@@ -695,6 +709,9 @@
                             break;
                         case 'analytics':
                             contentArea.innerHTML = createAnalyticsTab();
+                            break;
+                        case 'symptoms':
+                            contentArea.innerHTML = createSymptomsTab();
                             break;
                     }
                 });
@@ -833,7 +850,7 @@
             setupAddRecordEventListeners(modal);
         });
 
-        // Update the createModal function to properly handle close buttons
+        // Replace the createModal function
 
         function createModal(id, title, content, size = 'max-w-4xl') {
             const modalHTML = `
@@ -879,6 +896,12 @@
             const ambulanceOptions = localData.ambulance.map(a =>
                 `<option value="${a.name}">${a.name}</option>`
             ).join('');
+
+            // Get user's tracked conditions
+            const userConditions = localData.userProfile?.conditions || [];
+            
+            // Generate condition-specific questions
+            const conditionQuestions = generateConditionQuestions(userConditions);
 
             return `
                 <form id="add-record-form" class="space-y-6">
@@ -935,9 +958,18 @@
                             <option value="other">Other</option>
                         </select>
                     </div>
+
+                    <!-- Condition-Specific Questions -->
+                    ${conditionQuestions ? `
+                        <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                            <h4 class="font-semibold text-gray-900 mb-3">📋 Condition-Specific Questions</h4>
+                            <p class="text-sm text-gray-600 mb-4">Based on your tracked conditions, here are some relevant questions:</p>
+                            ${conditionQuestions}
+                        </div>
+                    ` : ''}
                     
                     <div>
-                        <label for="visit-notes" class="block text-sm font-medium text-gray-700 mb-2">Notes (Optional)</label>
+                        <label for="visit-notes" class="block text-sm font-medium text-gray-700 mb-2">General Notes</label>
                         <textarea id="visit-notes" rows="4" 
                                   placeholder="Add any additional details about your visit..."
                                   class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"></textarea>
@@ -955,6 +987,162 @@
                 </form>
             `;
         }
+
+        // Add this new function to generate condition-specific questions
+        function generateConditionQuestions(userConditions) {
+            if (!userConditions || userConditions.length === 0) return '';
+
+            const conditionQuestions = {
+                'epilepsy': [
+                    { id: 'seizure_occurred', type: 'checkbox', label: 'Did you have a seizure during this visit?' },
+                    { id: 'seizure_frequency', type: 'text', label: 'Recent seizure frequency', placeholder: 'e.g., 2 this week' },
+                    { id: 'medication_changes', type: 'textarea', label: 'Any medication changes?', placeholder: 'Describe any changes to your epilepsy medications' }
+                ],
+                'autism': [
+                    { id: 'sensory_issues', type: 'checkbox', label: 'Did you experience sensory overload?' },
+                    { id: 'communication_support', type: 'checkbox', label: 'Did you need communication support?' },
+                    { id: 'anxiety_level', type: 'select', label: 'Anxiety level during visit', options: ['Low', 'Medium', 'High', 'Severe'] }
+                ],
+                'diabetes': [
+                    { id: 'blood_sugar_check', type: 'text', label: 'Blood sugar level (if checked)', placeholder: 'e.g., 120 mg/dL' },
+                    { id: 'insulin_adjustment', type: 'textarea', label: 'Any insulin adjustments?', placeholder: 'Describe any changes to insulin regimen' },
+                    { id: 'hypo_symptoms', type: 'checkbox', label: 'Did you experience hypoglycemic symptoms?' }
+                ],
+                'mental_health': [
+                    { id: 'panic_attack', type: 'checkbox', label: 'Did you have a panic attack?' },
+                    { id: 'mood_rating', type: 'select', label: 'Overall mood during visit', options: ['Very Low', 'Low', 'Neutral', 'Good', 'Very Good'] },
+                    { id: 'therapy_discussed', type: 'checkbox', label: 'Was therapy/counseling discussed?' }
+                ],
+                'chronic_pain': [
+                    { id: 'pain_level', type: 'select', label: 'Pain level (1-10)', options: ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10'] },
+                    { id: 'pain_medication', type: 'textarea', label: 'Pain medication changes', placeholder: 'Any changes to pain management?' },
+                    { id: 'pain_location', type: 'text', label: 'Primary pain location', placeholder: 'e.g., lower back, joints' }
+                ],
+                'heart_condition': [
+                    { id: 'heart_rate', type: 'text', label: 'Heart rate (if checked)', placeholder: 'e.g., 72 bpm' },
+                    { id: 'blood_pressure', type: 'text', label: 'Blood pressure (if checked)', placeholder: 'e.g., 120/80' },
+                    { id: 'chest_pain', type: 'checkbox', label: 'Did you experience chest pain?' }
+                ],
+                'respiratory': [
+                    { id: 'breathing_difficulty', type: 'select', label: 'Breathing difficulty level', options: ['None', 'Mild', 'Moderate', 'Severe'] },
+                    { id: 'inhaler_used', type: 'checkbox', label: 'Did you use your inhaler?' },
+                    { id: 'oxygen_saturation', type: 'text', label: 'Oxygen saturation (if checked)', placeholder: 'e.g., 98%' }
+                ],
+                'autoimmune': [
+                    { id: 'flare_symptoms', type: 'checkbox', label: 'Are you experiencing a flare-up?' },
+                    { id: 'fatigue_level', type: 'select', label: 'Fatigue level', options: ['None', 'Mild', 'Moderate', 'Severe', 'Extreme'] },
+                    { id: 'joint_pain', type: 'checkbox', label: 'Do you have joint pain?' }
+                ],
+                'neurological': [
+                    { id: 'headache_severity', type: 'select', label: 'Headache severity', options: ['None', 'Mild', 'Moderate', 'Severe'] },
+                    { id: 'coordination_issues', type: 'checkbox', label: 'Did you experience coordination problems?' },
+                    { id: 'memory_concerns', type: 'checkbox', label: 'Any memory concerns?' }
+                ],
+                'gastrointestinal': [
+                    { id: 'symptom_severity', type: 'select', label: 'GI symptom severity', options: ['None', 'Mild', 'Moderate', 'Severe'] },
+                    { id: 'food_triggers', type: 'text', label: 'Suspected food triggers', placeholder: 'Any foods that may have triggered symptoms' },
+                    { id: 'bathroom_urgency', type: 'checkbox', label: 'Did you experience bathroom urgency?' }
+                ]
+            };
+
+            let questionsHTML = '';
+            
+            userConditions.forEach(condition => {
+                const questions = conditionQuestions[condition];
+                if (questions) {
+                    questionsHTML += `
+                        <div class="mb-4 p-3 bg-white rounded-lg border border-gray-200">
+                            <h5 class="font-medium text-gray-900 mb-3 capitalize">${condition.replace('_', ' ')} Related</h5>
+                            <div class="space-y-3">
+                                ${questions.map(q => {
+                                    switch (q.type) {
+                                        case 'checkbox':
+                                            return `
+                                                <label class="flex items-center">
+                                                    <input type="checkbox" name="condition_${condition}_${q.id}" 
+                                                           class="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded">
+                                                    <span class="ml-2 text-sm text-gray-700">${q.label}</span>
+                                                </label>
+                                            `;
+                                        case 'select':
+                                            return `
+                                                <div>
+                                                    <label class="block text-sm font-medium text-gray-700 mb-1">${q.label}</label>
+                                                    <select name="condition_${condition}_${q.id}" 
+                                                            class="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
+                                                        <option value="">Select...</option>
+                                                        ${q.options.map(opt => `<option value="${opt}">${opt}</option>`).join('')}
+                                                    </select>
+                                                </div>
+                                            `;
+                                        case 'textarea':
+                                            return `
+                                                <div>
+                                                    <label class="block text-sm font-medium text-gray-700 mb-1">${q.label}</label>
+                                                    <textarea name="condition_${condition}_${q.id}" rows="2" 
+                                                              placeholder="${q.placeholder || ''}"
+                                                              class="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-purple-500"></textarea>
+                                                </div>
+                                            `;
+                                        default: // text
+                                            return `
+                                                <div>
+                                                    <label class="block text-sm font-medium text-gray-700 mb-1">${q.label}</label>
+                                                    <input type="text" name="condition_${condition}_${q.id}" 
+                                                           placeholder="${q.placeholder || ''}"
+                                                           class="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
+                                                </div>
+                                            `;
+                                    }
+                                }).join('')}
+                            </div>
+                        </div>
+                    `;
+                }
+            });
+
+            return questionsHTML;
+        }
+        async function saveData() {
+            if (!docRef) return;
+            try {
+                await setDoc(docRef, localData, { merge: true });
+                console.log("Data saved successfully.");
+            } catch (e) {
+                console.error("Error saving data to Firestore: ", e);
+                showStatusMessage("Error saving data.", "error");
+            }
+        }
+
+        function getActionText(action, previousCount, newCount) {
+            switch (action) {
+                case 'visited': return 'Marked as visited';
+                case 'unvisited': return 'Unmarked as visited';
+                case 'count_increased': return `Visit count: ${previousCount} → ${newCount}`;
+            }
+        }
+
+        function calculateAnalytics(history) {
+            const dayGroups = {};
+            history.forEach(entry => {
+                const day = new Date(entry.timestamp).toDateString();
+                dayGroups[day] = (dayGroups[day] || 0) + 1;
+            });
+
+            const mostActiveDay = Object.keys(dayGroups).reduce((a, b) =>
+                dayGroups[a] > dayGroups[b] ? a : b, Object.keys(dayGroups)[0]
+            );
+
+            return {
+                mostActiveDay: mostActiveDay ? new Date(mostActiveDay).toLocaleDateString() : null
+            };
+        }
+
+        // Make functions available globally for onclick handlers
+        window.saveEntryNotes = saveEntryNotes;
+        window.deleteHistoryEntry = deleteHistoryEntry;
+
+        // Update the setupAddRecordEventListeners function
 
         function setupAddRecordEventListeners(modal) {
             const form = modal.querySelector('#add-record-form');
@@ -981,7 +1169,28 @@
             form.addEventListener('submit', async (e) => {
                 e.preventDefault();
 
-                const formData = {
+                // Collect condition-specific data
+                const conditionData = {};
+                const formData = new FormData(form);
+                
+                for (let [key, value] of formData.entries()) {
+                    if (key.startsWith('condition_')) {
+                        const parts = key.split('_');
+                        const condition = parts[1];
+                        const field = parts.slice(2).join('_');
+                        
+                        if (!conditionData[condition]) conditionData[condition] = {};
+                        
+                        // Handle checkboxes
+                        if (form.querySelector(`[name="${key}"]`).type === 'checkbox') {
+                            conditionData[condition][field] = true;
+                        } else if (value) {
+                            conditionData[condition][field] = value;
+                        }
+                    }
+                }
+
+                const recordData = {
                     id: `${new Date().toISOString()}_${Math.random().toString(36).substr(2, 9)}`,
                     timestamp: new Date().toISOString(),
                     date: modal.querySelector('#visit-date').value,
@@ -990,20 +1199,26 @@
                     ambulanceInvolved: ambulanceCheckbox.checked,
                     ambulanceTrust: ambulanceCheckbox.checked ? ambulanceSelect.value : null,
                     visitType: modal.querySelector('#visit-type').value,
-                    notes: modal.querySelector('#visit-notes').value || null
+                    notes: modal.querySelector('#visit-notes').value || null,
+                    conditionData: Object.keys(conditionData).length > 0 ? conditionData : null
                 };
 
                 if (!localData.medicalRecords) localData.medicalRecords = [];
-                localData.medicalRecords.unshift(formData);
+                localData.medicalRecords.unshift(recordData);
 
-                const hospitalIndex = localData.hospitals.findIndex(h => h.name === formData.hospital);
+                // Also add to symptom tracking
+                if (recordData.conditionData) {
+                    addToSymptomTracking(recordData);
+                }
+
+                const hospitalIndex = localData.hospitals.findIndex(h => h.name === recordData.hospital);
                 if (hospitalIndex !== -1) {
                     localData.hospitals[hospitalIndex].count++;
                     localData.hospitals[hospitalIndex].visited = true;
                 }
 
-                if (formData.ambulanceInvolved && formData.ambulanceTrust) {
-                    const ambulanceIndex = localData.ambulance.findIndex(a => a.name === formData.ambulanceTrust);
+                if (recordData.ambulanceInvolved && recordData.ambulanceTrust) {
+                    const ambulanceIndex = localData.ambulance.findIndex(a => a.name === recordData.ambulanceTrust);
                     if (ambulanceIndex !== -1) {
                         localData.ambulance[ambulanceIndex].count++;
                         localData.ambulance[ambulanceIndex].visited = true;
@@ -1017,57 +1232,229 @@
             });
         }
 
-        async function saveData() {
-            if (!docRef) return;
-            try {
-                await setDoc(docRef, localData, { merge: true });
-                console.log("Data saved successfully.");
-            } catch (e) {
-                console.error("Error saving data to Firestore: ", e);
-                showStatusMessage("Error saving data.", "error");
-            }
-        }
-
-        function getActionText(action, previousCount, newCount) {
-            switch (action) {
-                case 'visited': return 'Marked as visited';
-                case 'unvisited': return 'Unmarked as visited';
-                case 'count_increased': return `Visit count: ${previousCount} → ${newCount}`;
-                case 'count_decreased': return `Visit count: ${previousCount} → ${newCount}`;
-                default: return action;
-            }
-        }
-
-        function getTimeAgo(date) {
-            const now = new Date();
-            const diffInSeconds = Math.floor((now - date) / 1000);
-
-            if (diffInSeconds < 60) return 'Just now';
-            if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
-            if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
-            if (diffInSeconds < 2592000) return `${Math.floor(diffInSeconds / 86400)}d ago`;
-            return `${Math.floor(diffInSeconds / 2592000)}mo ago`;
-        }
-
-        function calculateAnalytics(history) {
-            const dayGroups = {};
-            history.forEach(entry => {
-                const day = new Date(entry.timestamp).toDateString();
-                dayGroups[day] = (dayGroups[day] || 0) + 1;
-            });
-
-            const mostActiveDay = Object.keys(dayGroups).reduce((a, b) =>
-                dayGroups[a] > dayGroups[b] ? a : b, Object.keys(dayGroups)[0]
-            );
-
-            return {
-                mostActiveDay: mostActiveDay ? new Date(mostActiveDay).toLocaleDateString() : null
+        // Add function to track symptoms separately
+        function addToSymptomTracking(recordData) {
+            if (!localData.symptomTracking) localData.symptomTracking = [];
+            
+            const symptomEntry = {
+                id: recordData.id,
+                date: recordData.date,
+                timestamp: recordData.timestamp,
+                hospital: recordData.hospital,
+                visitType: recordData.visitType,
+                conditions: recordData.conditionData
             };
+            
+            localData.symptomTracking.unshift(symptomEntry);
+            
+            // Keep only last 500 symptom entries
+            if (localData.symptomTracking.length > 500) {
+                localData.symptomTracking = localData.symptomTracking.slice(0, 500);
+            }
         }
 
-        // Make functions available globally for onclick handlers
-        window.saveEntryNotes = saveEntryNotes;
-        window.deleteHistoryEntry = deleteHistoryEntry;
+        function createSymptomsTab() {
+            const symptomData = localData.symptomTracking || [];
+            const userConditions = localData.userProfile?.conditions || [];
+            
+            if (userConditions.length === 0) {
+                return `
+                    <div class="profile-tab-panel text-center py-12" data-tab="symptoms">
+                        <div class="text-gray-400 text-6xl mb-4">📊</div>
+                        <h3 class="text-xl font-medium text-gray-900 mb-2">No conditions being tracked</h3>
+                        <p class="text-gray-500 mb-6">Set up condition tracking in your profile to see symptom analytics here.</p>
+                        <button onclick="document.querySelector('[data-tab=\\"symptoms\\"]').click(); setTimeout(() => document.getElementById('edit-profile-btn').click(), 100);" 
+                                class="bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 transition-colors">
+                            Set Up Tracking
+                        </button>
+                    </div>
+                `;
+            }
+
+            if (symptomData.length === 0) {
+                return `
+                    <div class="profile-tab-panel text-center py-12" data-tab="symptoms">
+                        <div class="text-gray-400 text-6xl mb-4">📊</div>
+                        <h3 class="text-xl font-medium text-gray-900 mb-2">No symptom data yet</h3>
+                        <p class="text-gray-500 mb-6">Add medical records with condition-specific information to see trends here.</p>
+                        <button onclick="document.getElementById('add-record-btn').click()" 
+                                class="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition-colors">
+                            Add First Record
+                        </button>
+                    </div>
+                `;
+            }
+
+            // Generate analytics for each condition
+            const conditionAnalytics = generateConditionAnalytics(symptomData, userConditions);
+            
+            return `
+                <div class="profile-tab-panel" data-tab="symptoms">
+                    <div class="space-y-6">
+                        ${conditionAnalytics}
+                        
+                        <!-- Recent Symptom Entries -->
+                        <div class="bg-white rounded-lg border border-gray-200 p-6">
+                            <h4 class="font-semibold text-lg mb-4">Recent Symptom Records</h4>
+                            <div class="space-y-3 max-h-64 overflow-y-auto custom-scrollbar">
+                                ${symptomData.slice(0, 10).map(entry => {
+                                    const date = new Date(entry.date);
+                                    return `
+                                        <div class="flex justify-between items-start p-3 bg-gray-50 rounded-lg">
+                                            <div>
+                                                <p class="font-medium text-gray-900">${entry.hospital}</p>
+                                                <p class="text-sm text-gray-600">${date.toLocaleDateString()} - ${entry.visitType}</p>
+                                                <div class="text-xs text-gray-500 mt-1">
+                                                    ${Object.keys(entry.conditions || {}).map(condition => 
+                                                        `<span class="inline-block bg-blue-100 text-blue-800 px-2 py-1 rounded mr-1">${condition}</span>`
+                                                    ).join('')}
+                                                </div>
+                                            </div>
+                                            <button onclick="showSymptomDetails('${entry.id}')" 
+                                                    class="text-blue-600 hover:text-blue-800 text-sm">
+                                                View Details
+                                            </button>
+                                        </div>
+                                    `;
+                                }).join('')}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function generateConditionAnalytics(symptomData, userConditions) {
+            return userConditions.map(condition => {
+                const conditionEntries = symptomData.filter(entry => 
+                    entry.conditions && entry.conditions[condition]
+                );
+                
+                if (conditionEntries.length === 0) {
+                    return `
+                        <div class="bg-white rounded-lg border border-gray-200 p-6">
+                            <h4 class="font-semibold text-lg mb-2 capitalize">${condition.replace('_', ' ')} Tracking</h4>
+                            <p class="text-gray-500">No data recorded yet for this condition.</p>
+                        </div>
+                    `;
+                }
+
+                // Generate analytics based on condition type
+                const analytics = analyzeConditionData(condition, conditionEntries);
+                
+                return `
+                    <div class="bg-white rounded-lg border border-gray-200 p-6">
+                        <h4 class="font-semibold text-lg mb-4 capitalize">${condition.replace('_', ' ')} Analytics</h4>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                            <div class="text-center p-3 bg-blue-50 rounded-lg">
+                                <div class="text-2xl font-bold text-blue-600">${conditionEntries.length}</div>
+                                <div class="text-sm text-gray-600">Total Records</div>
+                            </div>
+                            ${analytics.map(stat => `
+                                <div class="text-center p-3 bg-gray-50 rounded-lg">
+                                    <div class="text-2xl font-bold text-gray-800">${stat.value}</div>
+                                    <div class="text-sm text-gray-600">${stat.label}</div>
+                                </div>
+                            `).join('')}
+                        </div>
+                        
+                        <!-- Recent trend -->
+                        <div class="mt-4">
+                            <h5 class="font-medium text-gray-900 mb-2">Recent Trend (Last 5 Records)</h5>
+                            <div class="space-y-2">
+                                ${conditionEntries.slice(0, 5).map((entry, index) => {
+                                    const date = new Date(entry.date);
+                                    const conditionInfo = entry.conditions[condition];
+                                    return `
+                                        <div class="flex justify-between items-center p-2 ${index === 0 ? 'bg-blue-50' : 'bg-gray-50'} rounded">
+                                            <span class="text-sm text-gray-600">${date.toLocaleDateString()}</span>
+                                            <div class="text-xs">
+                                                ${Object.entries(conditionInfo).map(([key, value]) => 
+                                                    `<span class="inline-block bg-white px-2 py-1 rounded mr-1">${key}: ${value === true ? '✓' : value}</span>`
+                                                ).join('')}
+                                            </div>
+                                        </div>
+                                    `;
+                                }).join('')}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function analyzeConditionData(condition, entries) {
+            const analytics = [];
+            
+            switch (condition) {
+                case 'epilepsy':
+                    const seizureCount = entries.filter(e => e.conditions[condition]?.seizure_occurred).length;
+                    analytics.push({ label: 'Seizure Episodes', value: seizureCount });
+                    break;
+                case 'diabetes':
+                    const hypoCount = entries.filter(e => e.conditions[condition]?.hypo_symptoms).length;
+                    analytics.push({ label: 'Hypo Episodes', value: hypoCount });
+                    break;
+                case 'chronic_pain':
+                    const avgPain = entries.reduce((sum, e) => {
+                        const pain = parseInt(e.conditions[condition]?.pain_level) || 0;
+                        return sum + pain;
+                    }, 0) / entries.length;
+                    analytics.push({ label: 'Avg Pain Level', value: avgPain.toFixed(1) });
+                    break;
+                case 'mental_health':
+                    const panicCount = entries.filter(e => e.conditions[condition]?.panic_attack).length;
+                    analytics.push({ label: 'Panic Episodes', value: panicCount });
+                    break;
+                default:
+                    analytics.push({ label: 'Last Updated', value: new Date(entries[0].date).toLocaleDateString() });
+            }
+            
+            return analytics;
+        }
+
+        function showSymptomDetails(entryId) {
+            const entry = localData.symptomTracking.find(e => e.id === entryId);
+            if (!entry) return;
+
+            const date = new Date(entry.date);
+            
+            const content = `
+                <div class="space-y-4">
+                    <div class="bg-gray-50 rounded-lg p-4">
+                        <h3 class="font-semibold text-gray-900">${entry.hospital}</h3>
+                        <p class="text-gray-600">${date.toLocaleDateString()} - ${entry.visitType}</p>
+                    </div>
+                    
+                    ${Object.entries(entry.conditions || {}).map(([condition, data]) => `
+                        <div class="border border-gray-200 rounded-lg p-4">
+                            <h4 class="font-medium text-gray-900 mb-3 capitalize">${condition.replace('_', ' ')}</h4>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                ${Object.entries(data).map(([key, value]) => `
+                                    <div class="flex justify-between">
+                                        <span class="text-sm text-gray-600 capitalize">${key.replace('_', ' ')}:</span>
+                                        <span class="text-sm font-medium text-gray-900">${value === true ? '✓ Yes' : value}</span>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    `).join('')}
+                    
+                    <div class="flex justify-end pt-4 border-t">
+                        <button onclick="closeModal(document.getElementById('symptom-detail-modal'))" 
+                                class="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors">
+                            Close
+                        </button>
+                    </div>
+                </div>
+            `;
+
+            const modal = createModal('symptom-detail-modal', 'Symptom Record Details', content, 'max-w-2xl');
+            openModal(modal);
+        }
+
+        // Make function available globally
+        window.showSymptomDetails = showSymptomDetails;
     </script>
 
 </body>
