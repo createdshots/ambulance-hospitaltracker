@@ -122,12 +122,11 @@
     </div>
 
     <!-- Status Message Area -->
-    <div id="status-message-area" class="fixed top-20 right-4 z-30"></div>
-
+    <div id="status-message-area" class="fixed top-20 right-4 z-50"></div>
+    
     <!-- Modals Container -->
-    <div id="modal-container"></div>
+    <div id="modal-container" class="relative z-40"></div>
 
-    <!-- Footer -->
     <footer class="fixed bottom-4 right-4 z-10">
         <div class="flex flex-col items-end space-y-2">
             <!-- Help Button -->
@@ -135,9 +134,9 @@
                 class="bg-gray-600 text-white px-3 py-2 rounded-lg hover:bg-gray-700 transition-colors text-sm shadow-lg">
                 ❓ Help
             </button>
-
+            
             <!-- Creator Credit -->
-            <a href="https://github.com/createdshots" target="_blank" rel="noopener noreferrer"
+            <a href="https://github.com/jack-tolley" target="_blank" rel="noopener noreferrer"
                 class="flex items-center text-xs text-gray-400 hover:text-gray-600 bg-white px-2 py-1 rounded shadow">
                 <svg class="w-3 h-3 mr-1" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
                     <path fill-rule="evenodd"
@@ -196,7 +195,7 @@
             if (diffInDays < 7) return `${diffInDays}d ago`;
             return date.toLocaleDateString();
         }
-
+        
         function getActionText(action, previousCount, newCount) {
             switch (action) {
                 case 'visited': return 'Marked as visited';
@@ -205,6 +204,23 @@
                 case 'count_decreased': return `Visit count: ${newCount} → ${previousCount}`;
                 default: return action;
             }
+        }
+
+        function calculateAnalytics(history) {
+            if (!history || history.length === 0) return { mostActiveDay: 'N/A' };
+            const dayGroups = {};
+            history.forEach(entry => {
+                const day = new Date(entry.timestamp).toDateString();
+                dayGroups[day] = (dayGroups[day] || 0) + 1;
+            });
+
+            const mostActiveDay = Object.keys(dayGroups).reduce((a, b) =>
+                dayGroups[a] > dayGroups[b] ? a : b, Object.keys(dayGroups)[0]
+            );
+
+            return {
+                mostActiveDay: mostActiveDay ? new Date(mostActiveDay).toLocaleDateString() : 'N/A'
+            };
         }
 
         function showStatusMessage(message, type = 'success') {
@@ -266,28 +282,16 @@
             showStatusMessage("Could not connect to the database.", "error");
         }
 
-        // Sign out functionality
-        document.getElementById('signout-btn').addEventListener('click', () => {
-            signOut(auth);
-        });
-
         onAuthStateChanged(auth, async (user) => {
             if (unsubscribe) unsubscribe();
 
             if (user) {
-                if (typeof userFirebaseConfig === 'undefined') {
-                    showStatusMessage("FATAL: firebase-config.js not found. App cannot start.", "error");
-                    loadingIndicator.classList.add('loader-hidden');
-                    return;
-                }
-
                 userId = user.uid;
                 userIdDisplay.textContent = user.isAnonymous ? 'Guest' : user.displayName || user.email;
                 authSignedInView.style.display = 'flex';
                 notSignedIn.style.display = 'none';
-
-                docRef = doc(db, "users", userId);
-                console.log("Document reference created for user:", userId);
+                
+                docRef = doc(db, `artifacts/${appId}/users/${userId}/hospitals-tracker`, "data");
                 loadingIndicator.classList.remove('loader-hidden');
                 loaderText.textContent = 'Loading data...';
                 setupSnapshotListener();
@@ -296,40 +300,25 @@
                 authSignedInView.style.display = 'none';
                 notSignedIn.style.display = 'block';
                 loadingIndicator.classList.add('loader-hidden');
-                localData = { hospitals: [], ambulance: [], awards: [], visitHistory: [], medicalRecords: [], symptomTracking: [], userProfile: {} };
+                localData = { hospitals: [], ambulance: [], awards: [], visitHistory: [], medicalRecords: [], userProfile: {} };
                 renderProfile();
             }
         });
 
         function setupSnapshotListener() {
             if (!docRef) return;
+            let initialLoadComplete = false;
 
-            unsubscribe = onSnapshot(docRef, async (snapshot) => {
-                try {
-                    if (snapshot.exists()) {
-                        const firestoreData = snapshot.data();
-                        localData = {
-                            hospitals: [],
-                            ambulance: [],
-                            awards: [],
-                            visitHistory: [],
-                            medicalRecords: [],
-                            symptomTracking: [],
-                            userProfile: {},
-                            ...firestoreData
-                        };
-                    } else {
-                        // Document doesn't exist, use empty data
-                        console.log("No existing document found, using empty data");
-                    }
-
+            unsubscribe = onSnapshot(docRef, (snapshot) => {
+                if (snapshot.exists()) {
+                    localData = { ...localData, ...snapshot.data() };
+                }
+                
+                if (!initialLoadComplete) {
                     renderProfile();
                     profileContent.style.display = 'block';
                     loadingIndicator.classList.add('loader-hidden');
-                } catch (error) {
-                    console.error("Error processing snapshot:", error);
-                    showStatusMessage("Error loading data.", "error");
-                    loadingIndicator.classList.add('loader-hidden');
+                    initialLoadComplete = true;
                 }
             }, (error) => {
                 console.error("Snapshot listener error:", error);
@@ -337,7 +326,7 @@
                 loadingIndicator.classList.add('loader-hidden');
             });
         }
-
+        
         async function saveData() {
             if (!docRef) return;
             try {
@@ -366,11 +355,6 @@
                             <h1 class="text-3xl font-bold mb-2">${userId ? (userIdDisplay.textContent || 'User') : 'Guest'}</h1>
                             <p class="text-purple-100">Member since: ${joinDate}</p>
                             <p class="text-purple-100">Last activity: ${lastActivity}</p>
-                            ${localData.userProfile?.conditions?.length > 0 ? `
-                                <div class="mt-2">
-                                    <p class="text-purple-100 text-sm">Tracking conditions: ${localData.userProfile.conditions.length}</p>
-                                </div>
-                            ` : ''}
                         </div>
                         <div class="text-right">
                             <div class="text-4xl font-bold mb-1">${totalVisits}</div>
@@ -385,12 +369,12 @@
                     <div class="bg-white p-6 rounded-xl shadow-md text-center">
                         <div class="text-3xl font-bold text-blue-600 mb-2">${visitedHospitals}</div>
                         <div class="text-sm text-gray-600">Hospitals Visited</div>
-                        <div class="text-xs text-gray-400 mt-1">of ${localData.hospitals?.length || 0}</div>
+                        <div class="text-xs text-gray-400 mt-1">of ${localData.hospitals.length}</div>
                     </div>
                     <div class="bg-white p-6 rounded-xl shadow-md text-center">
                         <div class="text-3xl font-bold text-green-600 mb-2">${visitedAmbulance}</div>
                         <div class="text-sm text-gray-600">Trusts Visited</div>
-                        <div class="text-xs text-gray-400 mt-1">of ${localData.ambulance?.length || 0}</div>
+                        <div class="text-xs text-gray-400 mt-1">of ${localData.ambulance.length}</div>
                     </div>
                     <div class="bg-white p-6 rounded-xl shadow-md text-center">
                         <div class="text-3xl font-bold text-yellow-600 mb-2">${totalVisits}</div>
@@ -421,19 +405,17 @@
             `;
             setupProfileEventListeners();
         }
-
+        
+        // --- All other functions are defined below ---
+        
         function setupProfileEventListeners() {
             profileContent.addEventListener('click', (e) => {
-                const target = e.target;
-
-                // Handle Tab Clicks
-                if (target.closest('.profile-tab-btn')) {
-                    const tabButton = target.closest('.profile-tab-btn');
-                    const targetTab = tabButton.dataset.tab;
+                if (e.target.closest('.profile-tab-btn')) {
+                    const targetTab = e.target.closest('.profile-tab-btn').dataset.tab;
                     document.querySelectorAll('.profile-tab-btn').forEach(b => {
                         b.className = 'profile-tab-btn border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm';
                     });
-                    tabButton.className = 'profile-tab-btn border-purple-500 text-purple-600 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm';
+                    e.target.closest('.profile-tab-btn').className = 'profile-tab-btn border-purple-500 text-purple-600 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm';
 
                     const contentArea = document.getElementById('profile-tab-content');
                     switch (targetTab) {
@@ -443,247 +425,37 @@
                         case 'analytics': contentArea.innerHTML = createAnalyticsTab(); break;
                         case 'symptoms': contentArea.innerHTML = createSymptomsTab(); break;
                     }
-                }
-
-                // Handle Edit Profile Button - Fixed to check for the button or its child elements
-                if (target.id === 'edit-profile-btn' || target.closest('#edit-profile-btn')) {
-                    e.preventDefault();
-                    e.stopPropagation();
+                } else if (e.target.id === 'edit-profile-btn') {
                     showEditProfileModal();
-                    return;
-                }
-
-                // Handle "Add First Record" button inside an empty tab
-                if (target.id === 'add-first-record-btn') {
+                } else if (e.target.id === 'add-first-record-btn') {
                     document.getElementById('add-record-btn').click();
-                }
-
-                // Handle History Entry Clicks (for details or deletion)
-                if (target.closest('.history-entry')) {
-                    const entryElement = target.closest('.history-entry');
-                    const entryId = entryElement.dataset.entryId;
-                    if (target.dataset.action === 'delete-history') {
-                        deleteHistoryEntry(entryId);
-                    } else {
-                        showHistoryDetails(entryId);
-                    }
+                } else if (e.target.closest('[data-action="delete-history"]')) {
+                    const entryId = e.target.closest('[data-entry-id]').dataset.entryId;
+                    deleteHistoryEntry(entryId);
+                } else if (e.target.closest('.history-entry')) {
+                    const entryId = e.target.closest('.history-entry').dataset.entryId;
+                    showHistoryDetails(entryId);
                 }
             });
             document.getElementById('add-record-btn').addEventListener('click', showAddRecordModal);
             document.getElementById('help-btn').addEventListener('click', showHelpModal);
         }
 
-
-        // Tab creation functions
         function createHistoryTab(history) {
-            if (history.length === 0) {
-                return `
-                    <div class="profile-tab-panel text-center py-12" data-tab="history">
-                        <div class="text-gray-400 text-6xl mb-4">📋</div>
-                        <h3 class="text-xl font-medium text-gray-900 mb-2">No visit history yet</h3>
-                        <p class="text-gray-500 mb-6">Start checking off hospitals and ambulance trusts to build your history!</p>
-                        <a href="/" class="bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 transition-colors">Start Tracking</a>
-                    </div>
-                `;
+            if (!history || history.length === 0) {
+                return `<div class="text-center py-12"><div class="text-gray-400 text-6xl mb-4">📋</div><h3 class="text-xl font-medium text-gray-900 mb-2">No visit history yet</h3><p class="text-gray-500 mb-6">Start tracking visits on the main page to build your history!</p><a href="/" class="bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 transition-colors">Start Tracking</a></div>`;
             }
-
             const historyHTML = history.slice(0, 50).map(entry => {
                 const date = new Date(entry.timestamp);
                 const timeAgo = getTimeAgo(date);
                 const actionText = getActionText(entry.action, entry.previousCount, entry.newCount);
                 const icon = entry.type === 'hospitals' ? '🏥' : '🚑';
                 const colorClass = entry.type === 'hospitals' ? 'text-blue-600' : 'text-green-600';
-
-                return `
-                    <div class="history-entry flex items-start space-x-4 p-4 hover:bg-gray-50 rounded-lg border-b border-gray-100 last:border-b-0 cursor-pointer" data-entry-id="${entry.id}">
-                        <div class="flex-shrink-0 text-2xl">${icon}</div>
-                        <div class="flex-grow min-w-0">
-                            <div class="flex items-start justify-between">
-                                <div class="min-w-0 flex-1">
-                                    <p class="text-sm font-medium text-gray-900 truncate">${entry.name}</p>
-                                    ${entry.city ? `<p class="text-xs text-gray-500">${entry.city}</p>` : ''}
-                                    <p class="text-xs ${colorClass} mt-1">${actionText}</p>
-                                    ${entry.notes ? `<p class="text-xs text-gray-600 mt-1">📝 Has notes</p>` : ''}
-                                </div>
-                                <div class="text-right flex-shrink-0 ml-4">
-                                    <p class="text-xs text-gray-500">${timeAgo}</p>
-                                    <p class="text-xs text-gray-400">${date.toLocaleDateString()}</p>
-                                    <button class="text-xs text-red-500 hover:text-red-700 mt-1" data-action="delete-history" data-entry-id="${entry.id}">Delete</button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                `;
+                return `<div class="history-entry flex items-start space-x-4 p-4 hover:bg-gray-50 rounded-lg border-b border-gray-100 last:border-b-0 cursor-pointer" data-entry-id="${entry.id}"><div class="flex-shrink-0 text-2xl">${icon}</div><div class="flex-grow min-w-0"><div class="flex items-start justify-between"><div class="min-w-0 flex-1"><p class="text-sm font-medium text-gray-900 truncate">${entry.name}</p>${entry.city ? `<p class="text-xs text-gray-500">${entry.city}</p>` : ''}<p class="text-xs ${colorClass} mt-1">${actionText}</p>${entry.notes ? `<p class="text-xs text-gray-600 mt-1">📝 Has notes</p>` : ''}</div><div class="text-right flex-shrink-0 ml-4"><p class="text-xs text-gray-500">${timeAgo}</p><p class="text-xs text-gray-400">${date.toLocaleDateString()}</p><button class="text-xs text-red-500 hover:text-red-700 mt-1" data-action="delete-history" data-entry-id="${entry.id}">Delete</button></div></div></div></div>`;
             }).join('');
-
-            return `
-                <div class="profile-tab-panel" data-tab="history">
-                    <div class="space-y-0 max-h-96 overflow-y-auto custom-scrollbar">${historyHTML}</div>
-                    ${history.length > 50 ? `<p class="text-sm text-gray-500 text-center mt-4 pt-4 border-t">Showing latest 50 entries of ${history.length} total</p>` : ''}
-                </div>
-            `;
+            return `<div class="profile-tab-panel" data-tab="history"><div class="space-y-0 max-h-96 overflow-y-auto custom-scrollbar">${historyHTML}</div>${history.length > 50 ? `<p class="text-sm text-gray-500 text-center mt-4 pt-4 border-t">Showing latest 50 entries of ${history.length} total</p>` : ''}</div>`;
         }
-
-        function showAddRecordModal() {
-            const currentProfile = localData.userProfile || {};
-            const userConditions = currentProfile.conditions || [];
-            const hospitals = localData.hospitals || [];
-
-            const modalContent = `
-        <form id="add-record-form" class="space-y-6">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                    <label for="visit-date" class="block text-sm font-medium text-gray-700 mb-2">Visit Date</label>
-                    <input type="date" id="visit-date" required
-                           value="${new Date().toISOString().split('T')[0]}"
-                           class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500">
-                </div>
-                <div>
-                    <label for="visit-time" class="block text-sm font-medium text-gray-700 mb-2">Time (Optional)</label>
-                    <input type="time" id="visit-time"
-                           class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500">
-                </div>
-            </div>
-            
-            <div>
-                <label for="hospital-select" class="block text-sm font-medium text-gray-700 mb-2">Hospital/Location</label>
-                <select id="hospital-select" required
-                        class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500">
-                    <option value="">Select a hospital...</option>
-                    ${hospitals.map(h => `<option value="${h.name}">${h.name} - ${h.city}</option>`).join('')}
-                </select>
-            </div>
-            
-            <div>
-                <label for="visit-type" class="block text-sm font-medium text-gray-700 mb-2">Visit Type</label>
-                <select id="visit-type" required
-                        class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500">
-                    <option value="">Select visit type...</option>
-                    <option value="emergency">Emergency</option>
-                    <option value="outpatient">Outpatient Appointment</option>
-                    <option value="inpatient">Inpatient Stay</option>
-                    <option value="urgent_care">Urgent Care</option>
-                    <option value="diagnostic">Diagnostic/Test</option>
-                    <option value="specialist">Specialist Consultation</option>
-                    <option value="follow_up">Follow-up Visit</option>
-                    <option value="other">Other</option>
-                </select>
-            </div>
-            
-            ${generateConditionQuestionsForRecord(userConditions)}
-            
-            <div>
-                <label for="visit-notes" class="block text-sm font-medium text-gray-700 mb-2">Notes (Optional)</label>
-                <textarea id="visit-notes" rows="3"
-                          placeholder="Additional details about your visit..."
-                          class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"></textarea>
-            </div>
-            
-            <div class="flex justify-end space-x-3 pt-4 border-t">
-                <button type="button" class="close-modal-btn px-6 py-2 text-gray-600 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors">
-                    Cancel
-                </button>
-                <button type="submit" class="px-8 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
-                    Save Record
-                </button>
-            </div>
-        </form>
-    `;
-
-            const modal = createModal('add-record-modal', '📋 Add Medical Record', modalContent, 'max-w-2xl');
-            openModal(modal);
-            setupAddRecordEventListeners(modal);
-        }
-
-        function showQuickSymptomForm() {
-            const currentProfile = localData.userProfile || {};
-            const userConditions = currentProfile.conditions || [];
-
-            if (userConditions.length === 0) {
-                showStatusMessage('Please set up condition tracking in your profile first.', 'error');
-                return;
-            }
-
-            const modalContent = `
-        <form id="quick-symptom-form" class="space-y-6">
-            <div>
-                <label for="symptom-date" class="block text-sm font-medium text-gray-700 mb-2">Date</label>
-                <input type="date" id="symptom-date" required
-                       value="${new Date().toISOString().split('T')[0]}"
-                       class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-            </div>
-            
-            <div>
-                <h4 class="font-medium text-gray-900 mb-3">Conditions Experienced</h4>
-                <div class="space-y-2">
-                    ${userConditions.map(condition => `
-                        <label class="flex items-center p-2 border rounded-lg hover:bg-gray-50 cursor-pointer">
-                            <input type="checkbox" name="condition" value="${condition}" 
-                                   class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
-                            <span class="ml-3 text-sm font-medium text-gray-700 capitalize">${condition.replace('_', ' ')}</span>
-                        </label>
-                    `).join('')}
-                </div>
-            </div>
-            
-            <div>
-                <label for="symptom-notes" class="block text-sm font-medium text-gray-700 mb-2">Notes</label>
-                <textarea id="symptom-notes" rows="3"
-                          placeholder="Describe your symptoms, triggers, or other relevant details..."
-                          class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"></textarea>
-            </div>
-            
-            <div class="flex justify-end space-x-3 pt-4 border-t">
-                <button type="button" class="close-modal-btn px-6 py-2 text-gray-600 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors">
-                    Cancel
-                </button>
-                <button type="submit" class="px-8 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
-                    Log Symptoms
-                </button>
-            </div>
-        </form>
-    `;
-
-            const modal = createModal('quick-symptom-modal', '📊 Log Symptoms', modalContent, 'max-w-lg');
-            openModal(modal);
-
-            // Setup form submission
-            const form = modal.querySelector('#quick-symptom-form');
-            form.addEventListener('submit', async (e) => {
-                e.preventDefault();
-
-                const selectedConditions = Array.from(form.querySelectorAll('input[name="condition"]:checked'))
-                    .map(input => input.value);
-
-                if (selectedConditions.length === 0) {
-                    showStatusMessage('Please select at least one condition.', 'error');
-                    return;
-                }
-
-                const conditionData = {};
-                selectedConditions.forEach(condition => {
-                    conditionData[condition] = { experienced: true };
-                });
-
-                const symptomEntry = {
-                    id: `symptom_${new Date().toISOString()}_${Math.random().toString(36).substr(2, 9)}`,
-                    date: form.querySelector('#symptom-date').value,
-                    timestamp: new Date().toISOString(),
-                    conditions: conditionData,
-                    notes: form.querySelector('#symptom-notes').value || null,
-                    isSymptomOnly: true
-                };
-
-                if (!localData.symptomTracking) localData.symptomTracking = [];
-                localData.symptomTracking.unshift(symptomEntry);
-
-                await saveData();
-                closeModal(modal);
-                renderProfile();
-                showStatusMessage('Symptoms logged successfully!', 'success');
-            });
-        }
-
+        
         function createRecordsTab() {
             const medicalRecords = localData.medicalRecords || [];
 
@@ -700,18 +472,43 @@
 
             const recordsHTML = medicalRecords.slice(0, 20).map(record => {
                 const date = new Date(record.date);
+                const visitTypeColors = {
+                    'emergency': 'bg-red-100 text-red-800',
+                    'outpatient': 'bg-blue-100 text-blue-800',
+                    'inpatient': 'bg-purple-100 text-purple-800',
+                    'procedure': 'bg-orange-100 text-orange-800',
+                    'test': 'bg-green-100 text-green-800',
+                    'other': 'bg-gray-100 text-gray-800'
+                };
+
                 return `
-                    <div class="bg-white p-4 rounded-lg border border-gray-200 mb-3">
-                        <div class="flex justify-between items-start">
+                    <div class="border border-gray-200 rounded-lg p-6 mb-4 hover:shadow-md transition-shadow">
+                        <div class="flex justify-between items-start mb-4">
                             <div>
-                                <h4 class="font-medium text-gray-900">${record.hospital}</h4>
-                                <p class="text-sm text-gray-600">${date.toLocaleDateString()} ${record.time ? `at ${record.time}` : ''}</p>
+                                <h4 class="text-lg font-semibold text-gray-900">${record.hospital}</h4>
+                                <p class="text-gray-600">${date.toLocaleDateString()} ${record.time ? `at ${record.time}` : ''}</p>
                                 <p class="text-sm text-blue-600 capitalize">${record.visitType?.replace('_', ' ')}</p>
                                 ${record.ambulanceInvolved ? `<p class="text-xs text-green-600">🚑 Ambulance: ${record.ambulanceTrust}</p>` : ''}
                             </div>
-                            <span class="text-xs text-gray-500">${getTimeAgo(new Date(record.timestamp))}</span>
+                            <span class="px-3 py-1 rounded-full text-xs font-medium ${visitTypeColors[record.visitType] || 'bg-gray-100 text-gray-800'}">
+                                ${record.visitType.charAt(0).toUpperCase() + record.visitType.slice(1)}
+                            </span>
                         </div>
-                        ${record.notes ? `<div class="mt-2 text-sm text-gray-700 bg-gray-50 p-2 rounded"><strong>Notes:</strong> ${record.notes}</div>` : ''}
+                        
+                        ${record.conditionData ? `
+                            <div class="mt-3 p-3 bg-blue-50 rounded-lg">
+                                <h5 class="font-medium text-blue-900 mb-2">📊 Condition Data Recorded</h5>
+                                <div class="flex flex-wrap gap-1">
+                                    ${Object.keys(record.conditionData).map(condition =>
+                                        `<span class="inline-block bg-blue-200 text-blue-800 px-2 py-1 rounded text-xs capitalize">${condition.replace('_', ' ')}</span>`
+                                    ).join('')}
+                                </div>
+                            </div>
+                        ` : ''}
+                        
+                        ${record.notes ? `<div class="mt-3 p-3 bg-gray-50 rounded-lg">
+                                <p class="text-sm text-gray-700">${record.notes}</p>
+                            </div>` : ''}
                     </div>
                 `;
             }).join('');
@@ -725,12 +522,12 @@
         }
 
         function createAchievementsTab() {
-            let awardsHTML = '<div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 text-center">';
-
+            let achievementsHTML = '<div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 text-center">';
+            
             for (const id in awardsDefinition) {
                 const award = awardsDefinition[id];
                 const unlocked = localData.awards?.includes(id) || false;
-                awardsHTML += `
+                achievementsHTML += `
                     <div class="award p-4 border rounded-lg ${unlocked ? 'unlocked border-green-300 bg-green-50' : 'border-gray-300 bg-gray-50'}">
                         <div class="text-4xl mb-2">${award.icon}</div>
                         <h4 class="font-bold text-sm">${award.name}</h4>
@@ -739,15 +536,15 @@
                     </div>
                 `;
             }
-            awardsHTML += '</div>';
-
+            achievementsHTML += '</div>';
+            
             return `
                 <div class="profile-tab-panel" data-tab="achievements">
                     <div class="mb-4">
                         <h3 class="text-lg font-semibold text-gray-900 mb-2">Your Achievements</h3>
                         <p class="text-gray-600 text-sm">Unlock awards by reaching milestones in your health journey!</p>
                     </div>
-                    ${awardsHTML}
+                    ${achievementsHTML}
                 </div>
             `;
         }
@@ -835,10 +632,11 @@
                 return `
             <div class="flex justify-between items-start p-3 border-b border-gray-100 last:border-b-0">
                 <div>
-                    <p class="text-sm font-medium text-gray-900">${date.toLocaleDateString()}</p>
-                    <p class="text-xs text-gray-600">Tracked: ${conditions.map(c => c.replace('_', ' ')).join(', ')}</p>
-                    ${entry.hospital ? `<p class="text-xs text-blue-600">Hospital visit: ${entry.hospital}</p>` : ''}
-                    ${entry.notes ? `<p class="text-xs text-gray-500 mt-1 italic">"${entry.notes.substring(0, 40)}${entry.notes.length > 40 ? '...' : ''}"</p>` : ''}
+                    <p class="text-sm font-medium text-gray-900">${entry.isSymptomOnly ? 'Symptom Log' : entry.hospital}</p>
+                    <p class="text-xs text-gray-600">${date.toLocaleDateString()}</p>
+                    <div class="mt-1">
+                        ${conditions.map(c => `<span class="inline-block bg-blue-100 text-blue-800 px-1 py-0.5 rounded text-xs mr-1">${c.replace('_', ' ')}</span>`).join('')}
+                    </div>
                 </div>
                 <span class="text-xs text-gray-400">${getTimeAgo(new Date(entry.timestamp))}</span>
             </div>
@@ -887,7 +685,6 @@
                 'heart_condition', 'respiratory', 'autoimmune', 'neurological', 'gastrointestinal'
             ];
 
-            // Check if user signed up with SSO (has providerData)
             const isSSO = user && user.providerData && user.providerData.length > 0 &&
                 user.providerData.some(provider => provider.providerId !== 'password');
 
@@ -1030,7 +827,7 @@
                             </div>
                             <div class="bg-white p-2 rounded border">
                                 <p class="font-medium text-gray-700">Sign-in Method</p>
-                                <p class="text-gray-600 text-xs">${isSSO ? 'SSO Provider' : 'Email & Password'}</p>
+                                <p class="text-gray-600 text-xs">${isSSO ? 'SSO Provider' : 'Anonymous'}</p>
                             </div>
                             <div class="bg-white p-2 rounded border">
                                 <p class="font-medium text-gray-700">Total Records</p>
@@ -1072,7 +869,27 @@
 
             const modal = createModal('edit-profile-modal', '✏️ Edit Profile', modalContent, 'max-w-5xl');
             openModal(modal);
-            setupEditProfileEventListeners(modal);
+            
+            modal.querySelector('#delete-account-btn').addEventListener('click', showDeleteAccountConfirmation);
+            modal.querySelector('#edit-profile-form').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                
+                const selectedConditions = Array.from(modal.querySelectorAll('input[name="conditions"]:checked')).map(cb => cb.value);
+                
+                if (!localData.userProfile) localData.userProfile = {};
+                
+                localData.userProfile.displayName = modal.querySelector('#display-name').value;
+                localData.userProfile.dateOfBirth = modal.querySelector('#date-of-birth').value;
+                localData.userProfile.emergencyContact = modal.querySelector('#emergency-contact').value;
+                localData.userProfile.medicalNotes = modal.querySelector('#medical-notes').value;
+                localData.userProfile.conditions = selectedConditions;
+                localData.userProfile.dataSharing = modal.querySelector('#data-sharing').checked;
+                localData.userProfile.onboardingCompleted = modal.querySelector('#onboarding-completed').checked;
+                
+                await saveData();
+                closeModal(modal);
+                showStatusMessage('Profile updated successfully!', 'success');
+            });
         }
 
         function setupEditProfileEventListeners(modal) {
