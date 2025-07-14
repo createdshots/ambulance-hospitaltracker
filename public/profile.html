@@ -159,7 +159,7 @@
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'local-dev-app';
 
         let app, db, auth, userId, docRef;
-        let localData = { hospitals: [], ambulance: [], awards: [], visitHistory: [], medicalRecords: [], userProfile: {} };
+        let localData = { hospitals: [], ambulance: [], awards: [], visitHistory: [], medicalRecords: [] };
         let unsubscribe; // To hold the onSnapshot listener
 
         // DOM element references for easy access throughout the script.
@@ -206,6 +206,7 @@
                 authSignedInView.style.display = 'flex';
                 notSignedIn.style.display = 'none';
 
+                // Set up document reference
                 docRef = doc(db, `artifacts/${appId}/users/${userId}/hospitals-tracker`, "data");
 
                 loadingIndicator.classList.remove('loader-hidden');
@@ -217,7 +218,7 @@
                 authSignedInView.style.display = 'none';
                 notSignedIn.style.display = 'block';
                 loadingIndicator.classList.add('loader-hidden');
-                localData = { hospitals: [], ambulance: [], awards: [], visitHistory: [], medicalRecords: [], userProfile: {} };
+                localData = { hospitals: [], ambulance: [], awards: [], visitHistory: [], medicalRecords: [] };
                 renderProfile();
             }
         });
@@ -248,7 +249,7 @@
                 loadingIndicator.classList.add('loader-hidden');
             });
         }
-        
+
         async function saveData() {
             if (!docRef) return;
             try {
