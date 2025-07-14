@@ -143,7 +143,6 @@
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'local-dev-app';
 
         let app, db, auth, userId, docRef;
-        let isAuthReady = false;
         let localData = { hospitals: [], ambulance: [], awards: [] };
         let map;
         let unsubscribe; // To hold the onSnapshot listener
@@ -192,7 +191,6 @@
                 authSignedOutView.style.display = 'none';
                 
                 docRef = doc(db, `artifacts/${appId}/users/${userId}/hospitals-tracker`, "data");
-                isAuthReady = true;
                 loadingIndicator.classList.remove('loader-hidden');
                 loaderText.textContent = 'Loading data...';
                 setupSnapshotListener();
@@ -222,7 +220,7 @@
 
         // --- Firestore Data Handling ---
         function setupSnapshotListener() {
-            if (!isAuthReady || !docRef) return;
+            if (!docRef) return;
             let initialLoadComplete = false;
         
             unsubscribe = onSnapshot(docRef, async (snapshot) => {
@@ -271,9 +269,9 @@
                     loaderText.textContent = `Loading hospital data...`;
                     const response = await fetch('hospital_data.json');
                     if (!response.ok) throw new Error("Could not load 'hospital_data.json'.");
-                    const hospitalData = await response.json();
+                    const data = await response.json();
                     
-                    const newList = hospitalData.map(hospital => ({
+                    const newList = data.map(hospital => ({
                         name: hospital.name,
                         visited: false,
                         count: 0,
@@ -323,7 +321,7 @@
         }
 
         async function saveData() {
-            if (!isAuthReady || !docRef) return;
+            if (!docRef) return;
             checkAwards();
             try {
                 await setDoc(docRef, localData, { merge: true });
