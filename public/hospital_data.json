@@ -1,4 +1,4 @@
-const hospitalData = [
+[
   { "name": "Addenbrooke's Hospital", "city": "Cambridge", "coords": { "lat": 52.1751, "lon": 0.1433 } },
   { "name": "Aintree University Hospital", "city": "Liverpool", "coords": { "lat": 53.4611, "lon": -2.9367 } },
   { "name": "Alexandra Hospital", "city": "Redditch", "coords": { "lat": 52.2931, "lon": -1.9388 } },
@@ -579,4 +579,4 @@ const hospitalData = [
   { "name": "Wymondham Health Centre", "city": "Wymondham", "coords": { "lat": 52.57, "lon": 1.11 } },
   { "name": "Yate West Gate Centre", "city": "Yate", "coords": { "lat": 51.54, "lon": -2.41 } },
   { "name": "Yatton Health Centre", "city": "Yatton", "coords": { "lat": 51.38, "lon": -2.82 } }
-];
+]

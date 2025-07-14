@@ -279,7 +279,8 @@
                     name: hospital.name,
                     visited: false,
                     count: 0,
-                    coords: hospital.coords
+                    coords: hospital.coords,
+                    city: hospital.city
                 }));
                 showStatusMessage(`${newList.length} hospitals loaded successfully!`, 'success');
                 return newList;
@@ -402,11 +403,8 @@
                 itemElement.classList.toggle('border-green-200', item.visited);
                 
                 let cityHTML = '';
-                if (type === 'hospitals' && typeof hospitalData !== 'undefined') {
-                    const hospitalInfo = hospitalData.find(h => h.name === item.name);
-                    if (hospitalInfo && hospitalInfo.city) {
-                         cityHTML = `<span class="text-sm text-gray-500">${hospitalInfo.city}</span>`;
-                    }
+                if (type === 'hospitals' && item.city) {
+                    cityHTML = `<span class="text-sm text-gray-500">${item.city}</span>`;
                 }
 
                 itemElement.innerHTML = `
