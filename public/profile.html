@@ -717,111 +717,189 @@
 
         function showEditProfileModal() {
             const currentProfile = localData.userProfile || {};
+            const user = auth.currentUser;
             const availableConditions = [
                 'epilepsy', 'autism', 'diabetes', 'mental_health', 'chronic_pain',
                 'heart_condition', 'respiratory', 'autoimmune', 'neurological', 'gastrointestinal'
             ];
+
+            // Check if user signed up with SSO (has providerData)
+            const isSSO = user && user.providerData && user.providerData.length > 0 && 
+                         user.providerData.some(provider => provider.providerId !== 'password');
 
             const modalContent = `
                 <form id="edit-profile-form" class="space-y-6">
                     <!-- Personal Information -->
                     <div>
                         <h3 class="text-lg font-semibold text-gray-900 mb-4">Personal Information</h3>
-                <       div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <       div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
                                 <label for="display-name" class="block text-sm font-medium text-gray-700 mb-2">Display Name</label>
                                 <input type="text" id="display-name" 
-                               value="${currentProfile.displayName || ''}"
-                               placeholder="How you'd like to be addressed"
-                               class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
+                                       value="${currentProfile.displayName || user?.displayName || ''}"
+                                       placeholder="How you'd like to be addressed"
+                                       class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
+                            </div>
+                            ${!isSSO ? `
+                            <div>
+                                <label for="email" class="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
+                                <input type="email" id="email" 
+                                       value="${user?.email || ''}"
+                                       placeholder="your.email@example.com"
+                                       class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
+                                <p class="text-xs text-gray-500 mt-1">Used for account recovery and important notifications</p>
+                            </div>
+                            ` : `
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
+                                <div class="w-full p-3 border border-gray-200 rounded-lg bg-gray-50 text-gray-600">
+                                    ${user?.email || 'Not available'}
+                                </div>
+                                <p class="text-xs text-gray-500 mt-1">Email managed by your sign-in provider (Google/Microsoft)</p>
+                            </div>
+                            `}
+                        </div>
+                        <div class="mt-4">
+                            <label for="date-of-birth" class="block text-sm font-medium text-gray-700 mb-2">Date of Birth (Optional)</label>
+                            <input type="date" id="date-of-birth" 
+                                   value="${currentProfile.dateOfBirth || ''}"
+                                   class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
+                            <p class="text-xs text-gray-500 mt-1">Helps us provide age-appropriate health information</p>
+                        </div>
                     </div>
+
+                    <!-- Condition Tracking -->
                     <div>
-                        <label for="date-of-birth" class="block text-sm font-medium text-gray-700 mb-2">Date of Birth (Optional)</label>
-                        <input type="date" id="date-of-birth" 
-                               value="${currentProfile.dateOfBirth || ''}"
-                               class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
+                        <h3 class="text-lg font-semibold text-gray-900 mb-4">🏥 Condition Tracking</h3>
+                        <p class="text-sm text-gray-600 mb-4">Select conditions you'd like to track. This enables personalized symptom questions and better analytics.</p>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            ${availableConditions.map(condition => {
+                                const isSelected = currentProfile.conditions?.includes(condition) || false;
+                                const conditionNames = {
+                                    'epilepsy': '🧠 Epilepsy',
+                                    'autism': '🌟 Autism Spectrum',
+                                    'diabetes': '🩸 Diabetes',
+                                    'mental_health': '🧠 Mental Health',
+                                    'chronic_pain': '😣 Chronic Pain',
+                                    'heart_condition': '❤️ Heart Condition',
+                                    'respiratory': '🫁 Respiratory',
+                                    'autoimmune': '🛡️ Autoimmune',
+                                    'neurological': '🧠 Neurological',
+                                    'gastrointestinal': '🫃 Gastrointestinal'
+                                };
+                                return `
+                                    <label class="flex items-center p-3 border rounded-lg hover:bg-gray-50 cursor-pointer transition-colors ${isSelected ? 'border-purple-500 bg-purple-50' : 'border-gray-300'}">
+                                        <input type="checkbox" name="conditions" value="${condition}" 
+                                               ${isSelected ? 'checked' : ''}
+                                               class="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded">
+                                        <span class="ml-3 text-sm font-medium text-gray-700">${conditionNames[condition] || condition.replace('_', ' ')}</span>
+                                    </label>
+                                `;
+                            }).join('')}
+                        </div>
+                        <div class="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                            <p class="text-xs text-blue-800">
+                                <strong>Privacy Note:</strong> Your condition data is stored securely and never shared. 
+                                You can add or remove conditions at any time.
+                            </p>
+                        </div>
                     </div>
-                </div>
-            </div>
 
-            <!-- Condition Tracking -->
-            <div>
-                <h3 class="text-lg font-semibold text-gray-900 mb-4">Condition Tracking</h3>
-                <p class="text-sm text-gray-600 mb-4">Select conditions you'd like to track. This enables personalized symptom questions.</p>
-                <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
-                    ${availableConditions.map(condition => {
-                const isSelected = currentProfile.conditions?.includes(condition) || false;
-                return `
-                            <label class="flex items-center p-3 border rounded-lg hover:bg-gray-50 cursor-pointer ${isSelected ? 'border-purple-500 bg-purple-50' : 'border-gray-300'}">
-                                <input type="checkbox" name="conditions" value="${condition}" 
-                                       ${isSelected ? 'checked' : ''}
-                                       class="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded">
-                                <span class="ml-2 text-sm font-medium text-gray-700 capitalize">${condition.replace('_', ' ')}</span>
-                            </label>
-                        `;
-            }).join('')}
-                </div>
-            </div>
-
-            <!-- Emergency Information -->
-            <div>
-                <h3 class="text-lg font-semibold text-gray-900 mb-4">Emergency Information</h3>
-                <div class="space-y-4">
+                    <!-- Emergency Information -->
                     <div>
-                        <label for="emergency-contact" class="block text-sm font-medium text-gray-700 mb-2">Emergency Contact</label>
-                        <input type="text" id="emergency-contact" 
-                               value="${currentProfile.emergencyContact || ''}"
-                               placeholder="Name and phone number"
-                               class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
+                        <h3 class="text-lg font-semibold text-gray-900 mb-4">🚨 Emergency Information</h3>
+                        <div class="space-y-4">
+                            <div>
+                                <label for="emergency-contact" class="block text-sm font-medium text-gray-700 mb-2">Emergency Contact</label>
+                                <input type="text" id="emergency-contact" 
+                                       value="${currentProfile.emergencyContact || ''}"
+                                       placeholder="Name and phone number (e.g., John Smith - 07123456789)"
+                                       class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
+                            </div>
+                            <div>
+                                <label for="medical-notes" class="block text-sm font-medium text-gray-700 mb-2">Important Medical Notes</label>
+                                <textarea id="medical-notes" rows="3"
+                                          placeholder="Allergies, current medications, medical conditions, special instructions for emergency responders..."
+                                          class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500">${currentProfile.medicalNotes || ''}</textarea>
+                                <p class="text-xs text-gray-500 mt-1">This information could be vital in an emergency</p>
+                            </div>
+                        </div>
                     </div>
+
+                    <!-- Privacy & Data Settings -->
                     <div>
-                        <label for="medical-notes" class="block text-sm font-medium text-gray-700 mb-2">Important Medical Notes</label>
-                        <textarea id="medical-notes" rows="3"
-                                  placeholder="Allergies, medications, important medical information..."
-                                  class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500">${currentProfile.medicalNotes || ''}</textarea>
+                        <h3 class="text-lg font-semibold text-gray-900 mb-4">🔒 Privacy & Data</h3>
+                        <div class="space-y-4">
+                            <div class="p-4 border border-gray-200 rounded-lg">
+                                <label class="flex items-start">
+                                    <input type="checkbox" id="data-sharing" 
+                                           ${currentProfile.dataSharing ? 'checked' : ''}
+                                           class="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded mt-1">
+                                    <div class="ml-3">
+                                        <span class="text-sm font-medium text-gray-700">Help improve the app</span>
+                                        <p class="text-xs text-gray-500 mt-1">Allow anonymous usage analytics to help us improve the app. No personal health data is shared.</p>
+                                    </div>
+                                </label>
+                            </div>
+                            <div class="p-4 border border-gray-200 rounded-lg">
+                                <label class="flex items-start">
+                                    <input type="checkbox" id="onboarding-completed" 
+                                           ${currentProfile.onboardingCompleted ? 'checked' : ''}
+                                           class="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded mt-1">
+                                    <div class="ml-3">
+                                        <span class="text-sm font-medium text-gray-700">Mark onboarding as completed</span>
+                                        <p class="text-xs text-gray-500 mt-1">Stop showing introductory tips and tutorials</p>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
                     </div>
-                </div>
-            </div>
 
-            <!-- Privacy Settings -->
-            <div>
-                <h3 class="text-lg font-semibold text-gray-900 mb-4">Privacy & Data</h3>
-                <div class="space-y-3">
-                    <label class="flex items-center">
-                        <input type="checkbox" id="data-sharing" 
-                               ${currentProfile.dataSharing ? 'checked' : ''}
-                               class="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded">
-                        <span class="ml-2 text-sm text-gray-700">Allow anonymous data to help improve the app</span>
-                    </label>
-                    <label class="flex items-center">
-                        <input type="checkbox" id="onboarding-completed" 
-                               ${currentProfile.onboardingCompleted ? 'checked' : ''}
-                               class="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded">
-                        <span class="ml-2 text-sm text-gray-700">Mark onboarding as completed</span>
-                    </label>
-                </div>
-            </div>
+                    <!-- Account Information -->
+                    <div class="border-t pt-4">
+                        <h3 class="text-lg font-semibold text-gray-900 mb-4">📊 Account Information</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                            <div class="bg-gray-50 p-3 rounded-lg">
+                                <p class="font-medium text-gray-700">Account Type</p>
+                                <p class="text-gray-600">${user?.isAnonymous ? 'Guest Account' : 'Registered Account'}</p>
+                            </div>
+                            <div class="bg-gray-50 p-3 rounded-lg">
+                                <p class="font-medium text-gray-700">Sign-in Method</p>
+                                <p class="text-gray-600">${isSSO ? 'SSO Provider' : 'Email & Password'}</p>
+                            </div>
+                            <div class="bg-gray-50 p-3 rounded-lg">
+                                <p class="font-medium text-gray-700">Data Entries</p>
+                                <p class="text-gray-600">${(localData.medicalRecords?.length || 0) + (localData.symptomTracking?.length || 0)} records</p>
+                            </div>
+                        </div>
+                    </div>
 
-            <!-- Submit Button -->
-            <div class="flex justify-between pt-4 border-t">
-                <button type="button" id="delete-account-btn"
-                        class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors">
-                    Delete Account
-                </button>
-                <div class="space-x-3">
-                    <button type="button" class="close-modal-btn px-4 py-2 text-gray-600 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors">
-                        Cancel
-                    </button>
-                    <button type="submit"
-                            class="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors">
-                        Save Profile
-                    </button>
-                </div>
-            </div>
-        </form>
-    `;
+                    <!-- Action Buttons -->
+                    <div class="flex flex-col sm:flex-row justify-between items-center pt-6 border-t gap-4">
+                        <!-- Delete Account -->
+                        <div class="order-2 sm:order-1">
+                            <button type="button" id="delete-account-btn"
+                                    class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium">
+                                🗑️ Delete Account
+                            </button>
+                            <p class="text-xs text-gray-500 mt-1">This action cannot be undone</p>
+                        </div>
+                        
+                        <!-- Save/Cancel -->
+                        <div class="flex space-x-3 order-1 sm:order-2">
+                            <button type="button" class="close-modal-btn px-6 py-2 text-gray-600 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors font-medium">
+                                Cancel
+                            </button>
+                            <button type="submit"
+                                    class="px-8 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium">
+                                💾 Save Profile
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            `;
 
-            const modal = createModal('edit-profile-modal', 'Edit Profile', modalContent, 'max-w-2xl');
+            const modal = createModal('edit-profile-modal', '✏️ Edit Profile', modalContent, 'max-w-3xl');
             openModal(modal);
             setupEditProfileEventListeners(modal);
         }
@@ -829,51 +907,151 @@
         function setupEditProfileEventListeners(modal) {
             const form = modal.querySelector('#edit-profile-form');
             const deleteBtn = modal.querySelector('#delete-account-btn');
+            const user = auth.currentUser;
+            const isSSO = user && user.providerData && user.providerData.length > 0 && 
+                         user.providerData.some(provider => provider.providerId !== 'password');
 
             // Handle form submission
             form.addEventListener('submit', async (e) => {
                 e.preventDefault();
 
-                const formData = new FormData(form);
-                const selectedConditions = Array.from(form.querySelectorAll('input[name="conditions"]:checked'))
-                    .map(input => input.value);
+                try {
+                    // Show loading state
+                    const submitBtn = form.querySelector('button[type="submit"]');
+                    const originalText = submitBtn.innerHTML;
+                    submitBtn.innerHTML = '💾 Saving...';
+                    submitBtn.disabled = true;
 
-                const updatedProfile = {
-                    ...localData.userProfile,
-                    displayName: form.querySelector('#display-name').value,
-                    dateOfBirth: form.querySelector('#date-of-birth').value || null,
-                    conditions: selectedConditions,
-                    emergencyContact: form.querySelector('#emergency-contact').value || null,
-                    medicalNotes: form.querySelector('#medical-notes').value || null,
-                    dataSharing: form.querySelector('#data-sharing').checked,
-                    onboardingCompleted: form.querySelector('#onboarding-completed').checked,
-                    lastUpdated: new Date().toISOString()
-                };
+                    const selectedConditions = Array.from(form.querySelectorAll('input[name="conditions"]:checked'))
+                        .map(input => input.value);
 
-                localData.userProfile = updatedProfile;
-                await saveData();
-                closeModal(modal);
-                renderProfile();
-                showStatusMessage('Profile updated successfully!', 'success');
-            });
+                    const updatedProfile = {
+                        ...localData.userProfile,
+                        displayName: form.querySelector('#display-name').value.trim(),
+                        dateOfBirth: form.querySelector('#date-of-birth').value || null,
+                        conditions: selectedConditions,
+                        emergencyContact: form.querySelector('#emergency-contact').value.trim() || null,
+                        medicalNotes: form.querySelector('#medical-notes').value.trim() || null,
+                        dataSharing: form.querySelector('#data-sharing').checked,
+                        onboardingCompleted: form.querySelector('#onboarding-completed').checked,
+                        lastUpdated: new Date().toISOString()
+                    };
 
-            // Handle account deletion
-            deleteBtn.addEventListener('click', async () => {
-                if (confirm('Are you sure you want to delete your account? This action cannot be undone.')) {
-                    if (confirm('This will permanently delete all your data. Are you absolutely sure?')) {
-                        try {
-                            await deleteDoc(docRef);
-                            showStatusMessage('Account deleted successfully. You will be signed out.', 'success');
-                            setTimeout(() => {
-                                signOut(auth);
-                            }, 2000);
-                        } catch (error) {
-                            console.error('Error deleting account:', error);
-                            showStatusMessage('Error deleting account. Please try again.', 'error');
+                    // Handle email update for non-SSO users
+                    if (!isSSO) {
+                        const newEmail = form.querySelector('#email').value.trim();
+                        if (newEmail && newEmail !== user.email) {
+                            // Note: Email updates require re-authentication in Firebase
+                            // For now, we'll just show a message about this
+                            showStatusMessage('Email updates require re-authentication. Please contact support if you need to change your email.', 'error');
+                            submitBtn.innerHTML = originalText;
+                            submitBtn.disabled = false;
+                            return;
                         }
                     }
+
+                    // Save profile data
+                    localData.userProfile = updatedProfile;
+                    await saveData();
+
+                    // Update display name in Firebase if it changed
+                    if (updatedProfile.displayName && updatedProfile.displayName !== user.displayName) {
+                        try {
+                            await user.updateProfile({
+                                displayName: updatedProfile.displayName
+                            });
+                            userIdDisplay.textContent = updatedProfile.displayName;
+                        } catch (error) {
+                            console.warn('Could not update Firebase display name:', error);
+                        }
+                    }
+
+                    closeModal(modal);
+                    renderProfile();
+                    showStatusMessage('Profile updated successfully! 🎉', 'success');
+
+                } catch (error) {
+                    console.error('Error updating profile:', error);
+                    showStatusMessage('Error updating profile. Please try again.', 'error');
+                    
+                    // Reset button state
+                    const submitBtn = form.querySelector('button[type="submit"]');
+                    submitBtn.innerHTML = '💾 Save Profile';
+                    submitBtn.disabled = false;
                 }
             });
+
+            // Handle account deletion with enhanced confirmation
+            deleteBtn.addEventListener('click', async () => {
+                const dataCount = (localData.medicalRecords?.length || 0) + 
+                                 (localData.symptomTracking?.length || 0) + 
+                                 (localData.visitHistory?.length || 0);
+
+                if (!confirm(`⚠️ DELETE ACCOUNT CONFIRMATION\n\nThis will permanently delete:\n• Your profile and settings\n• ${dataCount} health records and entries\n• All visit history and achievements\n\nThis action CANNOT be undone.\n\nAre you sure you want to continue?`)) {
+                    return;
+                }
+
+                // Second confirmation with typing requirement
+                const confirmText = prompt(`To confirm deletion, please type "DELETE MY ACCOUNT" exactly:\n\n(This will permanently delete all your data)`);
+                
+                if (confirmText !== 'DELETE MY ACCOUNT') {
+                    showStatusMessage('Account deletion cancelled. The confirmation text did not match.', 'error');
+                    return;
+                }
+
+                try {
+                    // Show deletion progress
+                    deleteBtn.innerHTML = '🗑️ Deleting...';
+                    deleteBtn.disabled = true;
+
+                    // Delete Firestore data
+                    await deleteDoc(docRef);
+                    
+                    // Delete Firebase Auth account
+                    await user.delete();
+
+                    showStatusMessage('Account deleted successfully. You will be signed out.', 'success');
+                    
+                    // Redirect after a delay
+                    setTimeout(() => {
+                        window.location.href = '/';
+                    }, 2000);
+
+                } catch (error) {
+                    console.error('Error deleting account:', error);
+                    
+                    if (error.code === 'auth/requires-recent-login') {
+                        showStatusMessage('For security, please sign out and sign back in, then try deleting your account again.', 'error');
+                    } else {
+                        showStatusMessage('Error deleting account. Please try again or contact support.', 'error');
+                    }
+                    
+                    // Reset button state
+                    deleteBtn.innerHTML = '🗑️ Delete Account';
+                    deleteBtn.disabled = false;
+                }
+            });
+
+            // Add dynamic condition counter
+            const conditionCheckboxes = modal.querySelectorAll('input[name="conditions"]');
+            const updateConditionCount = () => {
+                const checkedCount = modal.querySelectorAll('input[name="conditions"]:checked').length;
+                let countDisplay = modal.querySelector('#condition-count');
+                
+                if (!countDisplay) {
+                    countDisplay = document.createElement('p');
+                    countDisplay.id = 'condition-count';
+                    countDisplay.className = 'text-sm font-medium text-purple-600 mt-2';
+                    modal.querySelector('h3').parentNode.appendChild(countDisplay);
+                }
+                
+                countDisplay.textContent = `${checkedCount} condition${checkedCount !== 1 ? 's' : ''} selected`;
+            };
+
+            conditionCheckboxes.forEach(checkbox => {
+                checkbox.addEventListener('change', updateConditionCount);
+            });
+            updateConditionCount(); // Initial count
         }
 
         function showQuickSymptomForm() {
@@ -1245,7 +1423,7 @@
                         <p class="text-sm text-blue-800 mb-3">If you need assistance or want to report a bug, please contact support:</p>
                         <div class="bg-white p-3 rounded border text-xs font-mono text-gray-600">
                             <p><strong>Your User ID:</strong> ${userIdText}</p>
-                            <p><strong>Email:</strong> <a href="mailto:jack@whitehill.group?subject=Support Request - ${userIdText}" class="text-blue-600 hover:underline">support@visittracker.app</a></p>
+                            <p><strong>Email:</strong> <a href="mailto:jack@whitehill.group?subject=Support Request - ${userIdText}" class="text-blue-600 hover:underline">jack@whitehill.group</a></p>
                         </div>
                         <p class="text-xs text-blue-600 mt-2">Include your User ID when contacting support for faster assistance.</p>
                     </div>
