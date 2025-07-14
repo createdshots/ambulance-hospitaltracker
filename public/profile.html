@@ -446,8 +446,6 @@
             });
         }
         
-        // --- All other functions are defined below ---
-        
         function createHistoryTab(history) {
             if (history.length === 0) {
                 return `<div class="profile-tab-panel text-center py-12" data-tab="history"><div class="text-gray-400 text-6xl mb-4">📋</div><h3 class="text-xl font-medium text-gray-900 mb-2">No visit history yet</h3><p class="text-gray-500 mb-6">Start checking off hospitals and ambulance trusts to build your history!</p><a href="/" class="bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 transition-colors">Start Tracking</a></div>`;
@@ -467,126 +465,97 @@
         function createAchievementsTab() { return `<div class="profile-tab-panel text-center py-12" data-tab="achievements"><div class="text-gray-400 text-6xl mb-4">🏆</div><h3 class="text-xl font-medium text-gray-900 mb-2">Achievements Coming Soon</h3></div>`; }
         function createAnalyticsTab() { return `<div class="profile-tab-panel text-center py-12" data-tab="analytics"><div class="text-gray-400 text-6xl mb-4">📊</div><h3 class="text-xl font-medium text-gray-900 mb-2">Analytics Coming Soon</h3></div>`; }
         function createSymptomsTab() { return `<div class="profile-tab-panel text-center py-12" data-tab="symptoms"><div class="text-gray-400 text-6xl mb-4">🩺</div><h3 class="text-xl font-medium text-gray-900 mb-2">Symptom Tracking Coming Soon</h3></div>`; }
-        function showEditProfileModal() { showStatusMessage('Edit profile modal coming soon!', 'success'); }
-        function showHistoryDetails(entryId) { showStatusMessage(`Details for entry ${entryId} coming soon!`, 'success'); }
-        async function deleteHistoryEntry(entryId) { showStatusMessage(`Deletion for entry ${entryId} coming soon!`, 'success'); }
-        function showHelpModal() { showStatusMessage('Help modal coming soon!', 'success'); }
-        function showOnboardingQuestionnaire() { showStatusMessage('Onboarding coming soon!', 'success'); }
-
-        // Initialize event listeners for static elements
-        document.getElementById('add-record-btn').addEventListener('click', () => {
-            showStatusMessage('Add record functionality coming soon!', 'success');
-        });
-        document.getElementById('help-btn').addEventListener('click', showHelpModal);
-    </script>
-
-        // Make functions available globally for onclick handlers
-        window.saveEntryNotes = saveEntryNotes;
-        window.deleteHistoryEntry = deleteHistoryEntry;
-        window.showSymptomDetails = showSymptomDetails;
-        window.saveSymptomNotes = saveSymptomNotes;
-        window.deleteSymptomEntry = deleteSymptomEntry;
-
-        function generateConditionAnalytics(symptomData, userConditions) {
-            return userConditions.map(condition => {
-                const conditionEntries = symptomData.filter(entry =>
-                    entry.conditions && entry.conditions[condition]
-                );
-
-                if (conditionEntries.length === 0) {
-                    return `
-                        <div class="bg-white rounded-lg border border-gray-200 p-6">
-                            <h4 class="font-semibold text-lg mb-2 capitalize">${condition.replace('_', ' ')} Tracking</h4>
-                            <p class="text-gray-500">No data recorded yet for this condition.</p>
-                        </div>
-                    `;
-                }
-
-                // Generate analytics based on condition type
-                const analytics = analyzeConditionData(condition, conditionEntries);
-
-                return `
-                    <div class="bg-white rounded-lg border border-gray-200 p-6">
-                        <h4 class="font-semibold text-lg mb-4 capitalize">${condition.replace('_', ' ')} Analytics</h4>
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                            <div class="text-center p-3 bg-blue-50 rounded-lg">
-                                <div class="text-2xl font-bold text-blue-600">${conditionEntries.length}</div>
-                                <div class="text-sm text-gray-600">Total Records</div>
-                            </div>
-                            ${analytics.map(stat => `
-                                <div class="text-center p-3 bg-gray-50 rounded-lg">
-                                    <div class="text-2xl font-bold text-gray-800">${stat.value}</div>
-                                    <div class="text-sm text-gray-600">${stat.label}</div>
-                                </div>
-                            `).join('')}
-                        </div>
-                        
-                        <!-- Recent trend -->
-                        <div class="mt-4">
-                            <h5 class="font-medium text-gray-900 mb-2">Recent Trend (Last 5 Records)</h5>
-                            <div class="space-y-2">
-                                ${conditionEntries.slice(0, 5).map((entry, index) => {
-                    const date = new Date(entry.date);
-                    const conditionInfo = entry.conditions[condition];
-                    return `
-                                        <div class="flex justify-between items-center p-2 ${index === 0 ? 'bg-blue-50' : 'bg-gray-50'} rounded">
-                                            <span class="text-sm text-gray-600">${date.toLocaleDateString()}</span>
-                                            <div class="text-xs">
-                                                ${Object.entries(conditionInfo).map(([key, value]) =>
-                        `<span class="inline-block bg-white px-2 py-1 rounded mr-1">${key}: ${value === true ? '✓' : value}</span>`
-                    ).join('')}
-                                            </div>
-                                        </div>
-                                    `;
-                }).join('')}
-                            </div>
-                        </div>
-                    </div>
-                `;
-            }).join('');
+        
+        function showEditProfileModal() {
+             const modalContent = `
+                <p>This feature is coming soon!</p>
+            `;
+            const modal = createModal('edit-profile-modal', 'Edit Profile', modalContent, 'max-w-md');
+            openModal(modal);
         }
 
-        function analyzeConditionData(condition, entries) {
-            const analytics = [];
+        function showHistoryDetails(entryId) {
+            const historyEntry = localData.visitHistory.find(h => h.id === entryId);
+            if (!historyEntry) return;
 
-            switch (condition) {
-                case 'epilepsy':
-                    const seizureCount = entries.filter(e => e.conditions[condition]?.seizure_occurred).length;
-                    analytics.push({ label: 'Seizure Episodes', value: seizureCount });
-                    break;
-                case 'diabetes':
-                    const hypoCount = entries.filter(e => e.conditions[condition]?.hypo_symptoms).length;
-                    analytics.push({ label: 'Hypo Episodes', value: hypoCount });
-                    break;
-                case 'chronic_pain':
-                    const avgPain = entries.reduce((sum, e) => {
-                        const pain = parseInt(e.conditions[condition]?.pain_level) || 0;
-                        return sum + pain;
-                    }, 0) / entries.length;
-                    analytics.push({ label: 'Avg Pain Level', value: avgPain.toFixed(1) });
-                    break;
-                case 'mental_health':
-                    const panicCount = entries.filter(e => e.conditions[condition]?.panic_attack).length;
-                    analytics.push({ label: 'Panic Episodes', value: panicCount });
-                    break;
-                default:
-                    analytics.push({ label: 'Last Updated', value: new Date(entries[0].date).toLocaleDateString() });
-            }
+            const date = new Date(historyEntry.timestamp);
+            const icon = historyEntry.type === 'hospitals' ? '🏥' : '🚑';
 
-            return analytics;
+            const content = `
+                <div class="space-y-4">
+                    <div class="flex items-start space-x-4 p-4 bg-gray-50 rounded-lg">
+                        <div class="text-3xl">${icon}</div>
+                        <div class="flex-grow">
+                            <h3 class="text-lg font-semibold text-gray-900">${historyEntry.name}</h3>
+                            ${historyEntry.city ? `<p class="text-sm text-gray-600">${historyEntry.city}</p>` : ''}
+                            <p class="text-sm text-gray-500 mt-1">${date.toLocaleString()}</p>
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Type</label>
+                            <p class="text-sm text-gray-900 capitalize">${historyEntry.type.replace('s', '')}</p>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Action</label>
+                            <p class="text-sm text-gray-900">${getActionText(historyEntry.action, historyEntry.previousCount, historyEntry.newCount)}</p>
+                        </div>
+                    </div>
+                    
+                    ${historyEntry.previousCount !== undefined ? `
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Previous Count</label>
+                                <p class="text-sm text-gray-900">${historyEntry.previousCount}</p>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">New Count</label>
+                                <p class="text-sm text-gray-900">${historyEntry.newCount}</p>
+                            </div>
+                        </div>
+                    ` : ''}
+                    
+                    <!-- Notes Section -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Notes</label>
+                        <textarea id="entry-notes" rows="3" 
+                                  placeholder="Add notes about this visit..."
+                                  class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500">${historyEntry.notes || ''}</textarea>
+                    </div>
+                    
+                    <div class="flex justify-between pt-4 border-t">
+                        <button id="save-notes-btn" 
+                                class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                            Save Notes
+                        </button>
+                        <div class="space-x-3">
+                            <button class="close-modal-btn px-4 py-2 text-gray-600 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors">
+                                Close
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            const modal = createModal('history-detail-modal', 'Visit History Details', content, 'max-w-lg');
+            openModal(modal);
+            
+            modal.querySelector('#save-notes-btn').addEventListener('click', () => saveEntryNotes(entryId));
         }
 
         async function saveEntryNotes(entryId) {
             const notesTextarea = document.getElementById('entry-notes');
             if (!notesTextarea) return;
 
-            const entryIndex = localData.visitHistory.findIndex(e => e.id === entryId);
+            const entryIndex = localData.visitHistory.findIndex(h => h.id === entryId);
             if (entryIndex === -1) return;
 
             localData.visitHistory[entryIndex].notes = notesTextarea.value;
 
             await saveData();
             renderProfile();
+            closeModal(document.getElementById('history-detail-modal'));
             showStatusMessage('Notes saved successfully!', 'success');
         }
 
@@ -595,187 +564,21 @@
                 return;
             }
 
-            const entryIndex = localData.visitHistory.findIndex(e => e.id === entryId);
+            const entryIndex = localData.visitHistory.findIndex(h => h.id === entryId);
             if (entryIndex === -1) return;
 
             localData.visitHistory.splice(entryIndex, 1);
 
             await saveData();
             renderProfile();
+
+            const detailModal = document.getElementById('history-detail-modal');
+            if (detailModal) {
+                closeModal(detailModal);
+            }
+
             showStatusMessage('History entry deleted successfully!', 'success');
         }
-
-        function showEditProfileModal() {
-            const conditions = [
-                { id: 'epilepsy', name: 'Epilepsy', trackable: ['Seizures', 'Medication times', 'Triggers', 'Aura symptoms'] },
-                { id: 'autism', name: 'Autism/ADHD', trackable: ['Sensory overload', 'Meltdowns', 'Stimming episodes', 'Social fatigue'] },
-                { id: 'diabetes', name: 'Diabetes', trackable: ['Blood sugar levels', 'Insulin doses', 'Hypoglycemic episodes', 'HbA1c results'] },
-                { id: 'mental_health', name: 'Mental Health', trackable: ['Panic attacks', 'Anxiety episodes', 'Mood changes', 'Therapy sessions'] },
-                { id: 'chronic_pain', name: 'Chronic Pain', trackable: ['Pain levels', 'Flare-ups', 'Medication effectiveness', 'Activity tolerance'] }
-            ];
-
-            const userConditions = localData.userProfile?.conditions || [];
-
-            const modalContent = `
-                <form id="edit-profile-form" class="space-y-6">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div>
-                            <h4 class="font-semibold text-lg mb-4">Medical Conditions</h4>
-                            <p class="text-sm text-gray-600 mb-4">Select conditions you'd like to track in your medical records.</p>
-                            
-                            <div class="space-y-3 max-h-80 overflow-y-auto custom-scrollbar">
-                                ${conditions.map(condition => `
-                                    <label class="flex items-start cursor-pointer p-3 border border-gray-200 rounded-lg hover:bg-gray-50">
-                                        <input type="checkbox" name="conditions" value="${condition.id}" 
-                                               ${userConditions.includes(condition.id) ? 'checked' : ''}
-                                               class="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded mt-1">
-                                        <div class="ml-3 flex-grow">
-                                            <div class="font-medium text-gray-900 text-sm">${condition.name}</div>
-                                            <div class="text-xs text-gray-500 mt-1">
-                                                ${condition.trackable.slice(0, 2).join(', ')}${condition.trackable.length > 2 ? '...' : ''}
-                                            </div>
-                                        </div>
-                                    </label>
-                                `).join('')}
-                            </div>
-                        </div>
-                        
-                        <div>
-                            <h4 class="font-semibold text-lg mb-4">Profile Information</h4>
-                            
-                            <div class="space-y-4">
-                                <div>
-                                    <label for="emergency-contact" class="block text-sm font-medium text-gray-700 mb-2">Emergency Contact (Optional)</label>
-                                    <input type="text" id="emergency-contact" 
-                                           value="${localData.userProfile?.emergencyContact || ''}"
-                                           placeholder="Name and phone number"
-                                           class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
-                                </div>
-                                
-                                <div>
-                                    <label for="allergies" class="block text-sm font-medium text-gray-700 mb-2">Allergies/Important Medical Info</label>
-                                    <textarea id="allergies" rows="3" 
-                                              placeholder="List any allergies, medications, or important medical information..."
-                                              class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500">${localData.userProfile?.allergies || ''}</textarea>
-                                </div>
-                                
-                                <!-- Account Deletion Section -->
-                                <div class="mt-8 pt-6 border-t border-red-200">
-                                    <h5 class="font-semibold text-red-800 mb-2">⚠️ Danger Zone</h5>
-                                    <p class="text-sm text-red-600 mb-4">This action cannot be undone. This will permanently delete your account and all associated data.</p>
-                                    <button type="button" id="delete-account-btn" 
-                                            class="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors text-sm">
-                                        Delete My Account
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="flex justify-end space-x-3 pt-4 border-t">
-                        <button type="button" class="close-modal-btn px-4 py-2 text-gray-600 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors">
-                            Cancel
-                        </button>
-                        <button type="submit" 
-                                class="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors">
-                            Save Changes
-                        </button>
-                    </div>
-                </form>
-            `;
-
-            const modal = createModal('edit-profile-modal', 'Edit Profile', modalContent, 'max-w-4xl');
-            openModal(modal);
-
-            // Handle account deletion
-            document.getElementById('delete-account-btn').addEventListener('click', showDeleteAccountConfirmation);
-
-            // Handle form submission
-            document.getElementById('edit-profile-form').addEventListener('submit', async (e) => {
-                e.preventDefault();
-
-                const selectedConditions = Array.from(document.querySelectorAll('input[name="conditions"]:checked'))
-                    .map(checkbox => checkbox.value);
-
-                if (!localData.userProfile) localData.userProfile = {};
-
-                localData.userProfile.conditions = selectedConditions;
-                localData.userProfile.emergencyContact = document.getElementById('emergency-contact').value;
-                localData.userProfile.allergies = document.getElementById('allergies').value;
-                localData.userProfile.lastUpdated = new Date().toISOString();
-
-                await saveData();
-                renderProfile();
-                closeModal(modal);
-                showStatusMessage('Profile updated successfully!', 'success');
-            });
-        }
-
-        function showDeleteAccountConfirmation() {
-            const confirmContent = `
-        <div class="text-center space-y-4">
-            <div class="text-red-500 text-6xl">⚠️</div>
-            <h3 class="text-xl font-bold text-red-800">Delete Account</h3>
-            <p class="text-gray-700">Are you absolutely sure you want to delete your account?</p>
-            <p class="text-sm text-red-600 bg-red-50 p-3 rounded-lg">
-                This will permanently delete:
-                <br>• All your medical records
-                <br>• All symptom tracking data
-                <br>• Your visit history
-                <br>• Your profile information
-                <br>• All tracked conditions
-            </p>
-            <p class="text-sm text-gray-600">This action cannot be undone.</p>
-            
-            <div class="flex justify-center space-x-3 pt-4">
-                <button onclick="closeModal(document.getElementById('delete-confirm-modal'))" 
-                        class="px-6 py-2 text-gray-600 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors">
-                    Cancel
-                </button>
-                <button onclick="confirmDeleteAccount()" 
-                        class="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors">
-                    Yes, Delete My Account
-                </button>
-            </div>
-        </div>
-    `;
-
-            const modal = createModal('delete-confirm-modal', 'Confirm Account Deletion', confirmContent, 'max-w-md');
-            openModal(modal);
-        }
-
-        async function confirmDeleteAccount() {
-            try {
-                // Delete all user data from Firestore
-                if (docRef) {
-                    await deleteDoc(docRef);
-                }
-
-                // Sign out user
-                await signOut(auth);
-
-                // Reset local data
-                localData = { hospitals: [], ambulance: [], awards: [], visitHistory: [], medicalRecords: [] };
-
-                // Close all modals
-                document.querySelectorAll('.modal-backdrop').forEach(modal => modal.remove());
-
-                // Show success message and redirect
-                showStatusMessage('Account deleted successfully. You have been signed out.', 'success');
-
-                // Redirect to home page after a delay
-                setTimeout(() => {
-                    window.location.href = '/';
-                }, 2000);
-
-            } catch (error) {
-                console.error('Error deleting account:', error);
-                showStatusMessage('Error deleting account. Please try again.', 'error');
-            }
-        }
-
-        // Add Help functionality
-        document.getElementById('help-btn').addEventListener('click', showHelpModal);
 
         function showHelpModal() {
             const userIdText = userId ? userId : 'Not signed in';
@@ -808,14 +611,6 @@
                         </div>
                         <p class="text-xs text-blue-600 mt-2">Include your User ID when contacting support for faster assistance.</p>
                     </div>
-                    
-                    <!-- Close Button -->
-                    <div class="flex justify-end pt-4 border-t">
-                        <button onclick="closeModal(document.getElementById('help-modal'))" 
-                                class="px-6 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors">
-                            Close
-                        </button>
-                    </div>
                 </div>
             `;
 
@@ -823,9 +618,12 @@
             openModal(modal);
         }
 
-        // Add Record functionality
-        document.getElementById('add-record-btn').addEventListener('click', showAddRecordModal);
-
+        // Initialize event listeners for static elements
+        document.getElementById('add-record-btn').addEventListener('click', () => {
+            showStatusMessage('Add record functionality coming soon!', 'success');
+        });
+        document.getElementById('help-btn').addEventListener('click', showHelpModal);
+    </script>
         function showAddRecordModal() {
             const hospitalOptions = (localData.hospitals || []).map(h =>
                 `<option value="${h.name}">${h.name}${h.city ? ` - ${h.city}` : ''}</option>`
