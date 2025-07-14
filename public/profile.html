@@ -467,6 +467,10 @@
             openModal(modal);
         }
 
+        function showAddRecordModal() {
+            showStatusMessage('Add record functionality coming soon!', 'success');
+        }
+
         function showHistoryDetails(entryId) {
             const historyEntry = localData.visitHistory.find(h => h.id === entryId);
             if (!historyEntry) return;
