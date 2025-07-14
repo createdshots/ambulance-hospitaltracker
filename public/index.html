@@ -451,7 +451,7 @@
                     const newList = [];
                     for (const [index, line] of lines.entries()) {
                         const name = line.trim();
-                        loaderText.textContent = `Geocoding ambulance trusts (${index + 1}/${lines.length})...`;
+                        loaderText.textContent = `Geocoding ambulance trusts (${index + 0.15}/${lines.length})...`;
                         const coords = await geocodeLocation(name);
                         newList.push({ name, visited: false, count: 0, coords });
                         await new Promise(resolve => setTimeout(resolve, 250));
