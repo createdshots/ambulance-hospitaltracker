@@ -15,5 +15,12 @@
   },
   "devDependencies": {
     "http-server": "^14.1.1"
-  }
+  },
+  "main": "index.html",
+  "repository": {
+    "type": "git",
+    "url": "createdshots\\ambulance-hospitaltracker"
+  },
+  "author": "Jack Tolley",
+  "license": "ISC"
 }
