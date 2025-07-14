@@ -121,13 +121,16 @@
     <div id="modal-container"></div>
 
     <footer class="fixed bottom-4 right-4 text-sm text-gray-400">
-        Created by Jack Tolley
+        <a href="https://github.com/jack-tolley" target="_blank" rel="noopener noreferrer" class="flex items-center hover:text-gray-600">
+            <svg class="w-4 h-4 mr-1" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path></svg>
+            Created by Jack Tolley
+        </a>
     </footer>
 
     <script type="module">
         // Firebase Imports
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // --- Firebase Configuration ---
@@ -142,7 +145,6 @@
         };
         const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : userFirebaseConfig;
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'local-dev-app';
-        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
 
         let app, db, auth, userId, docRef;
         let isAuthReady = false;
@@ -179,35 +181,29 @@
 
         // --- Authentication ---
         onAuthStateChanged(auth, async (user) => {
+            initialLoadComplete = false; // Reset on auth change
             if (user) {
                 userId = user.uid;
-                userIdDisplay.textContent = `User ID: ${user.isAnonymous ? 'Anonymous' : user.email}`;
+                userIdDisplay.textContent = user.isAnonymous ? 'Anonymous' : user.email;
                 authSignedInView.classList.remove('hidden');
                 authSignedOutView.classList.add('hidden');
                 
                 docRef = doc(db, `artifacts/${appId}/users/${userId}/hospitals-tracker`, "data");
                 isAuthReady = true;
+                loadingIndicator.classList.remove('loader-hidden');
                 setupSnapshotListener();
             } else {
                 authSignedInView.classList.add('hidden');
                 authSignedOutView.classList.remove('hidden');
-                loadingIndicator.classList.add('loader-hidden'); // Hide loader if not signed in
+                loadingIndicator.classList.add('loader-hidden'); 
+                localData = { hospitals: [], ambulance: [], awards: [] };
+                renderAll();
             }
         });
         
-        // Placeholder for future sign-in logic
-        document.getElementById('signin-btn').addEventListener('click', () => {
-             signInAnonymously(auth).catch(error => console.error("Anonymous sign-in failed", error));
-        });
-        
-        document.getElementById('signup-btn').addEventListener('click', () => {
-            alert("Sign up functionality will be added soon!");
-        });
-
         document.getElementById('signout-btn').addEventListener('click', () => {
-            auth.signOut();
+            signOut(auth);
         });
-
 
         // --- Firestore Data Handling ---
         function setupSnapshotListener() {
@@ -445,7 +441,7 @@
         }
 
         // --- Event Listeners ---
-        document.querySelector('.container').addEventListener('click', handleInteraction);
+        document.querySelector('body').addEventListener('click', handleInteraction);
 
         document.getElementById('hospital-search').addEventListener('input', (e) => renderList('hospitals', localData.hospitals, e.target.value));
         document.getElementById('ambulance-search').addEventListener('input', (e) => renderList('ambulance', localData.ambulance, e.target.value));
@@ -506,6 +502,72 @@
             awardsContent += '</div>';
             const modal = createModal('awards-modal', 'Your Awards', awardsContent);
             openModal(modal);
+        });
+        
+        // --- Auth Modal Listeners ---
+        document.getElementById('signup-btn').addEventListener('click', () => {
+            const content = `
+                <form id="signup-form" class="space-y-4">
+                    <div>
+                        <label for="signup-email" class="block text-sm font-medium text-gray-700">Email Address</label>
+                        <input type="email" id="signup-email" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                    </div>
+                    <div>
+                        <label for="signup-password" class="block text-sm font-medium text-gray-700">Password</label>
+                        <input type="password" id="signup-password" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                    </div>
+                    <button type="submit" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">Create Account</button>
+                </form>`;
+            const modal = createModal('signup-modal', 'Create an Account', content, 'max-w-md');
+            openModal(modal);
+            modal.querySelector('#signup-form').addEventListener('submit', (e) => {
+                e.preventDefault();
+                const email = e.target.querySelector('#signup-email').value;
+                const password = e.target.querySelector('#signup-password').value;
+                createUserWithEmailAndPassword(auth, email, password)
+                    .then(() => closeModal(modal))
+                    .catch(error => showStatusMessage(error.message, 'error'));
+            });
+        });
+
+        document.getElementById('signin-btn').addEventListener('click', () => {
+            const content = `
+                <form id="signin-form" class="space-y-4">
+                    <div>
+                        <label for="signin-email" class="block text-sm font-medium text-gray-700">Email Address</label>
+                        <input type="email" id="signin-email" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                    </div>
+                    <div>
+                        <label for="signin-password" class="block text-sm font-medium text-gray-700">Password</label>
+                        <input type="password" id="signin-password" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                    </div>
+                    <button type="submit" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">Sign In</button>
+                </form>
+                <div class="my-4 flex items-center">
+                    <div class="flex-grow border-t border-gray-300"></div>
+                    <span class="flex-shrink mx-4 text-gray-400">OR</span>
+                    <div class="flex-grow border-t border-gray-300"></div>
+                </div>
+                <button id="google-signin-btn" class="w-full flex justify-center items-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                    <svg class="w-5 h-5 mr-2" viewBox="0 0 48 48"><path fill="#4285F4" d="M43.611 20.083H42V20H24v8h11.303c-1.649 4.657-6.08 8-11.303 8c-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4C12.955 4 4 12.955 4 24s8.955 20 20 20s20-8.955 20-20c0-1.341-.138-2.65-.389-3.917z"></path><path fill="#34A853" d="M6.306 14.691l6.571 4.819C14.655 15.108 18.961 12 24 12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4C16.318 4 9.656 8.337 6.306 14.691z"></path><path fill="#FBBC05" d="M27.461 44.5l5.657-5.657C30.485 41.658 27.214 44 24 44c-5.166 0-9.558-2.922-11.481-7.281l-6.571 4.819C9.656 40.663 16.318 44 24 44z"></path><path fill="#EA4335" d="M43.611 20.083H42V20H24v8h11.303c-.792 2.237-2.231 4.166-4.087 5.571l5.657 5.657C42.485 36.678 44 31.888 44 24c0-1.341-.138-2.65-.389-3.917z"></path></svg>
+                    Sign in with Google
+                </button>`;
+            const modal = createModal('signin-modal', 'Sign In', content, 'max-w-md');
+            openModal(modal);
+            modal.querySelector('#signin-form').addEventListener('submit', (e) => {
+                e.preventDefault();
+                const email = e.target.querySelector('#signin-email').value;
+                const password = e.target.querySelector('#signin-password').value;
+                signInWithEmailAndPassword(auth, email, password)
+                    .then(() => closeModal(modal))
+                    .catch(error => showStatusMessage(error.message, 'error'));
+            });
+            modal.querySelector('#google-signin-btn').addEventListener('click', () => {
+                const provider = new GoogleAuthProvider();
+                signInWithPopup(auth, provider)
+                    .then(() => closeModal(modal))
+                    .catch(error => showStatusMessage(error.message, 'error'));
+            });
         });
 
     </script>
