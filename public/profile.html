@@ -444,9 +444,12 @@
                     }
                 }
 
-                // Handle Edit Profile Button
-                if (target.id === 'edit-profile-btn') {
+                // Handle Edit Profile Button - Fixed to check for the button or its child elements
+                if (target.id === 'edit-profile-btn' || target.closest('#edit-profile-btn')) {
+                    e.preventDefault();
+                    e.stopPropagation();
                     showEditProfileModal();
+                    return;
                 }
 
                 // Handle "Add First Record" button inside an empty tab
