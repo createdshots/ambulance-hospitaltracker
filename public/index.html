@@ -188,10 +188,11 @@
     <footer class="fixed bottom-4 right-4 z-10">
         <div class="flex flex-col items-end space-y-2">
             <!-- Help Button -->
-            <button id="help-btn" class="bg-gray-600 text-white px-3 py-2 rounded-lg hover:bg-gray-700 transition-colors text-sm shadow-lg">
+            <button id="help-btn"
+                class="bg-gray-600 text-white px-3 py-2 rounded-lg hover:bg-gray-700 transition-colors text-sm shadow-lg">
                 ❓ Help
             </button>
-            
+
             <!-- Creator Credit -->
             <a href="https://github.com/jack-tolley" target="_blank" rel="noopener noreferrer"
                 class="flex items-center text-xs text-gray-400 hover:text-gray-600 bg-white px-2 py-1 rounded shadow">
@@ -275,11 +276,11 @@
 
                 // Set up Firestore document reference
                 docRef = doc(db, `artifacts/${appId}/users/${userId}/hospitals-tracker`, "data");
-                
+
                 // Show loading and start listening
                 loadingIndicator.classList.remove('loader-hidden');
                 loaderText.textContent = 'Connecting to your data...';
-                
+
                 setupSnapshotListener();
             } else {
                 // User signed out
@@ -288,18 +289,18 @@
                 authSignedInView.style.display = 'none';
                 authSignedOutView.style.display = 'block';
                 loadingIndicator.classList.add('loader-hidden');
-                
+
                 // Reset to default local data
-                localData = { 
-                    hospitals: [], 
-                    ambulance: [], 
-                    awards: [], 
-                    visitHistory: [], 
+                localData = {
+                    hospitals: [],
+                    ambulance: [],
+                    awards: [],
+                    visitHistory: [],
                     medicalRecords: [],
                     symptomTracking: [],
                     userProfile: {}
                 };
-                
+
                 updateProfileButtonVisibility();
                 renderAll();
             }
@@ -321,7 +322,7 @@
 
                 const result = await signInWithPopup(auth, provider);
                 console.log('Google sign-in successful:', result.user);
-                
+
                 // The onAuthStateChanged handler will take care of the rest
             } catch (error) {
                 console.error('Google sign-in error:', error);
@@ -355,25 +356,25 @@
                     if (snapshot.exists()) {
                         // Merge existing data with loaded data
                         const firestoreData = snapshot.data();
-                        localData = { 
-                            hospitals: [], 
-                            ambulance: [], 
-                            awards: [], 
-                            visitHistory: [], 
+                        localData = {
+                            hospitals: [],
+                            ambulance: [],
+                            awards: [],
+                            visitHistory: [],
                             medicalRecords: [],
                             symptomTracking: [],
                             userProfile: {},
-                            ...firestoreData 
+                            ...firestoreData
                         };
                     } else {
                         // Document doesn't exist, initialize with default data
                         console.log("No existing document found, initializing with default data");
                         await initializeDefaultData();
                     }
-                    
+
                     renderAll();
                     loadingIndicator.classList.add('loader-hidden');
-                    
+
                     // Check for onboarding after data is loaded
                     if (!localData.userProfile?.onboardingCompleted) {
                         setTimeout(() => {
@@ -455,9 +456,9 @@
                 console.log("No document reference available, skipping save");
                 return;
             }
-            
+
             checkAwards();
-            
+
             try {
                 await setDoc(docRef, localData, { merge: true });
                 console.log("Data saved successfully to Firestore");
@@ -488,15 +489,15 @@
                 </div>`;
             modalContainer.insertAdjacentHTML('beforeend', modalHTML);
             const modal = document.getElementById(id);
-            
+
             // Handle close button clicks
             modal.querySelector('.close-modal-btn').addEventListener('click', () => closeModal(modal));
-            
+
             // Handle backdrop clicks
-            modal.addEventListener('click', (e) => { 
-                if (e.target === modal) closeModal(modal); 
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) closeModal(modal);
             });
-            
+
             return modal;
         }
 
@@ -511,8 +512,8 @@
         function closeModal(modal) {
             modal.classList.add('opacity-0');
             modal.querySelector('.modal-content').classList.add('scale-95');
-            setTimeout(() => { 
-                modal.remove(); 
+            setTimeout(() => {
+                modal.remove();
             }, 300);
         }
 
@@ -521,7 +522,7 @@
             try {
                 renderHospitals();
                 renderAmbulance();
-                
+
                 // Add symptom tracking section if user has conditions
                 if (localData.userProfile?.conditions?.length > 0) {
                     addSymptomTrackingSection();
@@ -559,7 +560,7 @@
             // Show only first 10 by default, with option to show more
             const showAll = listElement.dataset.showAll === 'true';
             const itemsToShow = showAll ? filteredData : filteredData.slice(0, 10);
-            
+
             itemsToShow.forEach((item) => {
                 const index = data.findIndex(d => d.name === item.name);
                 const itemElement = document.createElement('div');
@@ -593,12 +594,12 @@
                 const toggleButton = document.createElement('button');
                 toggleButton.className = 'w-full mt-2 px-3 py-2 text-sm text-blue-600 hover:text-blue-800 border border-blue-200 rounded-lg hover:bg-blue-50 transition-colors';
                 toggleButton.textContent = showAll ? `Show Less (${filteredData.length - 10} hidden)` : `Show All ${filteredData.length} ${type}`;
-                
+
                 toggleButton.addEventListener('click', () => {
                     listElement.dataset.showAll = showAll ? 'false' : 'true';
                     renderList(type, data, searchTerm);
                 });
-                
+
                 listElement.appendChild(toggleButton);
             }
         }
@@ -871,7 +872,7 @@
 
             // Get user's tracked conditions
             const userConditions = localData.userProfile?.conditions || [];
-            
+
             // Generate condition-specific questions
             const conditionQuestions = generateConditionQuestionsForRecord(userConditions);
 
@@ -994,7 +995,7 @@
             };
 
             let questionsHTML = '';
-            
+
             userConditions.forEach(condition => {
                 const questions = conditionQuestions[condition];
                 if (questions) {
@@ -1003,17 +1004,17 @@
                             <h5 class="font-medium text-gray-900 mb-3 capitalize">${condition.replace('_', ' ')} Related</h5>
                             <div class="space-y-3">
                                 ${questions.map(q => {
-                                    switch (q.type) {
-                                        case 'checkbox':
-                                            return `
+                        switch (q.type) {
+                            case 'checkbox':
+                                return `
                                                 <label class="flex items-center">
                                                     <input type="checkbox" name="condition_${condition}_${q.id}" 
                                                            class="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded">
                                                     <span class="ml-2 text-sm text-gray-700">${q.label}</span>
                                                 </label>
                                             `;
-                                        case 'select':
-                                            return `
+                            case 'select':
+                                return `
                                                 <div>
                                                     <label class="block text-sm font-medium text-gray-700 mb-1">${q.label}</label>
                                                     <select name="condition_${condition}_${q.id}" 
@@ -1023,8 +1024,8 @@
                                                     </select>
                                                 </div>
                                             `;
-                                        default: // text
-                                            return `
+                            default: // text
+                                return `
                                                 <div>
                                                     <label class="block text-sm font-medium text-gray-700 mb-1">${q.label}</label>
                                                     <input type="text" name="condition_${condition}_${q.id}" 
@@ -1032,8 +1033,8 @@
                                                            class="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
                                                 </div>
                                             `;
-                                    }
-                                }).join('')}
+                        }
+                    }).join('')}
                             </div>
                         </div>
                     `;
@@ -1075,15 +1076,15 @@
                 // Collect condition-specific data
                 const conditionData = {};
                 const formData = new FormData(form);
-                
+
                 for (let [key, value] of formData.entries()) {
                     if (key.startsWith('condition_')) {
                         const parts = key.split('_');
                         const condition = parts[1];
                         const field = parts.slice(2).join('_');
-                        
+
                         if (!conditionData[condition]) conditionData[condition] = {};
-                        
+
                         // Handle checkboxes
                         if (form.querySelector(`[name="${key}"]`).type === 'checkbox') {
                             conditionData[condition][field] = true;
@@ -1146,7 +1147,7 @@
 
                 // Re-render lists
                 renderAll();
-                
+
                 showStatusMessage('Medical record added successfully!', 'success');
             });
         }
@@ -1167,7 +1168,7 @@
             ];
 
             const userConditions = localData.userProfile?.conditions || [];
-            
+
             const modalContent = `
                 <form id="edit-profile-form" class="space-y-6">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -1258,18 +1259,18 @@
             // Handle form submission
             document.getElementById('edit-profile-form').addEventListener('submit', async (e) => {
                 e.preventDefault();
-                
+
                 const selectedConditions = Array.from(document.querySelectorAll('input[name="conditions"]:checked'))
                     .map(checkbox => checkbox.value);
-                
+
                 if (!localData.userProfile) localData.userProfile = {};
-                
+
                 localData.userProfile.conditions = selectedConditions;
                 localData.userProfile.emergencyContact = document.getElementById('emergency-contact').value;
                 localData.userProfile.allergies = document.getElementById('allergies').value;
                 localData.userProfile.preferredHospital = document.getElementById('preferred-hospital').value;
                 localData.userProfile.lastUpdated = new Date().toISOString();
-                
+
                 await saveData();
                 renderProfile();
                 closeModal(modal);
@@ -1317,24 +1318,24 @@
                 if (docRef) {
                     await deleteDoc(docRef);
                 }
-                
+
                 // Sign out user
                 await signOut(auth);
-                
+
                 // Reset local data
                 localData = { hospitals: [], ambulance: [], awards: [], visitHistory: [], medicalRecords: [] };
-                
+
                 // Close all modals
                 document.querySelectorAll('.modal-backdrop').forEach(modal => modal.remove());
-                
+
                 // Show success message and redirect
                 showStatusMessage('Account deleted successfully. You have been signed out.', 'success');
-                
+
                 // Redirect to home page after a delay
                 setTimeout(() => {
                     window.location.href = '/';
                 }, 2000);
-                
+
             } catch (error) {
                 console.error('Error deleting account:', error);
                 showStatusMessage('Error deleting account. Please try again.', 'error');
@@ -1420,7 +1421,7 @@
         // Add this function after your existing functions in index.html
         async function initializeDefaultData() {
             console.log("Initializing default data for new user");
-            
+
             try {
                 // Load hospital data if not already loaded
                 if (!localData.hospitals || localData.hospitals.length === 0) {
@@ -1449,18 +1450,18 @@
         function addSymptomTrackingSection() {
             const container = document.querySelector('.container');
             const existingSection = document.getElementById('symptom-tracking-section');
-            
+
             // Remove existing section if it exists
             if (existingSection) {
                 existingSection.remove();
             }
-            
+
             const symptomSection = document.createElement('div');
             symptomSection.id = 'symptom-tracking-section';
             symptomSection.className = 'mb-8 p-4 bg-blue-50 border border-blue-200 rounded-xl';
-            
+
             const recentSymptoms = localData.symptomTracking?.slice(0, 3) || [];
-            
+
             symptomSection.innerHTML = `
                 <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3">
                     <div>
@@ -1480,19 +1481,19 @@
                 ${recentSymptoms.length > 0 ? `
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
                         ${recentSymptoms.map(entry => {
-                            const date = new Date(entry.date);
-                            return `
+                const date = new Date(entry.date);
+                return `
                                 <div class="bg-white p-3 rounded-lg border border-blue-200">
                                     <p class="font-medium text-gray-900 text-sm">${entry.isSymptomOnly ? 'Symptom Log' : entry.hospital}</p>
                                     <p class="text-xs text-gray-600">${date.toLocaleDateString()}</p>
                                     <div class="mt-1">
-                                        ${Object.keys(entry.conditions || {}).map(condition => 
-                                            `<span class="inline-block bg-blue-100 text-blue-800 px-1 py-0.5 rounded text-xs mr-1">${condition.replace('_', ' ')}</span>`
-                                        ).join('')}
+                                        ${Object.keys(entry.conditions || {}).map(condition =>
+                    `<span class="inline-block bg-blue-100 text-blue-800 px-1 py-0.5 rounded text-xs mr-1">${condition.replace('_', ' ')}</span>`
+                ).join('')}
                                     </div>
                                 </div>
                             `;
-                        }).join('')}
+            }).join('')}
                     </div>
                 ` : `
                     <div class="text-center py-4">
@@ -1500,15 +1501,15 @@
                     </div>
                 `}
             `;
-            
+
             // Insert after the header but before the grid
             const header = document.querySelector('header');
             const gridContainer = document.querySelector('.grid.grid-cols-1.md\\:grid-cols-2');
-            
+
             if (header && gridContainer) {
                 header.parentNode.insertBefore(symptomSection, gridContainer);
             }
-            
+
             // Add event listener for quick symptom button
             setTimeout(() => {
                 const quickSymptomBtn = document.getElementById('quick-symptom-btn');
