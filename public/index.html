@@ -49,22 +49,52 @@
             filter: grayscale(0);
             opacity: 1;
         }
+        .loader-hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
     </style>
 </head>
 <body class="bg-gray-50 text-gray-800">
+
+    <!-- Full Page Loader -->
+    <div id="full-page-loader" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex flex-col items-center justify-center z-50 transition-opacity duration-500">
+        <svg class="animate-spin h-10 w-10 text-white mb-4" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+        <p id="loader-text" class="text-white text-lg">Loading data...</p>
+    </div>
+    
+    <!-- Auth Buttons -->
+    <div class="fixed top-4 right-4 z-20">
+        <div id="auth-signed-out-view">
+            <button id="signin-btn" class="bg-white text-blue-600 font-semibold py-2 px-4 border border-blue-600 rounded-lg shadow-md hover:bg-blue-50 transition-colors">Sign In</button>
+            <button id="signup-btn" class="bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:bg-blue-700 transition-colors ml-2">Sign Up</button>
+        </div>
+        <div id="auth-signed-in-view" class="hidden items-center">
+            <span id="user-id-display" class="text-sm text-gray-600 bg-white p-2 rounded-l-lg border-r-0 border"></span>
+            <button id="signout-btn" class="bg-red-500 text-white font-semibold py-2 px-4 rounded-r-lg shadow-md hover:bg-red-600 transition-colors">Sign Out</button>
+        </div>
+    </div>
+
 
     <div class="container mx-auto p-4 md:p-8 max-w-7xl">
 
         <header class="text-center mb-8">
             <h1 class="text-4xl font-bold text-gray-900">Visit Tracker</h1>
             <p class="text-lg text-gray-600 mt-2">Check off hospitals and ambulance trusts you've visited.</p>
-            <div class="mt-4 flex justify-center space-x-2">
+            
+            <div class="mt-6 p-4 bg-yellow-100 border-l-4 border-yellow-500 text-yellow-800 rounded-r-lg text-left max-w-4xl mx-auto">
+                <p class="font-bold">A Note for Our Community</p>
+                <p>This is a personal project designed for the chronically ill community to find a little bit of fun and a sense of accomplishment in their health journey. <strong>Please do not misuse health services for the purpose of checking off locations.</strong> Your health and the resources of the NHS are paramount.</p>
+            </div>
+
+            <div class="mt-6 flex justify-center space-x-2">
                 <button id="show-stats-btn" class="bg-indigo-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-indigo-700 transition-colors">Show Charts</button>
                 <button id="show-map-btn" class="bg-teal-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-teal-700 transition-colors">Show Map</button>
                 <button id="show-awards-btn" class="bg-amber-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-amber-600 transition-colors">Show Awards</button>
             </div>
-            <div id="loading-indicator" class="mt-4 text-blue-600 font-medium hidden"></div>
-            <div id="user-id-display" class="mt-4 text-sm text-gray-500"></div>
             <div id="status-message-area" class="mt-4 h-6"></div>
         </header>
 
@@ -89,6 +119,10 @@
 
     <!-- Modals Container -->
     <div id="modal-container"></div>
+
+    <footer class="fixed bottom-4 right-4 text-sm text-gray-400">
+        Created by Jack Tolley
+    </footer>
 
     <script type="module">
         // Firebase Imports
@@ -116,10 +150,14 @@
         let map;
         let initialLoadComplete = false;
 
-        const loadingIndicator = document.getElementById('loading-indicator');
-        const userIdDisplay = document.getElementById('user-id-display');
+        const loadingIndicator = document.getElementById('full-page-loader');
+        const loaderText = document.getElementById('loader-text');
         const statusMessageArea = document.getElementById('status-message-area');
         const modalContainer = document.getElementById('modal-container');
+        const authSignedInView = document.getElementById('auth-signed-in-view');
+        const authSignedOutView = document.getElementById('auth-signed-out-view');
+        const userIdDisplay = document.getElementById('user-id-display');
+
 
         // --- Awards Definition ---
         const awardsDefinition = {
@@ -143,27 +181,33 @@
         onAuthStateChanged(auth, async (user) => {
             if (user) {
                 userId = user.uid;
-                userIdDisplay.textContent = `User ID: ${userId}`;
+                userIdDisplay.textContent = `User ID: ${user.isAnonymous ? 'Anonymous' : user.email}`;
+                authSignedInView.classList.remove('hidden');
+                authSignedOutView.classList.add('hidden');
+                
                 docRef = doc(db, `artifacts/${appId}/users/${userId}/hospitals-tracker`, "data");
                 isAuthReady = true;
-                loadingIndicator.innerHTML = '<svg class="animate-spin h-5 w-5 mr-3 inline-block" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>Loading data...';
-                loadingIndicator.classList.remove('hidden');
                 setupSnapshotListener();
             } else {
-                userIdDisplay.textContent = 'Authenticating...';
-                await signIn();
+                authSignedInView.classList.add('hidden');
+                authSignedOutView.classList.remove('hidden');
+                loadingIndicator.classList.add('loader-hidden'); // Hide loader if not signed in
             }
         });
+        
+        // Placeholder for future sign-in logic
+        document.getElementById('signin-btn').addEventListener('click', () => {
+             signInAnonymously(auth).catch(error => console.error("Anonymous sign-in failed", error));
+        });
+        
+        document.getElementById('signup-btn').addEventListener('click', () => {
+            alert("Sign up functionality will be added soon!");
+        });
 
-        async function signIn() {
-            try {
-                if (initialAuthToken) await signInWithCustomToken(auth, initialAuthToken);
-                else await signInAnonymously(auth);
-            } catch (error) {
-                console.error("Authentication Error:", error);
-                userIdDisplay.textContent = 'Authentication failed.';
-            }
-        }
+        document.getElementById('signout-btn').addEventListener('click', () => {
+            auth.signOut();
+        });
+
 
         // --- Firestore Data Handling ---
         function setupSnapshotListener() {
@@ -191,7 +235,7 @@
                     needsSave = true;
                 }
 
-                loadingIndicator.classList.add('hidden');
+                loadingIndicator.classList.add('loader-hidden');
                 initialLoadComplete = true;
 
                 if (needsSave) {
@@ -203,7 +247,7 @@
             }, (error) => {
                 console.error("Snapshot listener error:", error);
                 showStatusMessage("Error connecting to data sync.", "error");
-                loadingIndicator.classList.add('hidden');
+                loadingIndicator.classList.add('loader-hidden');
             });
         }
         
@@ -220,8 +264,7 @@
                     return [];
                 }
 
-                loadingIndicator.innerHTML = `Geocoding ${lines.length} ${type}...`;
-                loadingIndicator.classList.remove('hidden');
+                loaderText.textContent = `Geocoding ${lines.length} ${type}...`;
 
                 const promises = lines.map((line, index) => {
                     return new Promise(resolve => {
@@ -239,7 +282,6 @@
             } catch (error) {
                 console.error(`Error loading ${fileName}:`, error);
                 showStatusMessage(`Failed to load ${fileName}.`, "error");
-                loadingIndicator.classList.add('hidden');
                 return [];
             }
         }
@@ -266,7 +308,7 @@
 
         function createModal(id, title, content, size = 'max-w-4xl') {
             const modalHTML = `
-                <div id="${id}" class="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center p-4 hidden modal-backdrop">
+                <div id="${id}" class="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center p-4 hidden opacity-0 modal-backdrop">
                     <div class="bg-white rounded-xl shadow-2xl p-6 w-full ${size} modal-content transform scale-95">
                         <div class="flex justify-between items-center mb-4">
                             <h2 class="text-2xl font-bold text-gray-900">${title}</h2>
@@ -285,15 +327,13 @@
         function openModal(modal) {
             modal.classList.remove('hidden');
             setTimeout(() => {
-                // FIX: Apply animation class to the modal itself, not a child
-                modal.classList.add('opacity-100');
+                modal.classList.remove('opacity-0');
                 modal.querySelector('.modal-content').classList.remove('scale-95');
             }, 10);
         }
 
         function closeModal(modal) {
-            // FIX: Apply animation class to the modal itself, not a child
-            modal.classList.remove('opacity-100');
+            modal.classList.add('opacity-0');
             modal.querySelector('.modal-content').classList.add('scale-95');
             setTimeout(() => { modal.remove(); }, 300);
         }
