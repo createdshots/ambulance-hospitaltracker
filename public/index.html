@@ -176,6 +176,15 @@
             'visits_100': { name: 'Century Club', description: 'Accumulate 100 total visits.', icon: '&#127941;' }
         };
 
+        // --- Initial Checks ---
+        if (typeof hospitalCities === 'undefined') {
+            document.body.innerHTML = `<div class="p-8 text-center text-red-500">
+                <h1 class="text-2xl font-bold">Error: Missing Data File</h1>
+                <p class="mt-2">The file 'hospital_cities.js' could not be loaded. Please ensure it is in the same folder as your index.html file.</p>
+            </div>`;
+            throw new Error("hospital_cities.js not found."); 
+        }
+
         try {
             app = initializeApp(firebaseConfig);
             db = getFirestore(app);
@@ -273,13 +282,13 @@
             try {
                 const response = await fetch(fileName);
                 if (!response.ok) {
-                    throw new Error(`Could not fetch ${fileName} - Status: ${response.status}`);
-                }
-                const contentType = response.headers.get("content-type");
-                if (contentType && contentType.indexOf("text/html") !== -1) {
-                    throw new Error(`Server returned HTML instead of a text file. Please ensure '${fileName}' is in the same folder as index.html.`);
+                    throw new Error(`Could not load '${fileName}'. Make sure it is in the same folder as index.html.`);
                 }
                 const text = await response.text();
+                // More robust check to prevent rendering HTML as a list
+                if (text.trim().toLowerCase().startsWith('<!doctype html>')) {
+                    throw new Error(`Received an HTML file instead of '${fileName}'. Please check that the file exists and is in the correct folder.`);
+                }
                 const lines = text.split(/\r\n?|\n/).filter(line => line.trim() !== '');
 
                 if (lines.length === 0) {
@@ -463,24 +472,11 @@
         }
 
         // --- Event Handling ---
-        function handleInteraction(event) {
-            const target = event.target;
-            const { type, index, action } = target.dataset;
-            if (!type || index === undefined) return;
-            const item = localData[type][parseInt(index)];
-            if (!item) return;
-
-            if (target.type === 'checkbox') item.visited = target.checked;
-            else if (action === 'increase') item.count++;
-            else if (action === 'decrease') item.count = Math.max(0, item.count - 1);
-            else return;
-            
-            saveData();
-        }
+        // FIX: Changed to delegate from a static parent to handle dynamic elements
+        document.getElementById('hospitals-list').addEventListener('click', handleInteraction);
+        document.getElementById('ambulance-list').addEventListener('click', handleInteraction);
 
         // --- Event Listeners ---
-        document.querySelector('body').addEventListener('click', handleInteraction);
-
         document.getElementById('hospital-search').addEventListener('input', (e) => renderList('hospitals', localData.hospitals, e.target.value));
         document.getElementById('ambulance-search').addEventListener('input', (e) => renderList('ambulance', localData.ambulance, e.target.value));
 
