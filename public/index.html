@@ -350,6 +350,7 @@
                         throw new Error(`'${fileName}' may be missing or the server returned an HTML error page instead of text. Please check the file path and availability.`);
                     }
                     const lines = text.split(/\r\n?|\n/).filter(line => line.trim() !== '');
+                    console.log('Ambulance trusts lines:', lines);
 
                     if (lines.length === 0) {
                         showStatusMessage(`${fileName} is empty or could not be read.`, "error");
@@ -463,6 +464,9 @@
                 listElement.innerHTML = `<p class="text-gray-500">No matching ${type}.</p>`;
                 return;
             }
+
+            console.log('Filtered ambulance data:', filteredData);
+
             filteredData.forEach((item) => {
                 const index = data.findIndex(d => d.name === item.name);
                 const itemElement = document.createElement('div');
