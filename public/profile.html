@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Profile - Hospital & Ambulance Trust Tracker</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="firebase-config.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 10px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+
+        .status-message,
+        .modal-backdrop,
+        .modal-content {
+            transition: all 0.3s ease-in-out;
+        }
+
+        .loader-hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .profile-tab-btn {
+            transition: all 0.2s ease;
+        }
+
+        .award {
+            filter: grayscale(1);
+            opacity: 0.5;
+        }
+
+        .award.unlocked {
+            filter: grayscale(0);
+            opacity: 1;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-50 text-gray-800">
+
+    <!-- Full Page Loader -->
+    <div id="full-page-loader"
+        class="fixed inset-0 bg-gray-900 bg-opacity-75 flex flex-col items-center justify-center z-50 transition-opacity duration-500 loader-hidden">
+        <svg class="animate-spin h-10 w-10 text-white mb-4" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor"
+                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+            </path>
+        </svg>
+        <p id="loader-text" class="text-white text-lg">Loading profile...</p>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="bg-white shadow-sm border-b">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <a href="/" class="text-xl font-bold text-gray-900">Visit Tracker</a>
+                    <span class="ml-2 text-sm text-gray-500">/ Profile</span>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <a href="/" class="text-gray-600 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium">
+                        ← Back to Tracker
+                    </a>
+                    <div id="auth-signed-in-view" class="hidden items-center">
+                        <span id="user-id-display" class="text-sm text-gray-600 bg-gray-100 px-3 py-2 rounded-l-lg"></span>
+                        <button id="signout-btn"
+                            class="bg-red-500 text-white font-semibold py-2 px-4 rounded-r-lg shadow-md hover:bg-red-600 transition-colors">
+                            Sign Out
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Profile Content -->
+    <div class="container mx-auto p-4 md:p-8 max-w-6xl">
+        <div id="profile-content" class="hidden">
+            <!-- Content will be dynamically inserted here -->
+        </div>
+        
+        <!-- Not signed in message -->
+        <div id="not-signed-in" class="text-center py-16">
+            <div class="text-gray-400 text-6xl mb-4">👤</div>
+            <h2 class="text-2xl font-bold text-gray-900 mb-2">Sign in to view your profile</h2>
+            <p class="text-gray-600 mb-6">Track your visit history, view achievements, and analyze your progress.</p>
+            <a href="/" class="bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 transition-colors">
+                Go to Tracker
+            </a>
+        </div>
+    </div>
+
+    <!-- Status Message Area -->
+    <div id="status-message-area" class="fixed top-20 right-4 z-30"></div>
+
+    <script type="module">
+        // Firebase Imports
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // --- Firebase Configuration ---
+        const firebaseConfig = typeof userFirebaseConfig !== 'undefined' ? userFirebaseConfig : {};
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'local-dev-app';
+
+        let app, db, auth, userId, docRef;
+        let localData = { hospitals: [], ambulance: [], awards: [], visitHistory: [] };
+        let unsubscribe;
+
+        const loadingIndicator = document.getElementById('full-page-loader');
+        const loaderText = document.getElementById('loader-text');
+        const statusMessageArea = document.getElementById('status-message-area');
+        const authSignedInView = document.getElementById('auth-signed-in-view');
+        const userIdDisplay = document.getElementById('user-id-display');
+        const profileContent = document.getElementById('profile-content');
+        const notSignedIn = document.getElementById('not-signed-in');
+
+        // --- Awards Definition ---
+        const awardsDefinition = {
+            'first_visit': { name: 'First Visit!', description: 'Log your first visit to any location.', icon: '🎉' },
+            'hospitals_5': { name: 'Hospital Hopper', description: 'Visit 5 different hospitals.', icon: '🏥' },
+            'hospitals_10': { name: 'Hospital Hero', description: 'Visit 10 different hospitals.', icon: '🦸' },
+            'trusts_all': { name: 'Trust Titan', description: 'Visit every ambulance trust.', icon: '🚑' },
+            'visits_100': { name: 'Century Club', description: 'Accumulate 100 total visits.', icon: '🏆' }
+        };
+
+        try {
+            app = initializeApp(firebaseConfig);
+            db = getFirestore(app);
+            auth = getAuth(app);
+        } catch (e) {
+            console.error("Firebase initialization failed:", e);
+            showStatusMessage("Could not connect to the database.", "error");
+        }
+
+        // --- Authentication ---
+        onAuthStateChanged(auth, async (user) => {
+            if (unsubscribe) unsubscribe();
+
+            if (user) {
+                userId = user.uid;
+                userIdDisplay.textContent = user.isAnonymous ? 'Guest' : user.displayName || user.email;
+                authSignedInView.style.display = 'flex';
+                notSignedIn.style.display = 'none';
+                profileContent.style.display = 'block';
+
+                docRef = doc(db, `artifacts/${appId}/users/${userId}/hospitals-tracker`, "data");
+                loadingIndicator.classList.remove('loader-hidden');
+                setupSnapshotListener();
+            } else {
+                authSignedInView.style.display = 'none';
+                notSignedIn.style.display = 'block';
+                profileContent.style.display = 'none';
+                loadingIndicator.classList.add('loader-hidden');
+            }
+        });
+
+        document.getElementById('signout-btn').addEventListener('click', () => {
+            signOut(auth);
+        });
+
+        // --- Data Handling ---
+        function setupSnapshotListener() {
+            if (!docRef) return;
+
+            unsubscribe = onSnapshot(docRef, (snapshot) => {
+                if (snapshot.exists()) {
+                    localData = { hospitals: [], ambulance: [], awards: [], visitHistory: [], ...snapshot.data() };
+                } else {
+                    localData = { hospitals: [], ambulance: [], awards: [], visitHistory: [] };
+                }
+                renderProfile();
+                loadingIndicator.classList.add('loader-hidden');
+            }, (error) => {
+                console.error("Snapshot listener error:", error);
+                showStatusMessage("Error loading profile data.", "error");
+                loadingIndicator.classList.add('loader-hidden');
+            });
+        }
+
+        // --- UI Functions ---
+        function showStatusMessage(message, type = 'success') {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `status-message p-4 rounded-lg shadow-lg font-medium mb-2 ${type === 'error' ? 'bg-red-100 text-red-800 border border-red-200' : 'bg-green-100 text-green-800 border border-green-200'}`;
+            messageDiv.textContent = message;
+            statusMessageArea.appendChild(messageDiv);
+            
+            setTimeout(() => {
+                messageDiv.style.opacity = '0';
+                setTimeout(() => messageDiv.remove(), 300);
+            }, 5000);
+        }
+
+        function renderProfile() {
+            const history = localData.visitHistory || [];
+            const totalHospitalVisits = localData.hospitals.reduce((sum, h) => sum + (h.count || 0), 0);
+            const totalAmbulanceVisits = localData.ambulance.reduce((sum, a) => sum + (a.count || 0), 0);
+            const totalVisits = totalHospitalVisits + totalAmbulanceVisits;
+            const visitedHospitals = localData.hospitals.filter(h => h.visited).length;
+            const visitedAmbulance = localData.ambulance.filter(a => a.visited).length;
+            
+            const joinDate = history.length > 0 ? new Date(history[history.length - 1].timestamp).toLocaleDateString() : 'Today';
+            const lastActivity = history.length > 0 ? new Date(history[0].timestamp).toLocaleDateString() : 'No activity yet';
+            
+            profileContent.innerHTML = `
+                <!-- Profile Header -->
+                <div class="bg-gradient-to-r from-purple-500 to-indigo-600 text-white p-8 rounded-xl mb-8">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h1 class="text-3xl font-bold mb-2">${userId ? (userIdDisplay.textContent || 'User') : 'Guest'}</h1>
+                            <p class="text-purple-100">Member since ${joinDate}</p>
+                            <p class="text-purple-100">Last activity: ${lastActivity}</p>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-4xl font-bold mb-1">${totalVisits}</div>
+                            <div class="text-purple-100">Total Visits</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Quick Stats Grid -->
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-6 mb-8">
+                    <div class="bg-white p-6 rounded-xl shadow-md text-center">
+                        <div class="text-3xl font-bold text-blue-600 mb-2">${visitedHospitals}</div>
+                        <div class="text-sm text-gray-600">Hospitals Visited</div>
+                        <div class="text-xs text-gray-400 mt-1">of ${localData.hospitals.length}</div>
+                    </div>
+                    <div class="bg-white p-6 rounded-xl shadow-md text-center">
+                        <div class="text-3xl font-bold text-green-600 mb-2">${visitedAmbulance}</div>
+                        <div class="text-sm text-gray-600">Trusts Visited</div>
+                        <div class="text-xs text-gray-400 mt-1">of ${localData.ambulance.length}</div>
+                    </div>
+                    <div class="bg-white p-6 rounded-xl shadow-md text-center">
+                        <div class="text-3xl font-bold text-yellow-600 mb-2">${totalHospitalVisits}</div>
+                        <div class="text-sm text-gray-600">Hospital Visits</div>
+                    </div>
+                    <div class="bg-white p-6 rounded-xl shadow-md text-center">
+                        <div class="text-3xl font-bold text-purple-600 mb-2">${localData.awards?.length || 0}</div>
+                        <div class="text-sm text-gray-600">Awards Earned</div>
+                        <div class="text-xs text-gray-400 mt-1">of ${Object.keys(awardsDefinition).length}</div>
+                    </div>
+                </div>
+                
+                <!-- Tabs -->
+                <div class="bg-white rounded-xl shadow-md">
+                    <div class="border-b border-gray-200">
+                        <nav class="-mb-px flex space-x-8 px-6">
+                            <button class="profile-tab-btn border-purple-500 text-purple-600 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm" data-tab="history">
+                                Visit History
+                            </button>
+                            <button class="profile-tab-btn border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm" data-tab="achievements">
+                                Achievements
+                            </button>
+                            <button class="profile-tab-btn border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm" data-tab="analytics">
+                                Analytics
+                            </button>
+                        </nav>
+                    </div>
+                    
+                    <!-- Tab Content -->
+                    <div id="profile-tab-content" class="p-6">
+                        ${createHistoryTab(history)}
+                    </div>
+                </div>
+            `;
+
+            setupProfileEventListeners();
+        }
+
+        function createHistoryTab(history) {
+            if (history.length === 0) {
+                return `
+                    <div class="profile-tab-panel text-center py-12" data-tab="history">
+                        <div class="text-gray-400 text-6xl mb-4">📋</div>
+                        <h3 class="text-xl font-medium text-gray-900 mb-2">No visit history yet</h3>
+                        <p class="text-gray-500 mb-6">Start checking off hospitals and ambulance trusts to build your history!</p>
+                        <a href="/" class="bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 transition-colors">
+                            Start Tracking
+                        </a>
+                    </div>
+                `;
+            }
+            
+            const historyHTML = history.slice(0, 50).map(entry => {
+                const date = new Date(entry.timestamp);
+                const timeAgo = getTimeAgo(date);
+                const actionText = getActionText(entry.action, entry.previousCount, entry.newCount);
+                const icon = entry.type === 'hospitals' ? '🏥' : '🚑';
+                const colorClass = entry.type === 'hospitals' ? 'text-blue-600' : 'text-green-600';
+                
+                return `
+                    <div class="flex items-start space-x-4 p-4 hover:bg-gray-50 rounded-lg border-b border-gray-100 last:border-b-0">
+                        <div class="flex-shrink-0 text-2xl">${icon}</div>
+                        <div class="flex-grow min-w-0">
+                            <div class="flex items-start justify-between">
+                                <div class="min-w-0 flex-1">
+                                    <p class="text-sm font-medium text-gray-900 truncate">${entry.name}</p>
+                                    ${entry.city ? `<p class="text-xs text-gray-500">${entry.city}</p>` : ''}
+                                    <p class="text-xs ${colorClass} mt-1">${actionText}</p>
+                                </div>
+                                <div class="text-right flex-shrink-0 ml-4">
+                                    <p class="text-xs text-gray-500">${timeAgo}</p>
+                                    <p class="text-xs text-gray-400">${date.toLocaleDateString()}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            return `
+                <div class="profile-tab-panel" data-tab="history">
+                    <div class="space-y-0 max-h-96 overflow-y-auto custom-scrollbar">
+                        ${historyHTML}
+                    </div>
+                    ${history.length > 50 ? `<p class="text-sm text-gray-500 text-center mt-4 pt-4 border-t">Showing latest 50 entries of ${history.length} total</p>` : ''}
+                </div>
+            `;
+        }
+
+        function createAchievementsTab() {
+            let achievementsHTML = '<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">';
+            
+            for (const id in awardsDefinition) {
+                const award = awardsDefinition[id];
+                const unlocked = (localData.awards || []).includes(id);
+                
+                achievementsHTML += `
+                    <div class="award p-6 border rounded-xl ${unlocked ? 'unlocked bg-green-50 border-green-200' : 'bg-gray-50 border-gray-200'}">
+                        <div class="text-5xl mb-4 text-center">${award.icon}</div>
+                        <h4 class="font-bold text-lg mb-2">${award.name}</h4>
+                        <p class="text-sm text-gray-600 mb-4">${award.description}</p>
+                        ${unlocked ? 
+                            `<p class="text-xs text-green-600 font-medium">✓ Unlocked</p>` :
+                            `<p class="text-xs text-gray-400">🔒 Locked</p>`
+                        }
+                    </div>
+                `;
+            }
+            
+            achievementsHTML += '</div>';
+            
+            return `<div class="profile-tab-panel" data-tab="achievements">${achievementsHTML}</div>`;
+        }
+
+        function createAnalyticsTab() {
+            const history = localData.visitHistory || [];
+            const hospitalHistory = history.filter(h => h.type === 'hospitals');
+            const ambulanceHistory = history.filter(h => h.type === 'ambulance');
+            
+            const analytics = calculateAnalytics(history);
+            
+            return `
+                <div class="profile-tab-panel" data-tab="analytics">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div class="space-y-6">
+                            <div>
+                                <h4 class="font-semibold text-lg mb-4">Activity Overview</h4>
+                                <div class="space-y-3">
+                                    <div class="flex justify-between py-2 border-b border-gray-100">
+                                        <span class="text-gray-600">Total entries logged:</span>
+                                        <span class="font-medium">${history.length}</span>
+                                    </div>
+                                    <div class="flex justify-between py-2 border-b border-gray-100">
+                                        <span class="text-gray-600">Hospital activities:</span>
+                                        <span class="font-medium">${hospitalHistory.length}</span>
+                                    </div>
+                                    <div class="flex justify-between py-2 border-b border-gray-100">
+                                        <span class="text-gray-600">Ambulance activities:</span>
+                                        <span class="font-medium">${ambulanceHistory.length}</span>
+                                    </div>
+                                    <div class="flex justify-between py-2">
+                                        <span class="text-gray-600">Most active day:</span>
+                                        <span class="font-medium">${analytics.mostActiveDay || 'N/A'}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="space-y-6">
+                            <div>
+                                <h4 class="font-semibold text-lg mb-4">Progress Summary</h4>
+                                <div class="space-y-4">
+                                    <div>
+                                        <div class="flex justify-between text-sm mb-2">
+                                            <span>Hospitals Progress</span>
+                                            <span>${Math.round((localData.hospitals.filter(h => h.visited).length / localData.hospitals.length) * 100)}%</span>
+                                        </div>
+                                        <div class="w-full bg-gray-200 rounded-full h-2">
+                                            <div class="bg-blue-600 h-2 rounded-full" style="width: ${(localData.hospitals.filter(h => h.visited).length / localData.hospitals.length) * 100}%"></div>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <div class="flex justify-between text-sm mb-2">
+                                            <span>Ambulance Trusts Progress</span>
+                                            <span>${localData.ambulance.length > 0 ? Math.round((localData.ambulance.filter(a => a.visited).length / localData.ambulance.length) * 100) : 0}%</span>
+                                        </div>
+                                        <div class="w-full bg-gray-200 rounded-full h-2">
+                                            <div class="bg-green-600 h-2 rounded-full" style="width: ${localData.ambulance.length > 0 ? (localData.ambulance.filter(a => a.visited).length / localData.ambulance.length) * 100 : 0}%"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function getActionText(action, previousCount, newCount) {
+            switch (action) {
+                case 'visited': return 'Marked as visited';
+                case 'unvisited': return 'Unmarked as visited';
+                case 'count_increased': return `Visit count: ${previousCount} → ${newCount}`;
+                case 'count_decreased': return `Visit count: ${previousCount} → ${newCount}`;
+                default: return action;
+            }
+        }
+
+        function getTimeAgo(date) {
+            const now = new Date();
+            const diffInSeconds = Math.floor((now - date) / 1000);
+            
+            if (diffInSeconds < 60) return 'Just now';
+            if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
+            if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
+            if (diffInSeconds < 2592000) return `${Math.floor(diffInSeconds / 86400)}d ago`;
+            return `${Math.floor(diffInSeconds / 2592000)}mo ago`;
+        }
+
+        function calculateAnalytics(history) {
+            const dayGroups = {};
+            history.forEach(entry => {
+                const day = new Date(entry.timestamp).toDateString();
+                dayGroups[day] = (dayGroups[day] || 0) + 1;
+            });
+            
+            const mostActiveDay = Object.keys(dayGroups).reduce((a, b) => 
+                dayGroups[a] > dayGroups[b] ? a : b, Object.keys(dayGroups)[0]
+            );
+            
+            return {
+                mostActiveDay: mostActiveDay ? new Date(mostActiveDay).toLocaleDateString() : null
+            };
+        }
+
+        function setupProfileEventListeners() {
+            document.querySelectorAll('.profile-tab-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const targetTab = e.target.dataset.tab;
+                    
+                    // Update tab buttons
+                    document.querySelectorAll('.profile-tab-btn').forEach(b => {
+                        b.className = 'profile-tab-btn border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm';
+                    });
+                    e.target.className = 'profile-tab-btn border-purple-500 text-purple-600 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm';
+                    
+                    // Update content
+                    const contentArea = document.getElementById('profile-tab-content');
+                    switch (targetTab) {
+                        case 'history':
+                            contentArea.innerHTML = createHistoryTab(localData.visitHistory || []);
+                            break;
+                        case 'achievements':
+                            contentArea.innerHTML = createAchievementsTab();
+                            break;
+                        case 'analytics':
+                            contentArea.innerHTML = createAnalyticsTab();
+                            break;
+                    }
+                });
+            });
+        }
+    </script>
+</body>
+
+</html>

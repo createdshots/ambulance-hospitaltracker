@@ -150,6 +150,9 @@
                 <button id="show-awards-btn"
                     class="bg-amber-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-amber-600 transition-colors">Show
                     Awards</button>
+                <button id="show-profile-btn"
+                    class="bg-purple-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-purple-700 transition-colors hidden">My
+                    Profile</button>
             </div>
             <div id="status-message-area" class="mt-4 h-6"></div>
         </header>
@@ -236,6 +239,8 @@
         onAuthStateChanged(auth, async (user) => {
             if (unsubscribe) unsubscribe();
 
+            updateProfileButtonVisibility();
+            
             if (user) {
                 if (typeof userFirebaseConfig === 'undefined') {
                     showStatusMessage("FATAL: firebase-config.js not found. App cannot start.", "error");
@@ -277,7 +282,7 @@
         });
 
         // --- Firestore Data Handling ---
-// ...existing code...
+        // ...existing code...
 
         // --- Firestore Data Handling ---
         function setupSnapshotListener() {
@@ -304,7 +309,7 @@
                     localData.hospitals = await loadListFromFile('hospitals');
                     needsSave = true;
                 }
-                
+
                 // Load ambulance data from file if we don't have the expected amount
                 if (!localData.ambulance || localData.ambulance.length < 10) { // You have 12 ambulance trusts in your txt file
                     localData.ambulance = await loadListFromFile('ambulance');
@@ -541,36 +546,97 @@
         }
 
         // --- Event Handling ---
-        function handleInteraction(event) {
-            const target = event.target;
-            if (!target.dataset.type) return;
+// Add this function after your existing functions
 
-            const type = target.dataset.type;
-            const index = parseInt(target.dataset.index);
-            const data = localData[type];
+// --- Visit History Tracking ---
+function logVisit(type, index, action) {
+    const item = localData[type][index];
+    const timestamp = new Date().toISOString();
+    
+    const historyEntry = {
+        id: `${timestamp}_${Math.random().toString(36).substr(2, 9)}`,
+        timestamp,
+        type, // 'hospitals' or 'ambulance'
+        name: item.name,
+        city: item.city || null,
+        action, // 'visited', 'unvisited', 'count_increased', 'count_decreased'
+        previousCount: item.count,
+        newCount: action === 'count_increased' ? item.count + 1 : 
+                 action === 'count_decreased' ? item.count - 1 : item.count,
+        coords: item.coords
+    };
+    
+    if (!localData.visitHistory) localData.visitHistory = [];
+    localData.visitHistory.unshift(historyEntry); // Add to beginning for recent-first order
+    
+    // Keep only last 1000 entries to prevent data bloat
+    if (localData.visitHistory.length > 1000) {
+        localData.visitHistory = localData.visitHistory.slice(0, 1000);
+    }
+}
 
-            if (!data || !data[index]) return;
+// Update your existing handleInteraction function
+function handleInteraction(event) {
+    const target = event.target;
+    if (!target.dataset.type) return;
 
-            if (target.type === 'checkbox') {
-                data[index].visited = target.checked;
-                if (target.checked && data[index].count === 0) {
-                    data[index].count = 1;
-                }
-            } else if (target.dataset.action === 'increase') {
-                data[index].count++;
-                if (data[index].count > 0) {
-                    data[index].visited = true;
-                }
-            } else if (target.dataset.action === 'decrease' && data[index].count > 0) {
-                data[index].count--;
-                if (data[index].count === 0) {
-                    data[index].visited = false;
-                }
-            }
+    const type = target.dataset.type;
+    const index = parseInt(target.dataset.index);
+    const data = localData[type];
 
-            saveData();
-            renderAll();
+    if (!data || !data[index]) return;
+
+    let action = '';
+    
+    if (target.type === 'checkbox') {
+        const wasVisited = data[index].visited;
+        data[index].visited = target.checked;
+        action = target.checked ? 'visited' : 'unvisited';
+        
+        if (target.checked && data[index].count === 0) {
+            data[index].count = 1;
+            action = 'visited'; // First visit
         }
+        
+        logVisit(type, index, action);
+        
+    } else if (target.dataset.action === 'increase') {
+        action = 'count_increased';
+        logVisit(type, index, action);
+        
+        data[index].count++;
+        if (data[index].count > 0) {
+            data[index].visited = true;
+        }
+        
+    } else if (target.dataset.action === 'decrease' && data[index].count > 0) {
+        action = 'count_decreased';
+        logVisit(type, index, action);
+        
+        data[index].count--;
+        if (data[index].count === 0) {
+            data[index].visited = false;
+        }
+    }
+
+    saveData();
+    renderAll();
+}
+
+// Add profile button event listener with your other button listeners
+document.getElementById('show-profile-btn').addEventListener('click', () => {
+    window.location.href = '/profile.html';
+});
+
+// Show profile button only when signed in - add this to your onAuthStateChanged function
+function updateProfileButtonVisibility() {
+    const profileBtn = document.getElementById('show-profile-btn');
+    if (userId) {
+        profileBtn.classList.remove('hidden');
+    } else {
+        profileBtn.classList.add('hidden');
+    }
+}
 
         document.getElementById('hospitals-list').addEventListener('click', handleInteraction);
         document.getElementById('ambulance-list').addEventListener('click', handleInteraction);
@@ -608,27 +674,45 @@
                         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
                     }).addTo(map);
 
-                    const allLocations = [...localData.hospitals, ...localData.ambulance];
-                    allLocations.forEach(loc => {
+                    const visitedHospitals = localData.hospitals.filter(h => h.visited);
+                    const visitedAmbulance = localData.ambulance.filter(a => a.visited);
+
+                    const visitedLocations = [...visitedHospitals, ...visitedAmbulance];
+
+                    visitedLocations.forEach(loc => {
                         if (loc.coords && loc.coords.lat) {
                             const isHospital = localData.hospitals.some(h => h.name === loc.name);
-                            const color = isHospital ? '#3b82f6' : '#16a34a'; // blue-500, green-600
-                            const fillColor = loc.visited ? color : '#f1f5f9'; // slate-100
-                            const fillOpacity = loc.visited ? 0.7 : 0.5;
-                            const radius = loc.visited ? 8 : 6;
-                            const weight = loc.visited ? 2 : 1;
+
+                            const color = isHospital ? '#3b82f6' : '#16a34a';
+
+                            const baseRadius = 8;
+                            const radius = Math.min(baseRadius + (loc.count * 2), 20);
+
+                            const baseOpacity = 0.6;
+                            const fillOpacity = Math.min(baseOpacity + (loc.count * 0.1), 1.0);
 
                             L.circleMarker([loc.coords.lat, loc.coords.lon], {
                                 color: color,
-                                fillColor: fillColor,
+                                fillColor: color,
                                 fillOpacity: fillOpacity,
                                 radius: radius,
-                                weight: weight
+                                weight: 2
                             })
                                 .addTo(map)
-                                .bindPopup(`<b>${loc.name}</b><br>Visits: ${loc.count}`);
+                                .bindPopup(`
+                                    <div class="text-center">
+                                        <b>${loc.name}</b><br>
+                                        <span class="text-sm ${isHospital ? 'text-blue-600' : 'text-green-600'}">${isHospital ? 'Hospital' : 'Ambulance Trust'}</span><br>
+                                        <span class="font-semibold">Visits: ${loc.count}</span>
+                                    </div>
+                                `);
                         }
                     });
+
+                    if (visitedLocations.length === 0) {
+                        modal.querySelector('#map').innerHTML = '<p class="text-gray-500 text-center mt-8">No visited locations to display. Start checking off hospitals and ambulance trusts to see them appear on the map!</p>';
+                    }
+
                 } catch (e) {
                     console.error("Map initialization failed:", e);
                     modal.querySelector('#map').innerHTML = '<p class="text-red-500 text-center">Sorry, the map could not be loaded.</p>';
