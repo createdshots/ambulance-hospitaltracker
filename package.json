@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "Hospital & Ambulance Trust Tracker",
   "scripts": {
-    "build": "echo 'No build step required for static HTML project'",
+    "build": "npx run build",
     "start": "npx http-server public -p 8080",
     "dev": "npx http-server public -p 8080 -o",
     "deploy": "firebase deploy",
