@@ -279,45 +279,242 @@
         // --- Firestore Data Handling ---
         function setupSnapshotListener() {
             if (!docRef) return;
-            let initialLoadComplete = false;
 
-            unsubscribe = onSnapshot(docRef, async (snapshot) => {
-                if (initialLoadComplete) {
-                    if (snapshot.exists()) {
-                        localData = snapshot.data();
-                    } else {
-                        localData = { hospitals: [], ambulance: [], awards: [] };
-                    }
+            // Unsubscribe previous listener if exists
+            if (unsubscribe) unsubscribe();
+
+            unsubscribe = onSnapshot(docRef, (docSnap) => {
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    localData.hospitals = data.hospitals || [];
+                    localData.ambulance = data.ambulance || [];
+                    localData.awards = data.awards || [];
                     renderAll();
-                    return;
-                }
-
-                let needsSave = false;
-                const data = snapshot.exists() ? snapshot.data() : {};
-                localData = { hospitals: [], ambulance: [], awards: [], ...data };
-
-                if (!localData.hospitals || localData.hospitals.length === 0) {
-                    localData.hospitals = await loadListFromFile('hospitals');
-                    needsSave = true;
-                }
-                if (!localData.ambulance || localData.ambulance.length === 0) {
-                    localData.ambulance = await loadListFromFile('ambulance');
-                    needsSave = true;
-                }
-
-                loadingIndicator.classList.add('loader-hidden');
-                initialLoadComplete = true;
-
-                if (needsSave) {
-                    await saveData();
+                    loadingIndicator.classList.add('loader-hidden');
+                    showStatusMessage("Data loaded successfully.", "success");
                 } else {
+                    // Document does not exist yet, initialize with empty arrays
+                    localData = { hospitals: [], ambulance: [], awards: [] };
                     renderAll();
+                    loadingIndicator.classList.add('loader-hidden');
+                    showStatusMessage("No saved data found. Start logging visits!", "info");
                 }
-
             }, (error) => {
-                console.error("Snapshot listener error:", error);
-                showStatusMessage("Error connecting to data sync.", "error");
                 loadingIndicator.classList.add('loader-hidden');
+                showStatusMessage(`Error loading data: ${error.message}`, "error");
+            });
+        }
+
+        // --- Render Functions ---
+        function renderAll() {
+            renderList('hospitals');
+            renderList('ambulance');
+            renderStats();
+            renderAwards();
+            if (map) renderMapMarkers();
+        }
+
+        function renderList(type) {
+            const listContainer = document.getElementById(`${type}-list`);
+            const searchInput = document.getElementById(`${type}-search`);
+            const filterText = searchInput.value.toLowerCase();
+
+            let dataArray = localData[type] || [];
+            // Filter based on search
+            if (filterText) {
+                dataArray = dataArray.filter(item => item.name.toLowerCase().includes(filterText));
+            }
+
+            listContainer.innerHTML = '';
+
+            if (dataArray.length === 0) {
+                listContainer.innerHTML = `<p class="text-gray-500">No ${type} found.</p>`;
+                return;
+            }
+
+            dataArray.forEach(item => {
+                const isVisited = item.visited || false;
+
+                const itemDiv = document.createElement('div');
+                itemDiv.className = "list-item flex justify-between items-center p-2 rounded-lg cursor-pointer hover:bg-gray-100";
+                itemDiv.tabIndex = 0;
+
+                itemDiv.innerHTML = `
+            <div>
+                <p class="font-medium text-gray-900">${item.name}</p>
+                <p class="text-sm text-gray-600">${item.location || ''}</p>
+            </div>
+            <input type="checkbox" ${isVisited ? 'checked' : ''} class="form-checkbox h-5 w-5 text-indigo-600" />
+        `;
+
+                // Toggle visited status on checkbox change
+                const checkbox = itemDiv.querySelector('input[type="checkbox"]');
+                checkbox.addEventListener('change', () => {
+                    toggleVisitStatus(type, item.id, checkbox.checked);
+                });
+
+                listContainer.appendChild(itemDiv);
+            });
+        }
+
+        function renderStats() {
+            // Calculate counts for hospitals and ambulance
+            const hospitalsVisited = localData.hospitals.filter(h => h.visited).length;
+            const hospitalsTotal = localData.hospitals.length;
+
+            const ambulanceVisited = localData.ambulance.filter(a => a.visited).length;
+            const ambulanceTotal = localData.ambulance.length;
+
+            document.getElementById('hospitals-stats').textContent =
+                `Visited ${hospitalsVisited} of ${hospitalsTotal} hospitals`;
+
+            document.getElementById('ambulance-stats').textContent =
+                `Visited ${ambulanceVisited} of ${ambulanceTotal} ambulance trusts`;
+        }
+
+        function renderAwards() {
+            // Simple award display example
+            const awardsContainerId = 'awards-container';
+            let awardsContainer = document.getElementById(awardsContainerId);
+            if (!awardsContainer) {
+                awardsContainer = document.createElement('div');
+                awardsContainer.id = awardsContainerId;
+                awardsContainer.className = "max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-6 mt-6";
+                document.querySelector('.container').appendChild(awardsContainer);
+            }
+            awardsContainer.innerHTML = '';
+
+            for (const [awardKey, awardInfo] of Object.entries(awardsDefinition)) {
+                const isUnlocked = localData.awards.includes(awardKey);
+
+                const awardDiv = document.createElement('div');
+                awardDiv.className = `award rounded-lg p-4 shadow-md text-center ${isUnlocked ? 'unlocked bg-yellow-100' : 'bg-gray-200'}`;
+                awardDiv.title = awardInfo.description;
+
+                awardDiv.innerHTML = `
+            <div class="text-4xl mb-2">${awardInfo.icon}</div>
+            <h3 class="font-semibold text-lg">${awardInfo.name}</h3>
+            <p class="text-sm">${awardInfo.description}</p>
+        `;
+
+                awardsContainer.appendChild(awardDiv);
+            }
+        }
+
+        // --- Update Visit Status in Firestore ---
+        async function toggleVisitStatus(type, id, visited) {
+            if (!userId) {
+                showStatusMessage("Please sign in to save your progress.", "warning");
+                return;
+            }
+
+            const items = localData[type];
+            const itemIndex = items.findIndex(i => i.id === id);
+            if (itemIndex === -1) return;
+
+            items[itemIndex].visited = visited;
+
+            try {
+                await setDoc(docRef, {
+                    hospitals: localData.hospitals,
+                    ambulance: localData.ambulance,
+                    awards: localData.awards,
+                });
+                showStatusMessage(`Updated ${items[itemIndex].name} as ${visited ? 'visited' : 'not visited'}.`, "success");
+                updateAwards();
+                renderStats();
+                renderAwards();
+                renderList(type);
+                if (map) renderMapMarkers();
+            } catch (error) {
+                showStatusMessage(`Failed to update: ${error.message}`, "error");
+            }
+        }
+
+        // --- Award Logic (Example) ---
+        function updateAwards() {
+            const visitedHospitalsCount = localData.hospitals.filter(h => h.visited).length;
+            const visitedTrustsCount = localData.ambulance.filter(a => a.visited).length;
+            const totalVisits = visitedHospitalsCount + visitedTrustsCount;
+
+            const awardsToUnlock = [];
+
+            if (totalVisits >= 1) awardsToUnlock.push('first_visit');
+            if (visitedHospitalsCount >= 5) awardsToUnlock.push('hospitals_5');
+            if (visitedHospitalsCount >= 10) awardsToUnlock.push('hospitals_10');
+            if (visitedTrustsCount === localData.ambulance.length && localData.ambulance.length > 0) awardsToUnlock.push('trusts_all');
+            if (totalVisits >= 100) awardsToUnlock.push('visits_100');
+
+            // Update awards if changed
+            const awardsChanged = JSON.stringify(awardsToUnlock.sort()) !== JSON.stringify(localData.awards.sort());
+            if (awardsChanged) {
+                localData.awards = awardsToUnlock;
+                // Save awards update to Firestore
+                setDoc(docRef, {
+                    hospitals: localData.hospitals,
+                    ambulance: localData.ambulance,
+                    awards: localData.awards,
+                }).catch(error => {
+                    showStatusMessage(`Failed to update awards: ${error.message}`, "error");
+                });
+            }
+        }
+
+        // --- Status Message Utility ---
+        let statusTimeout;
+        function showStatusMessage(message, type = 'info') {
+            clearTimeout(statusTimeout);
+            statusMessageArea.textContent = message;
+            statusMessageArea.className = `mt-4 h-6 text-sm font-medium ${type === 'success' ? 'text-green-600' :
+                    type === 'error' ? 'text-red-600' :
+                        type === 'warning' ? 'text-yellow-600' : 'text-gray-700'
+                }`;
+            statusTimeout = setTimeout(() => {
+                statusMessageArea.textContent = '';
+            }, 5000);
+        }
+
+        // --- Search Input Handlers ---
+        document.getElementById('hospital-search').addEventListener('input', () => renderList('hospitals'));
+        document.getElementById('ambulance-search').addEventListener('input', () => renderList('ambulance'));
+
+        // --- Map Setup ---
+        function initMap() {
+            if (map) return; // Already initialized
+
+            map = L.map('map').setView([54.5, -3], 6); // Centered on UK approx
+
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; OpenStreetMap contributors'
+            }).addTo(map);
+
+            renderMapMarkers();
+        }
+
+        let mapMarkers = [];
+        function renderMapMarkers() {
+            if (!map) return;
+
+            // Remove old markers
+            mapMarkers.forEach(marker => map.removeLayer(marker));
+            mapMarkers = [];
+
+            [...localData.hospitals, ...localData.ambulance].forEach(item => {
+                if (!item.lat || !item.lng) return; // Skip if no coordinates
+
+                const marker = L.marker([item.lat, item.lng], {
+                    title: item.name,
+                    opacity: item.visited ? 1.0 : 0.5
+                });
+
+                marker.bindPopup(`
+            <strong>${item.name}</strong><br/>
+            ${item.location || ''}<br/>
+            Status: ${item.visited ? 'Visited' : 'Not Visited'}
+        `);
+
+                marker.addTo(map);
+                mapMarkers.push(marker);
             });
         }
 
