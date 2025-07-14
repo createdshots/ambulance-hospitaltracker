@@ -237,7 +237,6 @@
             app = initializeApp(firebaseConfig);
             db = getFirestore(app);
             auth = getAuth(app);
-            const provider = new GoogleAuthProvider();
         } catch (e) {
             console.error("Firebase initialization failed:", e);
             showStatusMessage("Could not connect to the database.", "error");
@@ -298,7 +297,9 @@
                     console.log('Google sign-in successful:', result.user);
                     // Check if this is a new user and show onboarding
                     if (result.additionalUserInfo?.isNewUser) {
-                        showOnboardingQuestionnaire();
+                        setTimeout(() => {
+                            showOnboardingQuestionnaire();
+                        }, 1000);
                     }
                 })
                 .catch(error => {
@@ -450,7 +451,7 @@
 
         function createModal(id, title, content, size = 'max-w-4xl') {
             const modalHTML = `
-                <div id="${id}" class="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center p-4 hidden opacity-0 modal-backdrop">
+                <div id="${id}" class="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center p-4 z-50 opacity-0 modal-backdrop">
                     <div class="bg-white rounded-xl shadow-2xl p-6 w-full ${size} modal-content transform scale-95">
                         <div class="flex justify-between items-center mb-4">
                             <h2 class="text-2xl font-bold text-gray-900">${title}</h2>
@@ -461,13 +462,20 @@
                 </div>`;
             modalContainer.insertAdjacentHTML('beforeend', modalHTML);
             const modal = document.getElementById(id);
+            
+            // Handle close button clicks
             modal.querySelector('.close-modal-btn').addEventListener('click', () => closeModal(modal));
-            modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(modal); });
+            
+            // Handle backdrop clicks
+            modal.addEventListener('click', (e) => { 
+                if (e.target === modal) closeModal(modal); 
+            });
+            
             return modal;
         }
 
         function openModal(modal) {
-            modal.classList.remove('hidden');
+            modal.classList.remove('hidden', 'opacity-0');
             setTimeout(() => {
                 modal.classList.remove('opacity-0');
                 modal.querySelector('.modal-content').classList.remove('scale-95');
@@ -477,7 +485,9 @@
         function closeModal(modal) {
             modal.classList.add('opacity-0');
             modal.querySelector('.modal-content').classList.add('scale-95');
-            setTimeout(() => { modal.remove(); }, 300);
+            setTimeout(() => { 
+                modal.remove(); 
+            }, 300);
         }
 
         // --- Rendering ---
@@ -795,88 +805,87 @@
                 `<option value="${a.name}">${a.name}</option>`
             ).join('');
 
-            return
-
-            <form id="add-record-form" class="space-y-6">
+            return `
+        <form id="add-record-form" class="space-y-6">
             <!-- Date and Time -->
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label for="visit-date" class="block text-sm font-medium text-gray-700 mb-2">Visit Date</label>
-                        <input type="date" id="visit-date" required
-                            class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                            value="${new Date().toISOString().split('T')[0]}">
-                    </div>
-                    <div>
-                        <label for="visit-time" class="block text-sm font-medium text-gray-700 mb-2">Visit Time (Optional)</label>
-                        <input type="time" id="visit-time"
-                            class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
-                    </div>
-                </div>
-
-                <!-- Hospital Selection -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                    <label for="hospital-select" class="block text-sm font-medium text-gray-700 mb-2">Hospital/Medical Facility</label>
-                    <select id="hospital-select" required
+                    <label for="visit-date" class="block text-sm font-medium text-gray-700 mb-2">Visit Date</label>
+                    <input type="date" id="visit-date" required
+                        class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                        value="${new Date().toISOString().split('T')[0]}">
+                </div>
+                <div>
+                    <label for="visit-time" class="block text-sm font-medium text-gray-700 mb-2">Visit Time (Optional)</label>
+                    <input type="time" id="visit-time"
                         class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
-                        <option value="">Select a hospital...</option>
-                        ${hospitalOptions}
-                    </select>
                 </div>
+            </div>
 
-                <!-- Ambulance Involved -->
-                <div>
-                    <label class="flex items-center">
-                        <input type="checkbox" id="ambulance-involved"
-                            class="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded">
-                            <span class="ml-2 text-sm font-medium text-gray-700">Ambulance service was involved</span>
-                    </label>
-                </div>
+            <!-- Hospital Selection -->
+            <div>
+                <label for="hospital-select" class="block text-sm font-medium text-gray-700 mb-2">Hospital/Medical Facility</label>
+                <select id="hospital-select" required
+                    class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
+                    <option value="">Select a hospital...</option>
+                    ${hospitalOptions}
+                </select>
+            </div>
 
-                <!-- Ambulance Trust Selection (hidden by default) -->
-                <div id="ambulance-section" class="hidden">
-                    <label for="ambulance-select" class="block text-sm font-medium text-gray-700 mb-2">Ambulance Trust</label>
-                    <select id="ambulance-select"
-                        class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
-                        <option value="">Select an ambulance trust...</option>
-                        ${ambulanceOptions}
-                    </select>
-                </div>
+            <!-- Ambulance Involved -->
+            <div>
+                <label class="flex items-center">
+                    <input type="checkbox" id="ambulance-involved"
+                        class="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded">
+                        <span class="ml-2 text-sm font-medium text-gray-700">Ambulance service was involved</span>
+                </label>
+            </div>
 
-                <!-- Visit Type -->
-                <div>
-                    <label for="visit-type" class="block text-sm font-medium text-gray-700 mb-2">Type of Visit</label>
-                    <select id="visit-type" required
-                        class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
-                        <option value="">Select visit type...</option>
-                        <option value="emergency">Emergency</option>
-                        <option value="outpatient">Outpatient Appointment</option>
-                        <option value="inpatient">Inpatient Stay</option>
-                        <option value="procedure">Procedure/Surgery</option>
-                        <option value="test">Tests/Diagnostic</option>
-                        <option value="other">Other</option>
-                    </select>
-                </div>
+            <!-- Ambulance Trust Selection (hidden by default) -->
+            <div id="ambulance-section" class="hidden">
+                <label for="ambulance-select" class="block text-sm font-medium text-gray-700 mb-2">Ambulance Trust</label>
+                <select id="ambulance-select"
+                    class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
+                    <option value="">Select an ambulance trust...</option>
+                    ${ambulanceOptions}
+                </select>
+            </div>
 
-                <!-- Notes -->
-                <div>
-                    <label for="visit-notes" class="block text-sm font-medium text-gray-700 mb-2">Notes (Optional)</label>
-                    <textarea id="visit-notes" rows="4"
-                        placeholder="Add any additional details about your visit..."
-                        class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"></textarea>
-                </div>
+            <!-- Visit Type -->
+            <div>
+                <label for="visit-type" class="block text-sm font-medium text-gray-700 mb-2">Type of Visit</label>
+                <select id="visit-type" required
+                    class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
+                    <option value="">Select visit type...</option>
+                    <option value="emergency">Emergency</option>
+                    <option value="outpatient">Outpatient Appointment</option>
+                    <option value="inpatient">Inpatient Stay</option>
+                    <option value="procedure">Procedure/Surgery</option>
+                    <option value="test">Tests/Diagnostic</option>
+                    <option value="other">Other</option>
+                </select>
+            </div>
 
-                <!-- Submit Button -->
-                <div class="flex justify-end space-x-3 pt-4 border-t">
-                    <button type="button" class="cancel-btn px-4 py-2 text-gray-600 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors">
-                        Cancel
-                    </button>
-                    <button type="submit"
-                        class="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors">
-                        Add Record
-                    </button>
-                </div>
-            </form>
-                ;
+            <!-- Notes -->
+            <div>
+                <label for="visit-notes" class="block text-sm font-medium text-gray-700 mb-2">Notes (Optional)</label>
+                <textarea id="visit-notes" rows="4"
+                    placeholder="Add any additional details about your visit..."
+                    class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"></textarea>
+            </div>
+
+            <!-- Submit Button -->
+            <div class="flex justify-end space-x-3 pt-4 border-t">
+                <button type="button" class="cancel-btn px-4 py-2 text-gray-600 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors">
+                    Cancel
+                </button>
+                <button type="submit"
+                    class="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors">
+                    Add Record
+                </button>
+            </div>
+        </form>
+    `;
         }
 
         function setupAddRecordEventListeners(modal) {
@@ -904,7 +913,7 @@
             });
 
             // Form submission
-            form.addEventListener('submit', (e) => {
+            form.addEventListener('submit', async (e) => {
                 e.preventDefault();
 
                 const formData = {
@@ -926,28 +935,28 @@
                 // Update visit counts for tracking
                 const hospitalIndex = localData.hospitals.findIndex(h => h.name === formData.hospital);
                 if (hospitalIndex !== -1) {
-                    localData.hospitals[hospitalIndex].count++;
                     localData.hospitals[hospitalIndex].visited = true;
-                    logVisit('hospitals', hospitalIndex, 'count_increased');
+                    localData.hospitals[hospitalIndex].count++;
                 }
 
-                if (formData.ambulanceInvolved && formData.ambulanceTrust) {
-                    const ambulanceIndex = localData.ambulance.findIndex(a => a.name === formData.ambulanceTrust);
-                    if (ambulanceIndex !== -1) {
-                        localData.ambulance[ambulanceIndex].count++;
-                        localData.ambulance[ambulanceIndex].visited = true;
-                        logVisit('ambulance', ambulanceIndex, 'count_increased');
-                    }
+                const ambulanceIndex = localData.ambulance.findIndex(a => a.name === formData.ambulanceTrust);
+                if (ambulanceIndex !== -1) {
+                    localData.ambulance[ambulanceIndex].visited = true;
+                    localData.ambulance[ambulanceIndex].count++;
                 }
 
-                saveData();
-                renderAll();
+                // Save data
+                await saveData();
+
+                // Close modal
                 closeModal(modal);
-                showStatusMessage('Medical record added successfully!', 'success');
+
+                // Re-render lists
+                renderAll();
             });
         }
-        // Add this function after your existing functions
 
+        // --- Onboarding ---
         function showOnboardingQuestionnaire() {
             const conditions = [
                 { id: 'epilepsy', name: 'Epilepsy', trackable: ['Seizures', 'Medication times', 'Triggers', 'Aura symptoms'] },
@@ -963,83 +972,89 @@
             ];
 
             const modalContent = `
-        <form id="onboarding-form" class="space-y-6">
-            <div class="text-center mb-6">
-                <h3 class="text-xl font-semibold text-gray-900 mb-2">Welcome! Let's personalize your experience</h3>
-                <p class="text-gray-600">Select any conditions you'd like to track. This will help us customize your medical record forms and analytics.</p>
-            </div>
-            
-            <div class="space-y-4 max-h-96 overflow-y-auto custom-scrollbar">
-                ${conditions.map(condition => `
-                    <div class="border border-gray-200 rounded-lg p-4">
-                        <label class="flex items-start cursor-pointer">
-                            <input type="checkbox" name="conditions" value="${condition.id}" 
-                                   class="h-5 w-5 text-purple-600 focus:ring-purple-500 border-gray-300 rounded mt-1">
-                            <div class="ml-3 flex-grow">
-                                <div class="font-medium text-gray-900">${condition.name}</div>
-                                <div class="text-sm text-gray-500 mt-1">
-                                    Track: ${condition.trackable.join(', ')}
-                                </div>
+                <form id="onboarding-form" class="space-y-6">
+                    <div class="text-center mb-6">
+                        <h3 class="text-xl font-semibold text-gray-900 mb-2">Welcome! Let's personalize your experience</h3>
+                        <p class="text-gray-600">Select any conditions you'd like to track. This will help us customize your medical record forms and analytics.</p>
+                    </div>
+                    
+                    <div class="space-y-4 max-h-96 overflow-y-auto custom-scrollbar">
+                        ${conditions.map(condition => `
+                            <div class="border border-gray-200 rounded-lg p-4">
+                                <label class="flex items-start cursor-pointer">
+                                    <input type="checkbox" name="conditions" value="${condition.id}" 
+                                           class="h-5 w-5 text-purple-600 focus:ring-purple-500 border-gray-300 rounded mt-1">
+                                    <div class="ml-3 flex-grow">
+                                        <div class="font-medium text-gray-900">${condition.name}</div>
+                                        <div class="text-sm text-gray-500 mt-1">
+                                            Track: ${condition.trackable.join(', ')}
+                                        </div>
+                                    </div>
+                                </label>
                             </div>
-                        </label>
+                        `).join('')}
                     </div>
-                `).join('')}
-            </div>
-            
-            <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <div class="flex items-start">
-                    <div class="text-blue-600 text-xl mr-3">ℹ️</div>
-                    <div class="text-sm text-blue-800">
-                        <p class="font-medium mb-1">Your privacy matters</p>
-                        <p>This information is stored securely and only used to customize your experience. You can change these settings anytime in your profile.</p>
+                    
+                    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                        <div class="flex items-start">
+                            <div class="text-blue-600 text-xl mr-3">ℹ️</div>
+                            <div class="text-sm text-blue-800">
+                                <p class="font-medium mb-1">Your privacy matters</p>
+                                <p>This information is stored securely and only used to customize your experience. You can change these settings anytime in your profile.</p>
+                            </div>
+                        </div>
                     </div>
-                </div>
-            </div>
-            
-            <div class="flex justify-end space-x-3 pt-4 border-t">
-                <button type="button" id="skip-onboarding" 
-                        class="px-4 py-2 text-gray-600 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors">
-                    Skip for now
-                </button>
-                <button type="submit" 
-                        class="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors">
-                    Save Preferences
-                </button>
-            </div>
-        </form>
-    `;
+                    
+                    <div class="flex justify-end space-x-3 pt-4 border-t">
+                        <button type="button" id="skip-onboarding" 
+                                class="px-4 py-2 text-gray-600 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors">
+                            Skip for now
+                        </button>
+                        <button type="submit" 
+                                class="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors">
+                            Save Preferences
+                        </button>
+                    </div>
+                </form>
+            `;
 
             const modal = createModal('onboarding-modal', 'Personalize Your Experience', modalContent, 'max-w-2xl');
             openModal(modal);
 
-            // Handle form submission
-            document.getElementById('onboarding-form').addEventListener('submit', async (e) => {
-                e.preventDefault();
+            // Add event listeners after modal is created and opened
+            setTimeout(() => {
+                const form = modal.querySelector('#onboarding-form');
+                const skipBtn = modal.querySelector('#skip-onboarding');
 
-                const selectedConditions = Array.from(document.querySelectorAll('input[name="conditions"]:checked'))
-                    .map(checkbox => checkbox.value);
+                // Handle form submission
+                form.addEventListener('submit', async (e) => {
+                    e.preventDefault();
 
-                // Save to user profile
-                if (!localData.userProfile) localData.userProfile = {};
-                localData.userProfile.conditions = selectedConditions;
-                localData.userProfile.onboardingCompleted = true;
-                localData.userProfile.setupDate = new Date().toISOString();
+                    const selectedConditions = Array.from(modal.querySelectorAll('input[name="conditions"]:checked'))
+                        .map(checkbox => checkbox.value);
 
-                await saveData();
-                closeModal(modal);
-                showStatusMessage('Preferences saved! Your experience has been personalized.', 'success');
-            });
+                    // Save to user profile
+                    if (!localData.userProfile) localData.userProfile = {};
+                    localData.userProfile.conditions = selectedConditions;
+                    localData.userProfile.onboardingCompleted = true;
+                    localData.userProfile.setupDate = new Date().toISOString();
 
-            // Handle skip button
-            document.getElementById('skip-onboarding').addEventListener('click', async () => {
-                if (!localData.userProfile) localData.userProfile = {};
-                localData.userProfile.onboardingCompleted = true;
-                localData.userProfile.conditions = [];
-                localData.userProfile.setupDate = new Date().toISOString();
+                    await saveData();
+                    closeModal(modal);
+                    showStatusMessage('Preferences saved! Your experience has been personalized.', 'success');
+                });
 
-                await saveData();
-                closeModal(modal);
-            });
+                // Handle skip button
+                skipBtn.addEventListener('click', async () => {
+                    if (!localData.userProfile) localData.userProfile = {};
+                    localData.userProfile.onboardingCompleted = true;
+                    localData.userProfile.conditions = [];
+                    localData.userProfile.setupDate = new Date().toISOString();
+
+                    await saveData();
+                    closeModal(modal);
+                });
+            }, 50); // Small delay to ensure DOM is ready
         }
     </script>
 </body>
