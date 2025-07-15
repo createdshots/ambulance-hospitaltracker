@@ -84,6 +84,7 @@
   { "name": "Macclesfield District General Hospital", "city": "Macclesfield", "coords": { "lat": 53.26, "lon": -2.14 } },
   { "name": "Maidstone Hospital", "city": "Maidstone", "coords": { "lat": 51.28, "lon": 0.48 } },
   { "name": "Manchester Royal Infirmary", "city": "Manchester", "coords": { "lat": 53.46, "lon": -2.22 } },
+  { "name": "Midland Metopolitan Hospital", "city": "Birmingham", "coords": { "lat": 52.51, "lon": -1.99 } },
   { "name": "Manor Hospital", "city": "Walsall", "coords": { "lat": 52.59, "lon": -1.99 } },
   { "name": "Medway Maritime Hospital", "city": "Gillingham", "coords": { "lat": 51.39, "lon": 0.55 } },
   { "name": "Milton Keynes University Hospital", "city": "Milton Keynes", "coords": { "lat": 52.02, "lon": -0.73 } },
