@@ -13,8 +13,7 @@
     <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
         integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-    <!-- Firebase Configuration -->
-    <script src="firebase-config.js"></script>
+
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         body {
@@ -282,26 +281,33 @@
             });
         }
 
-        function initializeAppLogic() {
-            // Check for config files first
-            if (typeof userFirebaseConfig === 'undefined') {
-                document.body.innerHTML = `<div class="p-8 text-center text-red-500"><h1 class="text-2xl font-bold">Fatal Error</h1><p class="mt-2">The file 'firebase-config.js' could not be loaded. Please ensure it exists and is in the same folder as index.html.</p></div>`;
-                throw new Error("firebase-config.js not found.");
+        async function initializeAppLogic() {
+            let firebaseConfig;
+            try {
+                const response = await fetch('/__/firebase/init.json');
+                firebaseConfig = await response.json();
+                console.log("Firebase config from Firebase Hosting");
+            } catch (e) {
+                if (typeof userFirebaseConfig !== 'undefined') {
+                    console.log("Using local firebase-config.js");
+                    firebaseConfig = userFirebaseConfig;
+                } else {
+                    document.body.innerHTML = `<div class="p-8 text-center text-red-500"<h1 class="text-2x1 font-bold">Fatal Error</h1></div>`
+                    throw new Error("Firebase configuration not found. Please ensure firebase-config.js is included or Firebase Hosting is set up correctly.");
+                }
             }
 
             try {
-                app = initializeApp(userFirebaseConfig);
-                db = getFirestore(app);
-                auth = getAuth(app);
+            app = initializeApp(firebaseConfig);
+            db = getFirestore(app);
+            auth = getAuth(app);
             } catch (e) {
-                console.error("Firebase initialization failed:", e);
-                showStatusMessage("Could not connect to the database.", "error");
-                return; // Stop execution if Firebase fails
+                console.error("Error initializing Firebase:", e);
+                showStatusMessage("Error initializing Firebase. Please check your configuration.", "error");
+                return;
             }
 
-            // Setup all event listeners for the page
             setupEventListeners();
-            // Start listening for authentication state changes
             onAuthStateChanged(auth, handleAuthStateChange);
         }
 
