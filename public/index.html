@@ -422,18 +422,18 @@
                         return [];
                     }
 
-                    loaderText.textContent = `Geocoding ${lines.length} ambulance trusts...`;
-
+                    loaderText.textContent = `Importing ${lines.length} ambulance trusts...`;
+                    
                     const newList = [];
                     for (const [index, line] of lines.entries()) {
                         const name = line.trim();
-                        loaderText.textContent = `Geocoding ambulance trusts (${index + 1}/${lines.length})...`;
+                        loaderText.textContent = `Importing ambulance trusts (${index + 1}/${lines.length})...`;
                         const coords = await geocodeLocation(name);
                         newList.push({ name, visited: false, count: 0, coords });
-                        await new Promise(resolve => setTimeout(resolve, 250));
+                        await new Promise(resolve => setTimeout(resolve, 100));
                     }
-
-                    showStatusMessage(`${newList.length} ambulance trusts loaded successfully!`, 'success');
+                    
+                    showStatusMessage(`${newList.length} ambulance trusts imported successfully!`, 'success');
                     return newList;
                 }
             } catch (error) {
