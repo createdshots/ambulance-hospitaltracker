@@ -315,6 +315,32 @@
             onAuthStateChanged(auth, handleAuthStateChange);
         }
 
+        async function initializeDefaultData() {
+            console.log("Initializing default data...");
+
+            // Load hospitals and ambulance trusts from files
+            const hospitals = await loadListFromFile('hospitals');
+            const ambulance = await loadListFromFile('ambulance');
+
+            // Initialize localData with default values
+            localData = {
+                hospitals: hospitals,
+                ambulance: ambulance,
+                awards: [],
+                visitHistory: [],
+                medicalRecords: [],
+                symptomTracking: [],
+                userProfile: {
+                    conditions: [],
+                    onboardingCompleted: false
+                }
+            };
+
+            // Save the initialized data to Firestore
+            await saveData();
+            console.log("Default data initialized successfully.");
+        }
+
         async function handleAuthStateChange(user) {
             if (unsubscribe) unsubscribe();
 
