@@ -1683,6 +1683,50 @@
                     mainContent.appendChild(container);
                 }
             }
+        }
+        
+        async function initializeDefaultData() {
+            try {
+                console.log("Initializing default data for new user...");
+                loaderText.textContent = 'Loading initial data...';
+                
+                // Load hospital data from JSON file
+                const hospitalList = await loadListFromFile('hospitals');
+                
+                // Load ambulance data from text file
+                const ambulanceList = await loadListFromFile('ambulance');
+                
+                // Initialize localData with the loaded data
+                localData = {
+                    hospitals: hospitalList || [],
+                    ambulance: ambulanceList || [],
+                    awards: [],
+                    visitHistory: [],
+                    medicalRecords: [],
+                    symptomTracking: [],
+                    userProfile: {}
+                };
+                
+                // Save the initial data to Firestore for the user
+                await saveData();
+                
+                console.log(`Initialized with ${localData.hospitals.length} hospitals and ${localData.ambulance.length} ambulance trusts`);
+                showStatusMessage('Welcome! Your tracker has been set up with hospital and ambulance data.', 'success');
+                
+            } catch (error) {
+                console.error("Error initializing default data:", error);
+                // Fallback to empty data if loading fails
+                localData = {
+                    hospitals: [],
+                    ambulance: [],
+                    awards: [],
+                    visitHistory: [],
+                    medicalRecords: [],
+                    symptomTracking: [],
+                    userProfile: {}
+                };
+                showStatusMessage('Welcome! Please check your internet connection to load hospital data.', 'error');
+            }
         }        
         // Make functions globally available
         window.completeOnboarding = completeOnboarding;

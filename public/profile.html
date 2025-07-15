@@ -289,6 +289,37 @@
         // --- Function Declarations (moved early to avoid timing issues) ---
         let showAddRecordModal; // Declare early to avoid reference errors
         
+        async function loadHospitalDataIfNeeded() {
+            // If hospital data is missing or empty, load it from the JSON file
+            if (!localData.hospitals || localData.hospitals.length === 0) {
+                try {
+                    console.log("Loading hospital data for profile page...");
+                    const response = await fetch('hospital_data.json');
+                    if (!response.ok) throw new Error("Could not load hospital data");
+                    const data = await response.json();
+                    
+                    const hospitalList = data.map(hospital => ({
+                        name: hospital.name,
+                        visited: false,
+                        count: 0,
+                        coords: hospital.coords,
+                        city: hospital.city
+                    }));
+                    
+                    localData.hospitals = hospitalList;
+                    console.log(`Loaded ${hospitalList.length} hospitals for profile`);
+                    
+                    // Save the updated data
+                    await saveData();
+                    
+                } catch (error) {
+                    console.error("Error loading hospital data:", error);
+                    // Fallback to empty array
+                    localData.hospitals = [];
+                }
+            }
+        }
+        
         // --- Core Application Logic ---
         try {
             app = initializeApp(firebaseConfig);
@@ -326,10 +357,13 @@
             if (!docRef) return;
             let initialLoadComplete = false;
 
-            unsubscribe = onSnapshot(docRef, (snapshot) => {
+            unsubscribe = onSnapshot(docRef, async (snapshot) => {
                 if (snapshot.exists()) {
                     localData = { ...localData, ...snapshot.data() };
                 }
+                
+                // Ensure hospital data is available
+                await loadHospitalDataIfNeeded();
                 
                 if (!initialLoadComplete) {
                     renderProfile();
