@@ -370,9 +370,9 @@
 
                     // Check for onboarding after data is loaded
                     if (!localData.userProfile?.onboardingCompleted) {
-                        // Show a simple welcome message instead
+                        // Show the onboarding questionnaire for new users
                         setTimeout(() => {
-                            showStatusMessage('Welcome! Explore the app to track your hospital visits.', 'success');
+                            showOnboardingQuestionnaire();
                         }, 500);
                     }
                 } catch (error) {
@@ -1607,131 +1607,235 @@
         }
 
         function showOnboardingQuestionnaire() {
-            // Simple onboarding modal - can be expanded later
-            const content = `
-                <div class="space-y-4">
-                    <div class="text-center">
-                        <h3 class="text-xl font-semibold text-gray-900 mb-4">Welcome to Hospital & Ambulance Trust Tracker!</h3>
-                        <p class="text-gray-600 mb-4">This app helps you track your visits to hospitals and ambulance trusts across the UK.</p>
-                    </div>
-                    
-                    <div class="space-y-3">
-                        <div class="p-3 bg-blue-50 rounded-lg">
-                            <h4 class="font-medium text-blue-900 mb-2">✅ Getting Started</h4>
-                            <ul class="text-sm text-blue-800 space-y-1">
-                                <li>• Click the checkmarks next to hospitals you've visited</li>
-                                <li>• Use +/- buttons to track multiple visits</li>
-                                <li>• Add medical records with the "Add Record" button</li>
-                                <li>• View your progress and earn awards</li>
-                            </ul>
-                        </div>
+            // Get the same style/approach as the edit profile UI
+            const availableConditions = [
+                'epilepsy', 'autism', 'diabetes', 'mental_health', 'chronic_pain',
+                'heart_condition', 'respiratory', 'autoimmune', 'neurological', 'gastrointestinal'
+            ];
+            
+            const conditionNames = {
+                'epilepsy': '🧠 Epilepsy',
+                'autism': '🌟 Autism Spectrum',
+                'diabetes': '🩸 Diabetes',
+                'mental_health': '🧠 Mental Health',
+                'chronic_pain': '😣 Chronic Pain',
+                'heart_condition': '❤️ Heart Condition',
+                'respiratory': '🫁 Respiratory',
+                'autoimmune': '🛡️ Autoimmune',
+                'neurological': '🧠 Neurological',
+                'gastrointestinal': '🫃 Gastrointestinal'
+            };
+
+            const modalContent = `
+                <form id="onboarding-form" class="space-y-4">
+                    <!-- Main Content Grid -->
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                         
-                        <div class="p-3 bg-green-50 rounded-lg">
-                            <h4 class="font-medium text-green-900 mb-2">🔒 Your Privacy</h4>
-                            <p class="text-sm text-green-800 mb-3">All your data is stored securely and privately. You control what information you track.</p>
+                        <!-- Left Column -->
+                        <div class="space-y-4">
+                            <!-- Personal Information -->
+                            <div class="bg-gray-50 p-4 rounded-lg">
+                                <h3 class="text-lg font-semibold text-gray-900 mb-3">Personal Information</h3>
+                                <div class="grid grid-cols-1 gap-3">
+                                    <div>
+                                        <label for="display-name" class="block text-sm font-medium text-gray-700 mb-1">Display Name</label>
+                                        <input type="text" id="display-name" 
+                                               placeholder="How you'd like to be addressed"
+                                               class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm">
+                                    </div>
+                                    <div>
+                                        <label for="date-of-birth" class="block text-sm font-medium text-gray-700 mb-1">Date of Birth (Optional)</label>
+                                        <input type="date" id="date-of-birth" 
+                                               class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Emergency Information -->
+                            <div class="bg-red-50 p-4 rounded-lg">
+                                <h3 class="text-lg font-semibold text-gray-900 mb-3">🚨 Emergency Information</h3>
+                                <div class="grid grid-cols-1 gap-3">
+                                    <div>
+                                        <label for="emergency-contact" class="block text-sm font-medium text-gray-700 mb-1">Emergency Contact</label>
+                                        <input type="text" id="emergency-contact" 
+                                               placeholder="Name and phone number (e.g., John Smith - 07123456789)"
+                                               class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm">
+                                    </div>
+                                    <div>
+                                        <label for="medical-notes" class="block text-sm font-medium text-gray-700 mb-1">Important Medical Notes</label>
+                                        <textarea id="medical-notes" rows="2"
+                                                  placeholder="Allergies, current medications, medical conditions, special instructions for emergency responders..."
+                                                  class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm"></textarea>
+                                        <p class="text-xs text-gray-500 mt-1">This information could be vital in an emergency</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Right Column -->
+                        <div class="space-y-4">
+                            <!-- Condition Tracking -->
+                            <div class="bg-blue-50 p-4 rounded-lg">
+                                <h3 class="text-lg font-semibold text-gray-900 mb-3">🏥 Condition Tracking</h3>
+                                <p class="text-sm text-gray-600 mb-3">Select conditions you'd like to track. This enables personalized symptom questions and better analytics.</p>
+                                <div class="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto custom-scrollbar">
+                                    ${availableConditions.map(condition => `
+                                        <label class="flex items-center p-2 border rounded-lg hover:bg-white cursor-pointer transition-colors text-sm border-gray-300">
+                                            <input type="checkbox" name="conditions" value="${condition}" 
+                                                   class="h-3 w-3 text-purple-600 focus:ring-purple-500 border-gray-300 rounded">
+                                            <span class="ml-2 text-sm font-medium text-gray-700">${conditionNames[condition] || condition.replace('_', ' ')}</span>
+                                        </label>
+                                    `).join('')}
+                                </div>
+                                <div class="mt-2 p-2 bg-blue-100 border border-blue-200 rounded">
+                                    <p class="text-xs text-blue-800">
+                                        <strong>Privacy Note:</strong> Your condition data is stored securely and never shared. You can add or remove conditions at any time.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <!-- Settings & Account Info -->
+                            <div class="bg-gray-50 p-4 rounded-lg">
+                                <h3 class="text-lg font-semibold text-gray-900 mb-3">🔒 Privacy & Settings</h3>
+                                
+                                <!-- Privacy Settings -->
+                                <div class="grid grid-cols-1 gap-2 mb-4">
+                                    <label class="flex items-start p-2 border rounded hover:bg-gray-100 cursor-pointer">
+                                        <input type="checkbox" id="data-sharing" 
+                                               checked
+                                               class="h-3 w-3 text-purple-600 focus:ring-purple-500 border-gray-300 rounded mt-1">
+                                    <div class="ml-2">
+                                        <span class="text-sm font-medium text-gray-700">Help improve the app</span>
+                                        <p class="text-xs text-gray-500">Share anonymous usage analytics to help development</p>
+                                    </div>
+                                    </label>
+                                </div>
+
+                                <!-- App Features -->
+                                <div class="p-3 bg-purple-50 rounded-lg">
+                                    <h4 class="font-medium text-purple-900 mb-2">✨ Key Features</h4>
+                                    <ul class="text-xs text-purple-800 space-y-1">
+                                        <li>• Track hospital and ambulance visits</li>
+                                        <li>• Log medical records and symptoms</li>
+                                        <li>• View your visit history on maps</li>
+                                        <li>• Monitor health trends over time</li>
+                                        <li>• Earn achievements as you track</li>
+                                    </ul>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                    
-                    <div class="flex justify-center pt-4">
-                        <button onclick="completeOnboarding()" 
-                                class="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors">
-                            Get Started
+
+                    <!-- Action Buttons -->
+                    <div class="flex justify-end pt-4 border-t">
+                        <button type="submit"
+                                class="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium text-sm">
+                            Complete Setup & Get Started
                         </button>
                     </div>
-                </div>
+                </form>
             `;
-            
-            const modal = createModal('onboarding-modal', 'Welcome!', content, 'max-w-2xl');
+
+            const modal = createModal('onboarding-modal', '👋 Welcome! Set Up Your Profile', modalContent, 'max-w-5xl');
             openModal(modal);
-        }
-        
-        function completeOnboarding() {
-            // Mark onboarding as completed
-            localData.userProfile = localData.userProfile || {};
-            localData.userProfile.onboardingCompleted = true;
-            saveData();
-            
-            // Close the modal
-            const modal = document.getElementById('onboarding-modal');
-            if (modal) {
-                closeModal(modal);
-            }
-            
-            showStatusMessage('Welcome aboard! Start tracking your hospital visits.', 'success');
+            setupOnboardingEventListeners(modal);
         }
 
-        function addSymptomTrackingSection() {
-            // Simple implementation to add symptom tracking UI
-            const symptomsContainer = document.getElementById('symptoms-container');
-            if (!symptomsContainer) {
-                // Create container if it doesn't exist
-                const container = document.createElement('div');
-                container.id = 'symptoms-container';
-                container.className = 'mt-8 p-6 bg-blue-50 border border-blue-200 rounded-lg';
-                container.innerHTML = `
-                    <h3 class="text-lg font-semibold text-gray-900 mb-4">📊 Symptom Tracking</h3>
-                    <p class="text-gray-600 mb-4">Track your symptoms and health conditions over time.</p>
-                    <button onclick="showQuickSymptomForm()" 
-                            class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
-                        Log Symptoms
-                    </button>
-                `;
-                
-                // Insert after the main content
-                const mainContent = document.querySelector('.container');
-                if (mainContent) {
-                    mainContent.appendChild(container);
+        function setupOnboardingEventListeners(modal) {
+            const form = modal.querySelector('#onboarding-form');
+            
+            // Dynamic condition counter
+            const conditionCheckboxes = modal.querySelectorAll('input[name="conditions"]');
+            const updateConditionCount = () => {
+                const checkedCount = modal.querySelectorAll('input[name="conditions"]:checked').length;
+                let countDisplay = modal.querySelector('#condition-count');
+
+                if (!countDisplay) {
+                    countDisplay = document.createElement('p');
+                    countDisplay.id = 'condition-count';
+                    countDisplay.className = 'text-sm font-medium text-purple-600 mt-2';
+                    modal.querySelector('.bg-blue-50 h3').parentNode.appendChild(countDisplay);
                 }
-            }
-        }
-        
-        async function initializeDefaultData() {
-            try {
-                console.log("Initializing default data for new user...");
-                loaderText.textContent = 'Loading initial data...';
-                
-                // Load hospital data from JSON file
-                const hospitalList = await loadListFromFile('hospitals');
-                
-                // Load ambulance data from text file
-                const ambulanceList = await loadListFromFile('ambulance');
-                
-                // Initialize localData with the loaded data
-                localData = {
-                    hospitals: hospitalList || [],
-                    ambulance: ambulanceList || [],
-                    awards: [],
-                    visitHistory: [],
-                    medicalRecords: [],
-                    symptomTracking: [],
-                    userProfile: {}
-                };
-                
-                // Save the initial data to Firestore for the user
-                await saveData();
-                
-                console.log(`Initialized with ${localData.hospitals.length} hospitals and ${localData.ambulance.length} ambulance trusts`);
-                showStatusMessage('Welcome! Your tracker has been set up with hospital and ambulance data.', 'success');
-                
-            } catch (error) {
-                console.error("Error initializing default data:", error);
-                // Fallback to empty data if loading fails
-                localData = {
-                    hospitals: [],
-                    ambulance: [],
-                    awards: [],
-                    visitHistory: [],
-                    medicalRecords: [],
-                    symptomTracking: [],
-                    userProfile: {}
-                };
-                showStatusMessage('Welcome! Please check your internet connection to load hospital data.', 'error');
-            }
-        }        
-        // Make functions globally available
-        window.completeOnboarding = completeOnboarding;
-        window.showQuickSymptomForm = showQuickSymptomForm;
 
+                countDisplay.textContent = `${checkedCount} condition${checkedCount !== 1 ? 's' : ''} selected`;
+            };
+
+            conditionCheckboxes.forEach(checkbox => {
+                checkbox.addEventListener('change', updateConditionCount);
+            });
+            updateConditionCount(); // Initial count
+
+            // Form submission
+            form.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                
+                // Show loading state
+                const submitBtn = form.querySelector('button[type="submit"]');
+                const originalText = submitBtn.innerHTML;
+                submitBtn.innerHTML = 'Saving your profile...';
+                submitBtn.disabled = true;
+
+                try {
+                    // Collect selected conditions
+                    const selectedConditions = Array.from(form.querySelectorAll('input[name="conditions"]:checked'))
+                        .map(checkbox => checkbox.value);
+                    
+                    // Get other form values
+                    const displayName = form.querySelector('#display-name').value.trim();
+                    const dateOfBirth = form.querySelector('#date-of-birth').value || null;
+                    const emergencyContact = form.querySelector('#emergency-contact').value.trim() || null;
+                    const medicalNotes = form.querySelector('#medical-notes').value.trim() || null;
+                    const dataSharing = form.querySelector('#data-sharing').checked;
+                    
+                    // Create user profile data
+                    localData.userProfile = {
+                        displayName,
+                        dateOfBirth,
+                        emergencyContact,
+                        medicalNotes,
+                        conditions: selectedConditions,
+                        dataSharing,
+                        onboardingCompleted: true,
+                        createdAt: new Date().toISOString(),
+                        lastUpdated: new Date().toISOString()
+                    };
+                    
+                    // Update display name in auth if provided
+                    if (displayName && auth.currentUser) {
+                        try {
+                            await auth.currentUser.updateProfile({
+                                displayName: displayName
+                            });
+                            userIdDisplay.textContent = displayName;
+                        } catch (error) {
+                            console.warn("Could not update display name in Firebase Auth:", error);
+                        }
+                    }
+                    
+                    // Save to Firestore
+                    await saveData();
+                    
+                    // Show symptoms tracking section if conditions were selected
+                    if (selectedConditions.length > 0) {
+                        addSymptomTrackingSection();
+                    }
+                    
+                    // Close modal
+                    closeModal(modal);
+                    
+                    // Show welcome message
+                    showStatusMessage('Profile set up successfully! Welcome to Visit Tracker!', 'success');
+                    
+                } catch (error) {
+                    console.error("Error saving onboarding profile:", error);
+                    showStatusMessage("There was a problem saving your profile. Please try again.", "error");
+                    
+                    // Reset button
+                    submitBtn.innerHTML = originalText;
+                    submitBtn.disabled = false;
+                }
+            });
+        }
         // --- Initialization ---
         window.addEventListener('load', () => {
             initializeAppLogic();
