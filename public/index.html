@@ -399,6 +399,7 @@
 
                     // Check for onboarding after data is loaded
                     if (!localData.userProfile?.onboardingCompleted) {
+                        wait(2);
                         // Show the onboarding questionnaire for new users
                         setTimeout(() => {
                             showOnboardingQuestionnaire();
