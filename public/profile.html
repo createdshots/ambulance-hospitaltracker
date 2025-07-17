@@ -669,6 +669,14 @@
             });
         }
 
+        // --- Add Record Modal ---
+        function showAddRecordModal() {
+            const modalContent = createAddRecordForm();
+            const modal = createModal('add-record-modal', 'Add Medical Record', modalContent, 'max-w-2xl');
+            openModal(modal);
+            setupAddRecordEventListeners(modal);
+        }
+
         // --- Setup Event Listeners ---
         function setupEventListeners() {
             document.getElementById('signout-btn').addEventListener('click', () => signOut(auth));

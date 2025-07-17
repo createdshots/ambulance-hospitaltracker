@@ -1991,6 +1991,15 @@
             document.getElementById('add-record-btn').addEventListener('click', showAddRecordModal);
             document.getElementById('help-btn').addEventListener('click', showHelpModal);
         }
+
+        // --- Add Record Modal ---
+        function showAddRecordModal() {
+            const modalContent = createAddRecordForm();
+            const modal = createModal('add-record-modal', 'Add Medical Record', modalContent, 'max-w-2xl');
+            openModal(modal);
+            setupAddRecordEventListeners(modal);
+        }
+        window.showAddRecordModal = showAddRecordModal;
     </script>
 </body>
 
