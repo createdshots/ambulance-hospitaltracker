@@ -281,6 +281,8 @@
             document.getElementById('help-btn').addEventListener('click', showHelpModal);
         }
 
+        document.addEventListener('DOMContentLoaded', initializeAppLogic);
+
         async function initializeAppLogic() {
             let firebaseConfig;
             try {
@@ -479,7 +481,7 @@
             }
         }
 
-         function getActionText(action, previousCount, newCount) {
+        function getActionText(action, previousCount, newCount) {
             switch (action) {
                 case 'visited': return 'Marked as visited';
                 case 'unvisited': return 'Unmarked as visited';
@@ -588,7 +590,7 @@
         }
 
         // --- Rendering ---
-                function renderAll() {
+        function renderAll() {
             renderList('hospitals', localData.hospitals, document.getElementById('hospital-search').value);
             renderList('ambulance', localData.ambulance, document.getElementById('ambulance-search').value);
             renderStats('hospitals', localData.hospitals);
@@ -670,7 +672,7 @@
             showStatusMessage('Add record functionality coming soon!', 'success');
         }
 
-                function renderStats(type, data) {
+        function renderStats(type, data) {
             const statsElement = document.getElementById(`${type}-stats`);
             if (!data || data.length === 0) {
                 statsElement.innerHTML = '';
@@ -690,7 +692,7 @@
 
         // --- Features ---
 
-                async function geocodeLocation(name) {
+        async function geocodeLocation(name) {
             try {
                 const response = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(name)}&format=json&limit=1`);
                 const data = await response.json();
@@ -1238,6 +1240,10 @@
                 container.appendChild(symptomSection);
 
                 document.getElementById('quick-symptom-btn').addEventListener('click', showQuickSymptomForm);
+            }
+
+            function showQuickSymptomForm() {
+                showStatusMessage('Quick symptom form coming soon!', 'success');
             }
 
             let questionsHTML = '';

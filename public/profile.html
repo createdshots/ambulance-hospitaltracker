@@ -5,23 +5,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>My Profile - Hospital & Ambulance Trust Tracker</title>
-    <!-- Tailwind CSS - Note: For production, install via npm or use Tailwind CLI -->
-    <!-- Development: CDN (not recommended for production) -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Production alternative: <link href="./styles/tailwind.css" rel="stylesheet"> -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <!-- Firebase Configuration -->
-    <script>
-        const userFirebaseConfig = {
-            apiKey: "AIzaSyBrmQBFe8jdcQSTu7H8ttjhNd-tmGaTeCg",
-            authDomain: "hospitaltracker-39adb.firebaseapp.com",
-            projectId: "hospitaltracker-39adb",
-            storageBucket: "hospitaltracker-39adb.appspot.com",
-            messagingSenderId: "1004447062283",
-            appId: "1:1004447062283:web:8624b4173fc722a7db6a0e",
-            measurementId: "G-KEK2G7YDDT"
-        };
-    </script>
+    <script src="firebase-config.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         body {
@@ -78,7 +64,7 @@
 <body class="bg-gray-50 text-gray-800">
 
     <!-- Full Page Loader -->
-    <div id="full-page-loader"
+<div id="full-page-loader"
         class="fixed inset-0 bg-gray-900 bg-opacity-75 flex flex-col items-center justify-center z-50 transition-opacity duration-500 loader-hidden">
         <svg class="animate-spin h-10 w-10 text-white mb-4" viewBox="0 0 24 24">
             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
@@ -168,15 +154,12 @@
         import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, onSnapshot, setDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // --- Firebase Configuration ---
-        const firebaseConfig = typeof userFirebaseConfig !== 'undefined' ? userFirebaseConfig : {};
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'local-dev-app';
-
+        // --- Global Variables ---
         let app, db, auth, userId, docRef;
         let localData = { hospitals: [], ambulance: [], awards: [], visitHistory: [], medicalRecords: [], symptomTracking: [], userProfile: {} };
-        let unsubscribe; // To hold the onSnapshot listener
+        let unsubscribe;
 
-        // DOM element references
+        // --- DOM Element References ---
         const loadingIndicator = document.getElementById('full-page-loader');
         const loaderText = document.getElementById('loader-text');
         const statusMessageArea = document.getElementById('status-message-area');
@@ -196,7 +179,7 @@
         };
 
         // --- Helper Functions ---
-        function getTimeAgo(date) {
+function getTimeAgo(date) {
             const now = new Date();
             const diffInMs = now - date;
             const diffInMins = Math.floor(diffInMs / (1000 * 60));
@@ -237,12 +220,11 @@
             };
         }
 
-        function showStatusMessage(message, type = 'success') {
+function showStatusMessage(message, type = 'success') {
             const messageDiv = document.createElement('div');
             messageDiv.className = `status-message p-4 rounded-lg shadow-lg font-medium mb-2 ${type === 'error' ? 'bg-red-100 text-red-800 border border-red-200' : 'bg-green-100 text-green-800 border border-green-200'}`;
             messageDiv.textContent = message;
             statusMessageArea.appendChild(messageDiv);
-
             setTimeout(() => {
                 messageDiv.style.opacity = '0';
                 setTimeout(() => messageDiv.remove(), 300);
@@ -499,7 +481,7 @@
             document.getElementById('help-btn').addEventListener('click', showHelpModal);
         }
 
-        function createHistoryTab(history) {
+                function createHistoryTab(history) {
             if (!history || history.length === 0) {
                 return `<div class="text-center py-12"><div class="text-gray-400 text-6xl mb-4">📋</div><h3 class="text-xl font-medium text-gray-900 mb-2">No visit history yet</h3><p class="text-gray-500 mb-6">Start tracking visits on the main page to build your history!</p><a href="/" class="bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 transition-colors">Start Tracking</a></div>`;
             }
@@ -1248,7 +1230,7 @@
         }
 
         function showHistoryDetails(entryId) {
-            const historyEntry = localData.visitHistory?.find(h => h.id === entryId);
+            const historyEntry = localData.visitHistory.find(h => h.id === entryId);
             if (!historyEntry) return;
 
             const date = new Date(historyEntry.timestamp);
@@ -1300,7 +1282,7 @@
 
             const modal = createModal('history-detail-modal', 'Visit History Details', content, 'max-w-lg');
             openModal(modal);
-
+            
             modal.querySelector('#save-notes-btn').addEventListener('click', () => saveEntryNotes(entryId));
         }
 
@@ -1308,7 +1290,7 @@
             const notesTextarea = document.getElementById('entry-notes');
             if (!notesTextarea) return;
 
-            const entryIndex = localData.visitHistory?.findIndex(h => h.id === entryId);
+            const entryIndex = localData.visitHistory.findIndex(h => h.id === entryId);
             if (entryIndex === -1) return;
 
             localData.visitHistory[entryIndex].notes = notesTextarea.value;
@@ -1324,7 +1306,7 @@
                 return;
             }
 
-            const entryIndex = localData.visitHistory?.findIndex(h => h.id === entryId);
+            const entryIndex = localData.visitHistory.findIndex(h => h.id === entryId);
             if (entryIndex === -1) return;
 
             localData.visitHistory.splice(entryIndex, 1);
@@ -1585,44 +1567,46 @@
                     </div>
                 </form>
             `;
-            
-            const modal = createModal('add-record-modal', '📋 Add Medical Record', modalContent, 'max-w-5xl');
-            openModal(modal);
-            
-            // Set default date to today
-            modal.querySelector('#visit-date').value = new Date().toISOString().split('T')[0];
-            
-            // Handle hospital selection
-            modal.querySelector('#hospital-select').addEventListener('change', (e) => {
-                const otherInput = modal.querySelector('#other-hospital-input');
-                otherInput.classList.toggle('hidden', e.target.value !== 'other');
-            });
-            
-            // Setup event listeners for this modal
-            setupAddRecordEventListeners(modal);
-        };
-        document.getElementById('addRecordBtn').addEventListener('click', showAddRecordModal);
+        }; // <-- Add this to close showAddRecordModal function
 
-        // Initialize event listeners for static elements after DOM is ready
-        document.addEventListener('DOMContentLoaded', () => {
-            const addRecordBtn = document.getElementById('add-record-btn');
-            const helpBtn = document.getElementById('help-btn');
+        function setupEventListeners() {
+            document.getElementById('signout-btn').addEventListener('click', () => signOut(auth));
+            document.getElementById('add-record-btn').addEventListener('click', showAddRecordModal);
+            document.getElementById('help-btn').addEventListener('click', showHelpModal);
             
-            if (addRecordBtn) {
-                addRecordBtn.addEventListener('click', showAddRecordModal);
-            }
-            if (helpBtn) {
-                helpBtn.addEventListener('click', showHelpModal);
-            }
-        });
-        
-        // Add event listener for symptoms page add record button (use event delegation)
-        document.addEventListener('click', (e) => {
-            if (e.target.id === 'add-record-symptoms-btn') {
-                if (typeof showAddRecordModal === 'function') {
+            profileContent.addEventListener('click', (e) => {
+                if (e.target.closest('.profile-tab-btn')) {
+                    const targetTab = e.target.closest('.profile-tab-btn').dataset.tab;
+                    document.querySelectorAll('.profile-tab-btn').forEach(b => {
+                        b.className = 'profile-tab-btn border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm';
+                    });
+                    e.target.closest('.profile-tab-btn').className = 'profile-tab-btn border-purple-500 text-purple-600 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm';
+
+                    const contentArea = document.getElementById('profile-tab-content');
+                    switch (targetTab) {
+                        case 'history': contentArea.innerHTML = createHistoryTab(localData.visitHistory || []); break;
+                        case 'records': contentArea.innerHTML = createRecordsTab(); break;
+                        case 'achievements': contentArea.innerHTML = createAchievementsTab(); break;
+                        case 'analytics': contentArea.innerHTML = createAnalyticsTab(); break;
+                        case 'symptoms': contentArea.innerHTML = createSymptomsTab(); break;
+                    }
+                } else if (e.target.id === 'edit-profile-btn') {
+                    showEditProfileModal();
+                } else if (e.target.id === 'add-first-record-btn') {
                     showAddRecordModal();
+                } else if (e.target.closest('[data-action="delete-history"]')) {
+                    const entryId = e.target.closest('[data-entry-id]').dataset.entryId;
+                    deleteHistoryEntry(entryId);
+                } else if (e.target.closest('.history-entry')) {
+                    const entryId = e.target.closest('.history-entry').dataset.entryId;
+                    showHistoryDetails(entryId);
                 }
-            }
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            renderProfile();
+            setupEventListeners();
         });
     </script>
 </body>
