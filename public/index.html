@@ -2002,7 +2002,8 @@
         window.showAddRecordModal = showAddRecordModal;
 
         // --- Symptom Prompt Modal for New Record ---
-        function showSymptomPromptModal(recordData, onComplete) {
+ // --- Symptom Prompt Modal for New Record ---
+ function showSymptomPromptModal(recordData, onComplete) {
             const userConditions = localData.userProfile?.conditions || [];
             if (!userConditions.length) {
                 // No conditions tracked, skip symptom prompt
