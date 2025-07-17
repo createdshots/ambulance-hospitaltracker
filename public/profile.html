@@ -156,6 +156,119 @@
             }, 5000);
         }
 
+        // --- Generate Condition Questions for Symptoms (Global Utility) ---
+        function generateConditionQuestionsForSymptoms(userConditions) {
+            if (!userConditions || userConditions.length === 0) return '';
+            const conditionQuestions = {
+                'epilepsy': [
+                    { id: 'seizure_today', type: 'checkbox', label: 'Did you have a seizure today?' },
+                    { id: 'aura_symptoms', type: 'checkbox', label: 'Did you experience aura symptoms?' },
+                    { id: 'trigger_identified', type: 'text', label: 'Potential trigger (if known)', placeholder: 'e.g., stress, lack of sleep, flashing lights' },
+                    { id: 'medication_taken', type: 'checkbox', label: 'Did you take your medication as prescribed?' }
+                ],
+                'autism': [
+                    { id: 'sensory_overload', type: 'select', label: 'Sensory overload level', options: ['None', 'Mild', 'Moderate', 'Severe'] },
+                    { id: 'meltdown_occurred', type: 'checkbox', label: 'Did you experience a meltdown?' },
+                    { id: 'social_fatigue', type: 'select', label: 'Social fatigue level', options: ['None', 'Low', 'Medium', 'High', 'Exhausted'] },
+                    { id: 'stimming_frequency', type: 'select', label: 'Stimming frequency today', options: ['None', 'Occasional', 'Frequent', 'Constant'] }
+                ],
+                'diabetes': [
+                    { id: 'blood_sugar_morning', type: 'text', label: 'Morning blood sugar', placeholder: 'e.g., 120 mg/dL' },
+                    { id: 'blood_sugar_evening', type: 'text', label: 'Evening blood sugar', placeholder: 'e.g., 140 mg/dL' },
+                    { id: 'hypo_episode', type: 'checkbox', label: 'Did you have a hypoglycemic episode?' },
+                    { id: 'insulin_doses', type: 'text', label: 'Insulin doses taken', placeholder: 'e.g., 10 units morning, 8 units evening' }
+                ],
+                'mental_health': [
+                    { id: 'anxiety_level', type: 'select', label: 'Anxiety level today', options: ['Very Low', 'Low', 'Moderate', 'High', 'Very High'] },
+                    { id: 'panic_attack', type: 'checkbox', label: 'Did you have a panic attack?' },
+                    { id: 'mood_rating', type: 'select', label: 'Overall mood', options: ['Very Low', 'Low', 'Neutral', 'Good', 'Very Good'] },
+                    { id: 'sleep_quality', type: 'select', label: 'Sleep quality last night', options: ['Very Poor', 'Poor', 'Fair', 'Good', 'Excellent'] }
+                ],
+                'chronic_pain': [
+                    { id: 'pain_level_morning', type: 'select', label: 'Pain level (morning)', options: ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10'] },
+                    { id: 'pain_level_evening', type: 'select', label: 'Pain level (evening)', options: ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10'] },
+                    { id: 'flare_up', type: 'checkbox', label: 'Did you experience a flare-up?' },
+                    { id: 'medication_effectiveness', type: 'select', label: 'Pain medication effectiveness', options: ['Not effective', 'Slightly effective', 'Moderately effective', 'Very effective', 'Completely effective'] }
+                ],
+                'heart_condition': [
+                    { id: 'heart_rate_resting', type: 'text', label: 'Resting heart rate', placeholder: 'e.g., 72 bpm' },
+                    { id: 'blood_pressure', type: 'text', label: 'Blood pressure', placeholder: 'e.g., 120/80' },
+                    { id: 'chest_pain', type: 'checkbox', label: 'Did you experience chest pain?' },
+                    { id: 'palpitations', type: 'checkbox', label: 'Did you notice palpitations?' }
+                ],
+                'respiratory': [
+                    { id: 'breathing_difficulty', type: 'select', label: 'Breathing difficulty level', options: ['None', 'Mild', 'Moderate', 'Severe'] },
+                    { id: 'peak_flow', type: 'text', label: 'Peak flow reading', placeholder: 'e.g., 450 L/min' },
+                    { id: 'inhaler_usage', type: 'text', label: 'Inhaler uses today', placeholder: 'e.g., 3 times' },
+                    { id: 'oxygen_saturation', type: 'text', label: 'Oxygen saturation', placeholder: 'e.g., 98%' }
+                ],
+                'autoimmune': [
+                    { id: 'flare_severity', type: 'select', label: 'Flare-up severity', options: ['None', 'Mild', 'Moderate', 'Severe'] },
+                    { id: 'fatigue_level', type: 'select', label: 'Fatigue level', options: ['None', 'Mild', 'Moderate', 'Severe', 'Debilitating'] },
+                    { id: 'joint_pain', type: 'select', label: 'Joint pain level', options: ['None', 'Mild', 'Moderate', 'Severe'] },
+                    { id: 'medication_side_effects', type: 'checkbox', label: 'Did you experience medication side effects?' }
+                ],
+                'neurological': [
+                    { id: 'migraine_occurred', type: 'checkbox', label: 'Did you have a migraine?' },
+                    { id: 'coordination_issues', type: 'checkbox', label: 'Did you notice coordination problems?' },
+                    { id: 'memory_problems', type: 'checkbox', label: 'Did you experience memory issues?' },
+                    { id: 'speech_difficulties', type: 'checkbox', label: 'Did you have speech difficulties?' }
+                ],
+                'gastrointestinal': [
+                    { id: 'symptom_severity', type: 'select', label: 'Symptom severity today', options: ['None', 'Mild', 'Moderate', 'Severe'] },
+                    { id: 'food_triggers', type: 'text', label: 'Food triggers (if any)', placeholder: 'e.g., dairy, gluten' },
+                    { id: 'bathroom_urgency', type: 'select', label: 'Bathroom urgency episodes', options: ['None', '1-2', '3-5', '6-10', 'More than 10'] },
+                    { id: 'medication_response', type: 'select', label: 'Medication effectiveness', options: ['Not taken', 'Not effective', 'Somewhat effective', 'Very effective'] }
+                ]
+            };
+            let questionsHTML = '';
+            userConditions.forEach(condition => {
+                const questions = conditionQuestions[condition];
+                if (questions) {
+                    questionsHTML += `
+                        <div class="mb-4 p-3 bg-white rounded-lg border border-gray-200">
+                            <h5 class="font-medium text-gray-900 mb-3 capitalize">${condition.replace('_', ' ')} Tracking</h5>
+                            <div class="space-y-3">
+                                ${questions.map(q => {
+                                    switch (q.type) {
+                                        case 'checkbox':
+                                            return `
+                                                <label class="flex items-center">
+                                                    <input type="checkbox" name="condition_${condition}_${q.id}" 
+                                                           class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                                                    <span class="ml-2 text-sm text-gray-700">${q.label}</span>
+                                                </label>
+                                            `;
+                                        case 'select':
+                                            return `
+                                                <div>
+                                                    <label class="block text-sm font-medium text-gray-700 mb-1">${q.label}</label>
+                                                    <select name="condition_${condition}_${q.id}" 
+                                                            class="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                                        <option value="">Select...</option>
+                                                        ${q.options.map(opt => `<option value="${opt}">${opt}</option>`).join('')}
+                                                    </select>
+                                                </div>
+                                            `;
+                                        default: // text
+                                            return `
+                                                <div>
+                                                    <label class="block text-sm font-medium text-gray-700 mb-1">${q.label}</label>
+                                                    <input type="text" name="condition_${condition}_${q.id}" 
+                                                           placeholder="${q.placeholder || ''}"
+                                                           class="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                                </div>
+                                            `;
+                                    }
+                                }).join('')}
+                            </div>
+                        </div>
+                    `;
+                }
+            });
+            return questionsHTML;
+        }
+
         // --- Main Application Logic ---
         function initializeAppLogic() {
             try {

@@ -1778,7 +1778,7 @@
                 `}
             `;
             const header = document.querySelector('header');
-            const gridContainer = document.querySelector('.grid.grid-cols-1.md\:grid-cols-2');
+            const gridContainer = document.querySelector('.grid.grid-cols-1.md\\:grid-cols-2');
             if (header && gridContainer) {
                 header.parentNode.insertBefore(symptomSection, gridContainer);
             }
@@ -2071,6 +2071,21 @@
                 }
             });
             return questionsHTML;
+        }
+
+        // Only add guest-login-btn event listener if the element exists
+        const guestLoginBtn = document.getElementById('guest-login-btn');
+        if (guestLoginBtn) {
+            guestLoginBtn.addEventListener('click', () => {
+                signInAnonymously(auth)
+                    .then(() => {
+                        // Redirect to profile or main app page
+                        window.location.href = 'profile.html';
+                    })
+                    .catch((error) => {
+                        alert('Guest login failed: ' + error.message);
+                    });
+            });
         }
     </script>
 </body>
