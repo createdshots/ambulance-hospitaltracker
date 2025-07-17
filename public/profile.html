@@ -965,25 +965,27 @@
                 ? generateConditionQuestionsForSymptoms(userConditions)
                 : '';
             const modalContent = `
-                <form id="profile-quick-symptom-form" class="space-y-6">
-                    <div>
-                        <label for="symptom-date" class="block text-sm font-medium text-gray-700 mb-2">Date</label>
-                        <input type="date" id="symptom-date" required
-                            class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                            value="${new Date().toISOString().split('T')[0]}">
+                <form id="profile-quick-symptom-form" class="space-y-4">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label for="symptom-date" class="block text-sm font-medium text-gray-700 mb-2">Date</label>
+                            <input type="date" id="symptom-date" required
+                                class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                value="${new Date().toISOString().split('T')[0]}">
+                        </div>
+                        <div>
+                            <label for="symptom-notes" class="block text-sm font-medium text-gray-700 mb-2">Additional Notes (Optional)</label>
+                            <textarea id="symptom-notes" rows="3"
+                                placeholder="Any additional symptoms or notes..."
+                                class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"></textarea>
+                        </div>
                     </div>
-                    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-4">
                         <h4 class="font-semibold text-gray-900 mb-3">📋 Symptom Questions</h4>
                         <p class="text-sm text-gray-600 mb-4">Based on your tracked conditions:</p>
                         ${conditionQuestions}
                     </div>
-                    <div>
-                        <label for="symptom-notes" class="block text-sm font-medium text-gray-700 mb-2">Additional Notes (Optional)</label>
-                        <textarea id="symptom-notes" rows="3"
-                            placeholder="Any additional symptoms or notes..."
-                            class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"></textarea>
-                    </div>
-                    <div class="flex justify-end space-x-3 pt-4 border-t">
+                    <div class="flex justify-end space-x-3 pt-4 border-t mt-4">
                         <button type="button" class="cancel-btn px-4 py-2 text-gray-600 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors">
                             Cancel
                         </button>

@@ -468,12 +468,12 @@
                         return [];
                     }
 
-                    loaderText.textContent = `Geocoding ${lines.length} ambulance trusts...`;
+                    loaderText.textContent = `Loading ${lines.length} ambulance trusts...`;
 
                     const newList = [];
                     for (const [index, line] of lines.entries()) {
                         const name = line.trim();
-                        loaderText.textContent = `Geocoding ambulance trusts (${index + 0.15}/${lines.length})...`;
+                        loaderText.textContent = `Loading ambulance trusts and geocoding hospitals (${index + 0.5}/${lines.length})...`;
                         const coords = await geocodeLocation(name);
                         newList.push({ name, visited: false, count: 0, coords });
                         await new Promise(resolve => setTimeout(resolve, 250));
@@ -922,21 +922,14 @@
             const hospitalOptions = localData.hospitals.map(h =>
                 `<option value="${h.name}">${h.name}${h.city ? ` - ${h.city}` : ''}</option>`
             ).join('');
-
             const ambulanceOptions = localData.ambulance.map(a =>
                 `<option value="${a.name}">${a.name}</option>`
             ).join('');
-
-            // Get user's tracked conditions
             const userConditions = localData.userProfile?.conditions || [];
-
-            // Generate condition-specific questions
             const conditionQuestions = generateConditionQuestionsForRecord(userConditions);
-
             return `
                 <form id="add-record-form" class="space-y-6">
-                    <!-- Date and Time -->
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
                             <label for="visit-date" class="block text-sm font-medium text-gray-700 mb-2">Visit Date</label>
                             <input type="date" id="visit-date" required
@@ -948,53 +941,43 @@
                             <input type="time" id="visit-time"
                                 class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
                         </div>
+                        <div>
+                            <label for="hospital-select" class="block text-sm font-medium text-gray-700 mb-2">Hospital/Medical Facility</label>
+                            <select id="hospital-select" required
+                                class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
+                                <option value="">Select a hospital...</option>
+                                ${hospitalOptions}
+                            </select>
+                        </div>
+                        <div>
+                            <label class="flex items-center">
+                                <input type="checkbox" id="ambulance-involved"
+                                    class="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded">
+                                <span class="ml-2 text-sm font-medium text-gray-700">Ambulance service was involved</span>
+                            </label>
+                            <div id="ambulance-section" class="hidden mt-2">
+                                <label for="ambulance-select" class="block text-sm font-medium text-gray-700 mb-2">Ambulance Trust</label>
+                                <select id="ambulance-select"
+                                    class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
+                                    <option value="">Select an ambulance trust...</option>
+                                    ${ambulanceOptions}
+                                </select>
+                            </div>
+                        </div>
+                        <div>
+                            <label for="visit-type" class="block text-sm font-medium text-gray-700 mb-2">Type of Visit</label>
+                            <select id="visit-type" required
+                                class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
+                                <option value="">Select visit type...</option>
+                                <option value="emergency">Emergency</option>
+                                <option value="outpatient">Outpatient Appointment</option>
+                                <option value="inpatient">Inpatient Stay</option>
+                                <option value="procedure">Procedure/Surgery</option>
+                                <option value="test">Tests/Diagnostic</option>
+                                <option value="other">Other</option>
+                            </select>
+                        </div>
                     </div>
-
-                    <!-- Hospital Selection -->
-                    <div>
-                        <label for="hospital-select" class="block text-sm font-medium text-gray-700 mb-2">Hospital/Medical Facility</label>
-                        <select id="hospital-select" required
-                            class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
-                            <option value="">Select a hospital...</option>
-                            ${hospitalOptions}
-                        </select>
-                    </div>
-
-                    <!-- Ambulance Involved -->
-                    <div>
-                        <label class="flex items-center">
-                            <input type="checkbox" id="ambulance-involved"
-                                class="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded">
-                            <span class="ml-2 text-sm font-medium text-gray-700">Ambulance service was involved</span>
-                        </label>
-                    </div>
-
-                    <!-- Ambulance Trust Selection (hidden by default) -->
-                    <div id="ambulance-section" class="hidden">
-                        <label for="ambulance-select" class="block text-sm font-medium text-gray-700 mb-2">Ambulance Trust</label>
-                        <select id="ambulance-select"
-                            class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
-                            <option value="">Select an ambulance trust...</option>
-                            ${ambulanceOptions}
-                        </select>
-                    </div>
-
-                    <!-- Visit Type -->
-                    <div>
-                        <label for="visit-type" class="block text-sm font-medium text-gray-700 mb-2">Type of Visit</label>
-                        <select id="visit-type" required
-                            class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
-                            <option value="">Select visit type...</option>
-                            <option value="emergency">Emergency</option>
-                            <option value="outpatient">Outpatient Appointment</option>
-                            <option value="inpatient">Inpatient Stay</option>
-                            <option value="procedure">Procedure/Surgery</option>
-                            <option value="test">Tests/Diagnostic</option>
-                            <option value="other">Other</option>
-                        </select>
-                    </div>
-
-                    <!-- Condition-Specific Questions -->
                     ${conditionQuestions ? `
                         <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
                             <h4 class="font-semibold text-gray-900 mb-3">📋 Condition-Specific Questions</h4>
@@ -1002,16 +985,12 @@
                             ${conditionQuestions}
                         </div>
                     ` : ''}
-
-                    <!-- Notes -->
                     <div>
                         <label for="visit-notes" class="block text-sm font-medium text-gray-700 mb-2">Notes (Optional)</label>
                         <textarea id="visit-notes" rows="4"
                             placeholder="Add any additional details about your visit..."
                             class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"></textarea>
                     </div>
-
-                    <!-- Submit Button -->
                     <div class="flex justify-end space-x-3 pt-4 border-t">
                         <button type="button" class="cancel-btn px-4 py-2 text-gray-600 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors">
                             Cancel
@@ -1755,18 +1734,11 @@
         function addSymptomTrackingSection() {
             const container = document.querySelector('.container');
             const existingSection = document.getElementById('symptom-tracking-section');
-
-            // Remove existing section if it exists
-            if (existingSection) {
-                existingSection.remove();
-            }
-
+            if (existingSection) existingSection.remove();
             const symptomSection = document.createElement('div');
             symptomSection.id = 'symptom-tracking-section';
             symptomSection.className = 'mb-8 p-4 bg-blue-50 border border-blue-200 rounded-xl';
-
             const recentSymptoms = localData.symptomTracking?.slice(0, 3) || [];
-
             symptomSection.innerHTML = `
                 <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3">
                     <div>
@@ -1782,108 +1754,40 @@
                         </a>
                     </div>
                 </div>
-                
                 ${recentSymptoms.length > 0 ? `
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
                         ${recentSymptoms.map(entry => {
-                const date = new Date(entry.date);
-                return `
-                                <div class="bg-white p-3 rounded-lg border border-blue-200">
-                                    <p class="font-medium text-gray-900 text-sm">${entry.isSymptomOnly ? 'Symptom Log' : entry.hospital}</p>
-                                    <p class="text-xs text-gray-600">${date.toLocaleDateString()}</p>
-                                    <div class="mt-1">
-                                        ${Object.keys(entry.conditions || {}).map(condition =>
-                    `<span class="inline-block bg-blue-100 text-blue-800 px-1 py-0.5 rounded text-xs mr-1">${condition.replace('_', ' ')}</span>`
-                ).join('')}
-                                    </div>
-                                </div>
-                            `;
-            }).join('')}
+                    const date = new Date(entry.date);
+                    return `
+                        <div class="bg-white p-3 rounded-lg border border-blue-200">
+                            <p class="font-medium text-gray-900 text-sm">${entry.isSymptomOnly ? 'Symptom Log' : entry.hospital}</p>
+                            <p class="text-xs text-gray-600">${date.toLocaleDateString()}</p>
+                            <div class="mt-1">
+                                ${Object.keys(entry.conditions || {}).map(condition =>
+                                    `<span class="inline-block bg-blue-100 text-blue-800 px-1 py-0.5 rounded text-xs mr-1">${condition.replace('_', ' ')}</span>`
+                                ).join('')}
+                            </div>
+                        </div>
+                    `;
+                }).join('')}
                     </div>
                 ` : `
                     <div class="text-center py-4">
-                        <p class="text-blue-700 text-sm">No symptoms logged yet. Click "Log Symptoms" to get started!</p>
+                        <p class="text-blue-700 text-sm">No symptoms logged yet. Click \"Log Symptoms\" to get started!</p>
                     </div>
                 `}
             `;
-
-            // Insert after the header but before the grid
             const header = document.querySelector('header');
-            const gridContainer = document.querySelector('.grid.grid-cols-1.md\\:grid-cols-2');
-
+            const gridContainer = document.querySelector('.grid.grid-cols-1.md\:grid-cols-2');
             if (header && gridContainer) {
                 header.parentNode.insertBefore(symptomSection, gridContainer);
             }
-
-            // Add event listener for quick symptom button
             setTimeout(() => {
                 const quickSymptomBtn = document.getElementById('quick-symptom-btn');
                 if (quickSymptomBtn) {
                     quickSymptomBtn.addEventListener('click', showQuickSymptomForm);
                 }
             }, 100);
-
-            // Add placeholder function for showQuickSymptomForm
-            function showQuickSymptomForm() {
-                const userConditions = localData.userProfile?.conditions || [];
-
-                if (userConditions.length === 0) {
-                    showStatusMessage('Please set up condition tracking in your profile first.', 'error');
-                    return;
-                }
-
-                const conditionQuestions = generateConditionQuestionsForSymptoms(userConditions);
-
-                const modalContent = `
-                    <form id="quick-symptom-form" class="space-y-6">
-                        <!-- Date Selection -->
-                        <div>
-                            <label for="symptom-date" class="block text-sm font-medium text-gray-700 mb-2">Date</label>
-                            <input type="date" id="symptom-date" required
-                                class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                value="${new Date().toISOString().split('T')[0]}">
-                        </div>
-
-                        <!-- Condition-Specific Questions -->
-                        <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                            <h4 class="font-semibold text-gray-900 mb-3">📋 Symptom Questions</h4>
-                            <p class="text-sm text-gray-600 mb-4">Based on your tracked conditions:</p>
-                            ${conditionQuestions}
-                        </div>
-
-                        <!-- General Notes -->
-                        <div>
-                            <label for="symptom-notes" class="block text-sm font-medium text-gray-700 mb-2">Additional Notes (Optional)</label>
-                            <textarea id="symptom-notes" rows="3"
-                                placeholder="Any additional symptoms or notes..."
-                                class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"></textarea>
-                        </div>
-
-                        <!-- Submit Button -->
-                        <div class="flex justify-end space-x-3 pt-4 border-t">
-                            <button type="button" class="cancel-btn px-4 py-2 text-gray-600 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors">
-                                Cancel
-                            </button>
-                            <button type="submit"
-                                class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
-                                Log Symptoms
-                            </button>
-                        </div>
-                    </form>
-                `;
-
-
-
-                const modal = createModal('help-modal', 'Help & Support', helpContent, 'max-w-2xl');
-                openModal(modal);
-            }
-
-            // Make functions globally available
-            window.showAddRecordModal = showAddRecordModal;
-
-            // Initialize event listeners for static elements
-            document.getElementById('add-record-btn').addEventListener('click', showAddRecordModal);
-            document.getElementById('help-btn').addEventListener('click', showHelpModal);
         }
 
         // --- Add Record Modal ---
