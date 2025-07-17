@@ -254,10 +254,6 @@
             'visits_100': { name: 'Century Club', description: 'Accumulate 100 total visits.', icon: '&#127941;' }
         };
 
-        function showQuickSymptomForm() {
-            showStatusMessage('Quick symptom form coming soon!', 'success');
-        }
-
         function setupEventListeners() {
             document.getElementById('signout-btn').addEventListener('click', () => signOut(auth));
             document.getElementById('google-signin-btn').addEventListener('click', () => {
@@ -1240,10 +1236,6 @@
                 container.appendChild(symptomSection);
 
                 document.getElementById('quick-symptom-btn').addEventListener('click', showQuickSymptomForm);
-            }
-
-            function showQuickSymptomForm() {
-                showStatusMessage('Quick symptom form coming soon!', 'success');
             }
 
             let questionsHTML = '';
