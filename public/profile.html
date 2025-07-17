@@ -954,6 +954,92 @@
             });
         }
 
+        // --- Log Symptoms Modal for Profile ---
+        function showProfileLogSymptomModal() {
+            const userConditions = localData.userProfile?.conditions || [];
+            if (userConditions.length === 0) {
+                showStatusMessage('Please set up condition tracking in your profile first.', 'error');
+                return;
+            }
+            const conditionQuestions = typeof generateConditionQuestionsForSymptoms === 'function'
+                ? generateConditionQuestionsForSymptoms(userConditions)
+                : '';
+            const modalContent = `
+                <form id="profile-quick-symptom-form" class="space-y-6">
+                    <div>
+                        <label for="symptom-date" class="block text-sm font-medium text-gray-700 mb-2">Date</label>
+                        <input type="date" id="symptom-date" required
+                            class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            value="${new Date().toISOString().split('T')[0]}">
+                    </div>
+                    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                        <h4 class="font-semibold text-gray-900 mb-3">📋 Symptom Questions</h4>
+                        <p class="text-sm text-gray-600 mb-4">Based on your tracked conditions:</p>
+                        ${conditionQuestions}
+                    </div>
+                    <div>
+                        <label for="symptom-notes" class="block text-sm font-medium text-gray-700 mb-2">Additional Notes (Optional)</label>
+                        <textarea id="symptom-notes" rows="3"
+                            placeholder="Any additional symptoms or notes..."
+                            class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"></textarea>
+                    </div>
+                    <div class="flex justify-end space-x-3 pt-4 border-t">
+                        <button type="button" class="cancel-btn px-4 py-2 text-gray-600 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors">
+                            Cancel
+                        </button>
+                        <button type="submit"
+                            class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                            Log Symptoms
+                        </button>
+                    </div>
+                </form>
+            `;
+            // Remove any existing modals
+            modalContainer.innerHTML = '';
+            // Create modal
+            const modal = document.createElement('div');
+            modal.id = 'profile-quick-symptom-modal';
+            modal.className = 'fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center p-4 z-50';
+            modal.innerHTML = `<div class="bg-white rounded-xl shadow-2xl p-6 w-full max-w-2xl modal-content">${modalContent}</div>`;
+            modalContainer.appendChild(modal);
+            // Cancel button
+            modal.querySelector('.cancel-btn').addEventListener('click', () => modal.remove());
+            // Form submission
+            modal.querySelector('#profile-quick-symptom-form').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const form = e.target;
+                const symptomData = {
+                    id: `${new Date().toISOString()}_${Math.random().toString(36).substr(2, 9)}`,
+                    timestamp: new Date().toISOString(),
+                    date: form.querySelector('#symptom-date').value,
+                    conditions: {},
+                    notes: form.querySelector('#symptom-notes').value || null,
+                    isSymptomOnly: true,
+                    type: 'symptom_log'
+                };
+                const formData = new FormData(form);
+                for (let [key, value] of formData.entries()) {
+                    if (key.startsWith('condition_')) {
+                        const parts = key.split('_');
+                        const condition = parts[1];
+                        const field = parts.slice(2).join('_');
+                        if (!symptomData.conditions[condition]) symptomData.conditions[condition] = {};
+                        if (form.querySelector(`[name="${key}"]`).type === 'checkbox') {
+                            symptomData.conditions[condition][field] = true;
+                        } else if (value) {
+                            symptomData.conditions[condition][field] = value;
+                        }
+                    }
+                }
+                if (!localData.symptomTracking) localData.symptomTracking = [];
+                localData.symptomTracking.unshift(symptomData);
+                await saveData();
+                modal.remove();
+                showStatusMessage('Symptoms logged successfully!', 'success');
+                renderProfile();
+            });
+        }
+
         // --- Run the app ---
         initializeAppLogic();
     </script>
