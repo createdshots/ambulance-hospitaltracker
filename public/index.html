@@ -580,7 +580,7 @@
         // --- Rendering ---
         function renderAll() {
             try {
-                renderGreeting();
+                renderGreetingAndActions();
                 renderHospitals();
                 renderAmbulance();
                 addRecentActivitySection();
@@ -1541,9 +1541,7 @@
             });
         }
 
-        // Help Modal
-        document.getElementById('help-btn').addEventListener('click', showHelpModal);
-
+        // --- Help Modal ---
         function showHelpModal() {
             const helpContent = `
         <div class="space-y-4">
@@ -1554,13 +1552,33 @@
                 <li>To log symptoms, use the <b>Log Symptoms</b> button on your dashboard or profile.</li>
                 <li>Update your profile and tracked conditions from the profile page.</li>
             </ul>
+            <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded">
+                <h3 class="font-semibold text-yellow-800 mb-1">A Note for Our Community</h3>
+                <p class="text-yellow-900 text-sm">This is a personal project designed for the chronically ill community to find a little bit of fun and a sense of accomplishment in their health journey. Please do not misuse health services for the purpose of checking off locations. Your health and the resources of the NHS are paramount.</p>
+            </div>
             <button id="close-help-btn" class="mt-4 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors">Close</button>
         </div>
     `;
             const modal = createModal('help-modal', 'Help & Support', helpContent, 'max-w-2xl');
             openModal(modal);
-            // Add close button functionality
             modal.querySelector('#close-help-btn').addEventListener('click', () => closeModal(modal));
+        }
+
+        // --- Main Greeting and Actions ---
+        function renderGreetingAndActions() {
+            let name = localData.userProfile?.displayName?.trim();
+            if (!name) {
+                const user = auth?.currentUser;
+                name = user?.displayName || user?.email || (user?.isAnonymous ? 'Guest' : 'User');
+            }
+            const greetingDiv = document.getElementById('personal-greeting');
+            if (greetingDiv) {
+                greetingDiv.innerHTML = `
+            <div class="text-2xl font-semibold text-purple-700 text-center mb-1">Hello, ${name}!</div>
+            <div class="text-lg text-gray-700 text-center mb-4">What would you like to do today?</div>
+            <div class="text-sm text-blue-600 text-center mb-2 italic">Remember to log your symptoms regularly for better insights!</div>
+        `;
+            }
         }
 
         // --- Full Page Loader with Progress Bar ---
@@ -1714,6 +1732,26 @@
                 greetingDiv.textContent = `Hello, ${name}!`;
             }
         }
+
+        // Add a work-in-progress note at the bottom of the page
+        window.addEventListener('DOMContentLoaded', () => {
+            // ... build tracker code ...
+            const wipDiv = document.createElement('div');
+            wipDiv.id = 'wip-note';
+            wipDiv.textContent = 'This is a work-in-progress project. Features and data may change. Thank you for your feedback!';
+            wipDiv.style.position = 'fixed';
+            wipDiv.style.bottom = '0.5rem';
+            wipDiv.style.right = '1.5rem';
+            wipDiv.style.opacity = '0.25';
+            wipDiv.style.fontSize = '0.85rem';
+            wipDiv.style.background = '#fff';
+            wipDiv.style.padding = '2px 10px';
+            wipDiv.style.borderRadius = '8px';
+            wipDiv.style.boxShadow = '0 1px 4px rgba(0,0,0,0.04)';
+            wipDiv.style.zIndex = '9998';
+            wipDiv.style.pointerEvents = 'none';
+            document.body.appendChild(wipDiv);
+        });
     </script>
 </body>
 

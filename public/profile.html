@@ -901,12 +901,16 @@
                         <li>To log symptoms, use the <b>Log Symptoms</b> button on your dashboard or profile.</li>
                         <li>Update your profile and tracked conditions from the profile page.</li>
                     </ul>
+                    <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded">
+                        <h3 class="font-semibold text-yellow-800 mb-1">A Note for Our Community</h3>
+                        <p class="text-yellow-900 text-sm">This is a personal project designed for the chronically ill community to find a little bit of fun and a sense of accomplishment in their health journey. Please do not misuse health services for the purpose of checking off locations. Your health and the resources of the NHS are paramount.</p>
+                    </div>
+                    <div class="text-sm text-blue-600 text-center italic mt-2">Tip: Keep your profile up to date for the best experience!</div>
                     <button id="close-help-btn" class="mt-4 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors">Close</button>
                 </div>
             `;
             const modal = createModal('help-modal', 'Help & Support', helpContent, 'max-w-2xl');
             openModal(modal);
-            // Add close button functionality
             modal.querySelector('#close-help-btn').addEventListener('click', () => closeModal(modal));
         }
         
