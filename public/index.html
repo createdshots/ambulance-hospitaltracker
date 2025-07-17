@@ -79,6 +79,9 @@
 
 <body class="bg-gray-50 text-gray-800">
 
+    <!-- Personalized Greeting -->
+    <div id="personal-greeting" class="text-2xl font-semibold text-purple-700 text-center mt-6 mb-2"></div>
+
     <!-- Full Page Loader -->
     <div id="full-page-loader"
         class="fixed inset-0 bg-gray-900 bg-opacity-75 flex flex-col items-center justify-center z-50 transition-opacity duration-500 loader-hidden">
@@ -577,9 +580,9 @@
         // --- Rendering ---
         function renderAll() {
             try {
+                renderGreeting();
                 renderHospitals();
                 renderAmbulance();
-                // Add recent activity section (replaces symptom tracking)
                 addRecentActivitySection();
             } catch (error) {
                 console.error("Error rendering data:", error);
@@ -1542,547 +1545,62 @@
         document.getElementById('help-btn').addEventListener('click', showHelpModal);
 
         function showHelpModal() {
-            const userIdText = userId ? userId : 'Not signed in';
             const helpContent = `
-                <div class="space-y-4">
-                    <div class="text-center pb-3 border-b">
-                        <h3 class="text-xl font-semibold text-gray-900">Help & Support</h3>
-                        <p class="text-sm text-gray-600 mt-1">Everything you need to know about myHealthTracker</p>
-                    </div>
-                    
-                    <!-- Main Content Grid -->
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        
-                        <!-- Left Column: Quick Start & Features -->
-                        <div class="space-y-4">
-                            <!-- Quick Start -->
-                            <div class="bg-green-50 p-4 rounded-lg">
-                                <h4 class="font-semibold text-green-900 mb-3 flex items-center">
-                                    🚀 Quick Start Guide
-                                </h4>
-                                <ul class="text-sm text-green-800 space-y-1.5">
-                                    <li class="flex items-start">
-                                        <span class="text-green-600 mr-2">1.</span>
-                                        <span>Sign in to save progress across devices</span>
-                                    </li>
-                                    <li class="flex items-start">
-                                        <span class="text-green-600 mr-2">2.</span>
-                                        <span>Check off hospitals and trusts you've visited</span>
-                                    </li>
-                                    <li class="flex items-start">
-                                        <span class="text-green-600 mr-2">3.</span>
-                                        <span>Use +/- buttons for multiple visits</span>
-                                    </li>
-                                    <li class="flex items-start">
-                                        <span class="text-green-600 mr-2">4.</span>
-                                        <span>Add detailed records with "Add Record"</span>
-                                    </li>
-                                    <li class="flex items-start">
-                                        <span class="text-green-600 mr-2">5.</span>
-                                        <span>View progress and awards in your profile</span>
-                                    </li>
-                                </ul>
-                            </div>
-
-                            <!-- Features -->
-                            <div class="bg-blue-50 p-4 rounded-lg">
-                                <h4 class="font-semibold text-blue-900 mb-3 flex items-center">
-                                    ✨ Key Features
-                                </h4>
-                                <div class="grid grid-cols-1 gap-2 text-sm text-blue-800">
-                                    <div class="flex items-center">
-                                        <span class="text-blue-600 mr-2">🏥</span>
-                                        <span>Track hospital visits</span>
-                                    </div>
-                                    <div class="flex items-center">
-                                        <span class="text-blue-600 mr-2">🚑</span>
-                                        <span>Monitor ambulance trusts</span>
-                                    </div>
-                                    <div class="flex items-center">
-                                        <span class="text-blue-600 mr-2">📊</span>
-                                        <span>View statistics & maps</span>
-                                    </div>
-                                    <div class="flex items-center">
-                                        <span class="text-blue-600 mr-2">🏆</span>
-                                        <span>Unlock achievements</span>
-                                    </div>
-                                    <div class="flex items-center">
-                                        <span class="text-blue-600 mr-2">📋</span>
-                                        <span>Log medical records</span>
-                                    </div>
-                                    <div class="flex items-center">
-                                        <span class="text-blue-600 mr-2">📈</span>
-                                        <span>Track symptoms</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Right Column: Support & Privacy -->
-                        <div class="space-y-4">
-                            <!-- Support Contact -->
-                            <div class="bg-purple-50 p-4 rounded-lg">
-                                <h4 class="font-semibold text-purple-900 mb-3 flex items-center">
-                                    📧 Get Support
-                                </h4>
-                                <p class="text-sm text-purple-800 mb-3">Need help or found a bug? Contact support:</p>
-                                <div class="bg-white p-3 rounded border text-xs font-mono text-gray-600 space-y-1">
-                                    <div class="flex justify-between">
-                                        <span class="font-medium">User ID:</span>
-                                        <span class="text-purple-600">${userIdText}</span>
-                                    </div>
-                                    <div class="flex justify-between">
-                                        <span class="font-medium">Email:</span>
-                                        <a href="mailto:jack@whitehill.group?subject=Support Request - ${userIdText}" 
-                                           class="text-purple-600 hover:underline">jack@whitehill.group</a>
-                                    </div>
-                                </div>
-                                <p class="text-xs text-purple-600 mt-2">
-                                    💡 Include your User ID for faster assistance
-                                </p>
-                            </div>
-
-                            <!-- Privacy & Community -->
-                            <div class="bg-yellow-50 p-4 rounded-lg">
-                                <h4 class="font-semibold text-yellow-900 mb-3 flex items-center">
-                                    🛡️ Privacy & Community
-                                </h4>
-                                <div class="text-sm text-yellow-800 space-y-2">
-                                    <p><strong>Your Privacy:</strong> Health data stays secure and private</p>
-                                    <p><strong>Community Use:</strong> Please don't misuse NHS services for tracking</p>
-                                    <p><strong>Purpose:</strong> Find encouragement in your health journey</p>
-                                </div>
-                            </div>
-
-                            <!-- Keyboard Shortcuts -->
-                            <div class="bg-gray-50 p-4 rounded-lg">
-                                <h4 class="font-semibold text-gray-900 mb-3 flex items-center">
-                                    ⌨️ Tips & Shortcuts
-                                </h4>
-                                <div class="text-sm text-gray-700 space-y-1">
-                                    <div class="flex justify-between">
-                                        <span>Search lists:</span>
-                                        <span class="font-mono bg-gray-200 px-1 rounded text-xs">Type to filter</span>
-                                    </div>
-                                    <div class="flex justify-between">
-                                        <span>Quick add:</span>
-                                        <span class="font-mono bg-gray-200 px-1 rounded text-xs">+ button</span>
-                                    </div>
-                                    <div class="flex justify-between">
-                                        <span>View profile:</span>
-                                        <span class="font-mono bg-gray-200 px-1 rounded text-xs">My Profile button</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Close Button -->
-                    <div class="flex justify-end pt-3 border-t">
-                        <button onclick="closeModal(document.getElementById('help-modal'))" 
-                                class="px-6 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors font-medium">
-                            Close
-                        </button>
-                    </div>
-                </div>
-            `;
-
-            const modal = createModal('help-modal', 'Help & Support', helpContent, 'max-w-4xl');
+        <div class="space-y-4">
+            <h2 class="text-xl font-bold mb-2">Help & Support</h2>
+            <p>Welcome to myHealthTracker! Here you can track your medical visits, symptoms, and more. If you have questions or need support, check the FAQ or contact us.</p>
+            <ul class="list-disc pl-6 text-sm text-gray-700">
+                <li>To add a new record, click the <b>Add Record</b> button.</li>
+                <li>To log symptoms, use the <b>Log Symptoms</b> button on your dashboard or profile.</li>
+                <li>Update your profile and tracked conditions from the profile page.</li>
+            </ul>
+            <button id="close-help-btn" class="mt-4 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors">Close</button>
+        </div>
+    `;
+            const modal = createModal('help-modal', 'Help & Support', helpContent, 'max-w-2xl');
             openModal(modal);
+            // Add close button functionality
+            modal.querySelector('#close-help-btn').addEventListener('click', () => closeModal(modal));
         }
 
-        // Add this function after your existing functions in index.html
-        async function initializeDefaultData() {
-            console.log("Initializing default data for new user");
-
-            try {
-                // Load hospital data if not already loaded
-                if (!localData.hospitals || localData.hospitals.length === 0) {
-                    loaderText.textContent = 'Loading hospital data...';
-                    localData.hospitals = await loadListFromFile('hospitals');
-                }
-                // Load ambulance data if not already loaded
-                if (!localData.ambulance || localData.ambulance.length === 0) {
-                    loaderText.textContent = 'Loading ambulance trust data...';
-                    localData.ambulance = await loadListFromFile('ambulance');
-                }
-                // Initialize other fields if missing
-                if (!localData.awards) localData.awards = [];
-                if (!localData.visitHistory) localData.visitHistory = [];
-                if (!localData.medicalRecords) localData.medicalRecords = [];
-                if (!localData.symptomTracking) localData.symptomTracking = [];
-                if (!localData.userProfile) localData.userProfile = {};
-                await saveData();
-            } catch (error) {
-                console.error("Error initializing default data:", error);
-                showStatusMessage("Error initializing default data.", "error");
+        // --- Full Page Loader with Progress Bar ---
+        function showFullPageLoader(progress = 0, message = 'Loading...') {
+            let loader = document.getElementById('full-page-loader');
+            if (!loader) {
+                loader = document.createElement('div');
+                loader.id = 'full-page-loader';
+                loader.style.position = 'fixed';
+                loader.style.top = '0';
+                loader.style.left = '0';
+                loader.style.width = '100vw';
+                loader.style.height = '100vh';
+                loader.style.background = 'rgba(255,255,255,0.95)';
+                loader.style.zIndex = '99999';
+                loader.style.display = 'flex';
+                loader.style.flexDirection = 'column';
+                loader.style.justifyContent = 'center';
+                loader.style.alignItems = 'center';
+                loader.innerHTML = `
+            <div class="text-xl font-semibold text-purple-700 mb-4">${message}</div>
+            <div class="w-64 h-4 bg-gray-200 rounded-full overflow-hidden mb-2">
+                <div id="loader-progress-bar" class="h-full bg-purple-500 transition-all duration-300" style="width: ${progress}%;"></div>
+            </div>
+            <div id="loader-percentage" class="text-sm text-gray-600">${progress}%</div>
+        `;
+                document.body.appendChild(loader);
+            } else {
+                loader.querySelector('.text-xl').textContent = message;
+                loader.querySelector('#loader-progress-bar').style.width = `${progress}%`;
+                loader.querySelector('#loader-percentage').textContent = `${progress}%`;
             }
         }
-
-        // Add this function to index.html
-        function addSymptomTrackingSection() {
-            const container = document.querySelector('.container');
-            const existingSection = document.getElementById('symptom-tracking-section');
-            if (existingSection) existingSection.remove();
-            const symptomSection = document.createElement('div');
-            symptomSection.id = 'symptom-tracking-section';
-            symptomSection.className = 'mb-8 p-4 bg-blue-50 border border-blue-200 rounded-xl';
-            const recentSymptoms = localData.symptomTracking?.slice(0, 3) || [];
-            symptomSection.innerHTML = `
-                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3">
-                    <div>
-                        <h3 class="text-lg font-semibold text-blue-900">📊 Symptom Tracking</h3>
-                        <p class="text-sm text-blue-700">Quick access to log your symptoms and view recent entries</p>
-                    </div>
-                    <div class="flex gap-2">
-                        <button id="quick-symptom-btn" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm">
-                            Log Symptoms
-                        </button>
-                        <a href="/profile.html" class="bg-blue-100 text-blue-800 px-4 py-2 rounded-lg hover:bg-blue-200 transition-colors text-sm">
-                            View All
-                        </a>
-                    </div>
-                </div>
-                ${recentSymptoms.length > 0 ? `
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-                        ${recentSymptoms.map(entry => {
-                    const date = new Date(entry.date);
-                    return `
-                        <div class="bg-white p-3 rounded-lg border border-blue-200">
-                            <p class="font-medium text-gray-900 text-sm">${entry.isSymptomOnly ? 'Symptom Log' : entry.hospital}</p>
-                            <p class="text-xs text-gray-600">${date.toLocaleDateString()}</p>
-                            <div class="mt-1">
-                                ${Object.keys(entry.conditions || {}).map(condition =>
-                                    `<span class="inline-block bg-blue-100 text-blue-800 px-1 py-0.5 rounded text-xs mr-1">${condition.replace('_', ' ')}</span>`
-                                ).join('')}
-                            </div>
-                        </div>
-                    `;
-                }).join('')}
-                    </div>
-                ` : `
-                    <div class="text-center py-4">
-                        <p class="text-blue-700 text-sm">No symptoms logged yet. Click \"Log Symptoms\" to get started!</p>
-                    </div>
-                `}
-            `;
-            const header = document.querySelector('header');
-            const gridContainer = document.querySelector('.grid.grid-cols-1.md\\:grid-cols-2');
-            if (header && gridContainer) {
-                header.parentNode.insertBefore(symptomSection, gridContainer);
-            }
-            setTimeout(() => {
-                const quickSymptomBtn = document.getElementById('quick-symptom-btn');
-                if (quickSymptomBtn) {
-                    quickSymptomBtn.addEventListener('click', showQuickSymptomForm);
-                }
-            }, 100);
+        function hideFullPageLoader() {
+            const loader = document.getElementById('full-page-loader');
+            if (loader) loader.remove();
         }
-
-        // --- Add Record Modal ---
-        function showAddRecordModal() {
-            const modalContent = createAddRecordForm();
-            const modal = createModal('add-record-modal', 'Add Medical Record', modalContent, 'max-w-2xl');
-            openModal(modal);
-            setupAddRecordEventListeners(modal);
-        }
-        window.showAddRecordModal = showAddRecordModal;
-
-        // --- Symptom Prompt Modal for New Record ---
-        function showSymptomPromptModal(recordData, onComplete) {
-            const userConditions = localData.userProfile?.conditions || [];
-            if (!userConditions.length) {
-                // No conditions tracked, skip symptom prompt
-                onComplete(null);
-                return;
-            }
-            const conditionQuestions = generateConditionQuestionsForSymptoms(userConditions);
-            const modalContent = `
-                <form id="symptom-prompt-form" class="space-y-4">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div>
-                            <label for="symptom-date" class="block text-sm font-medium text-gray-700 mb-2">Date</label>
-                            <input type="date" id="symptom-date" required
-                                class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                value="${recordData.date || new Date().toISOString().split('T')[0]}">
-                        </div>
-                        <div>
-                            <label for="symptom-notes" class="block text-sm font-medium text-gray-700 mb-2">Additional Notes (Optional)</label>
-                            <textarea id="symptom-notes" rows="3"
-                                placeholder="Any additional symptoms or notes..."
-                                class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"></textarea>
-                        </div>
-                    </div>
-                    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-4">
-                        <h4 class="font-semibold text-gray-900 mb-3">📋 Symptom Questions</h4>
-                        <p class="text-sm text-gray-600 mb-4">Based on your tracked conditions for this record:</p>
-                        ${conditionQuestions}
-                    </div>
-                    <div class="flex justify-end space-x-3 pt-4 border-t mt-4">
-                        <button type="button" class="cancel-btn px-4 py-2 text-gray-600 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors">
-                            Cancel
-                        </button>
-                        <button type="submit"
-                            class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
-                            Save Symptoms
-                        </button>
-                    </div>
-                </form>
-            `;
-            const modal = createModal('symptom-prompt-modal', 'Log Symptoms for This Record', modalContent, 'max-w-2xl');
-            openModal(modal);
-            // Cancel button
-            modal.querySelector('.cancel-btn').addEventListener('click', () => {
-                closeModal(modal);
-                onComplete(null);
-            });
-            // Form submit
-            modal.querySelector('#symptom-prompt-form').addEventListener('submit', (e) => {
-                e.preventDefault();
-                const form = e.target;
-                const symptomData = {
-                    id: recordData.id,
-                    timestamp: recordData.timestamp,
-                    date: form.querySelector('#symptom-date').value,
-                    hospital: recordData.hospital,
-                    visitType: recordData.visitType,
-                    conditions: {},
-                    notes: form.querySelector('#symptom-notes').value || null,
-                    isSymptomOnly: false
-                };
-                const formData = new FormData(form);
-                for (let [key, value] of formData.entries()) {
-                    if (key.startsWith('condition_')) {
-                        const parts = key.split('_');
-                        const condition = parts[1];
-                        const field = parts.slice(2).join('_');
-                        if (!symptomData.conditions[condition]) symptomData.conditions[condition] = {};
-                        if (form.querySelector(`[name="${key}"]`).type === 'checkbox') {
-                            symptomData.conditions[condition][field] = true;
-                        } else if (value) {
-                            symptomData.conditions[condition][field] = value;
-                        }
-                    }
-                }
-                closeModal(modal);
-                onComplete(symptomData);
-            });
-        }
-        // --- Update Add Record Modal Submission ---
-        function setupAddRecordEventListeners(modal) {
-            const form = modal.querySelector('#add-record-form');
-            const ambulanceCheckbox = modal.querySelector('#ambulance-involved');
-            const ambulanceSection = modal.querySelector('#ambulance-section');
-            const ambulanceSelect = modal.querySelector('#ambulance-select');
-            const cancelBtn = modal.querySelector('.cancel-btn');
-            ambulanceCheckbox.addEventListener('change', (e) => {
-                if (e.target.checked) {
-                    ambulanceSection.classList.remove('hidden');
-                    ambulanceSelect.required = true;
-                } else {
-                    ambulanceSection.classList.add('hidden');
-                    ambulanceSelect.required = false;
-                    ambulanceSelect.value = '';
-                }
-            });
-            cancelBtn.addEventListener('click', () => {
-                closeModal(modal);
-            });
-            form.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                // Collect condition-specific data
-                const conditionData = {};
-                const formData = new FormData(form);
-                for (let [key, value] of formData.entries()) {
-                    if (key.startsWith('condition_')) {
-                        const parts = key.split('_');
-                        const condition = parts[1];
-                        const field = parts.slice(2).join('_');
-                        if (!conditionData[condition]) conditionData[condition] = {};
-                        if (form.querySelector(`[name="${key}"]`).type === 'checkbox') {
-                            conditionData[condition][field] = true;
-                        } else if (value) {
-                            conditionData[condition][field] = value;
-                        }
-                    }
-                }
-                const recordData = {
-                    id: `${new Date().toISOString()}_${Math.random().toString(36).substr(2, 9)}`,
-                    timestamp: new Date().toISOString(),
-                    date: modal.querySelector('#visit-date').value,
-                    time: modal.querySelector('#visit-time').value || null,
-                    hospital: modal.querySelector('#hospital-select').value,
-                    ambulanceInvolved: ambulanceCheckbox.checked,
-                    ambulanceTrust: ambulanceCheckbox.checked ? ambulanceSelect.value : null,
-                    visitType: modal.querySelector('#visit-type').value,
-                    notes: modal.querySelector('#visit-notes').value || null,
-                    conditionData: Object.keys(conditionData).length > 0 ? conditionData : null
-                };
-                // Prompt for symptoms after record form
-                closeModal(modal);
-                showSymptomPromptModal(recordData, async (symptomData) => {
-                    // Save both record and symptoms
-                    if (!localData.medicalRecords) localData.medicalRecords = [];
-                    localData.medicalRecords.unshift(recordData);
-                    if (symptomData) {
-                        if (!localData.symptomTracking) localData.symptomTracking = [];
-                        localData.symptomTracking.unshift(symptomData);
-                    }
-                    await saveData();
-                    renderAll();
-                    showStatusMessage('Medical record and symptoms saved!', 'success');
-                });
-            });
-        }
-
-        document.getElementById('guest-login-btn').addEventListener('click', () => {
-          signInAnonymously(auth)
-            .then(() => {
-              // Redirect to profile or main app page
-              window.location.href = 'profile.html';
-            })
-            .catch((error) => {
-              alert('Guest login failed: ' + error.message);
-            });
-        });
-
-        // Optional: Detect if user is anonymous
-        onAuthStateChanged(auth, (user) => {
-          if (user) {
-            if (user.isAnonymous) {
-              // Handle guest user UI
-              console.log('Guest user signed in');
-            }
-          }
-        });
-
-        // --- Generate Condition Questions for Symptoms (Global Utility) ---
-        function generateConditionQuestionsForSymptoms(userConditions) {
-            if (!userConditions || userConditions.length === 0) return '';
-            const conditionQuestions = {
-                'epilepsy': [
-                    { id: 'seizure_today', type: 'checkbox', label: 'Did you have a seizure today?' },
-                    { id: 'aura_symptoms', type: 'checkbox', label: 'Did you experience aura symptoms?' },
-                    { id: 'trigger_identified', type: 'text', label: 'Potential trigger (if known)', placeholder: 'e.g., stress, lack of sleep, flashing lights' },
-                    { id: 'medication_taken', type: 'checkbox', label: 'Did you take your medication as prescribed?' }
-                ],
-                'autism': [
-                    { id: 'sensory_overload', type: 'select', label: 'Sensory overload level', options: ['None', 'Mild', 'Moderate', 'Severe'] },
-                    { id: 'meltdown_occurred', type: 'checkbox', label: 'Did you experience a meltdown?' },
-                    { id: 'social_fatigue', type: 'select', label: 'Social fatigue level', options: ['None', 'Low', 'Medium', 'High', 'Exhausted'] },
-                    { id: 'stimming_frequency', type: 'select', label: 'Stimming frequency today', options: ['None', 'Occasional', 'Frequent', 'Constant'] }
-                ],
-                'diabetes': [
-                    { id: 'blood_sugar_morning', type: 'text', label: 'Morning blood sugar', placeholder: 'e.g., 120 mg/dL' },
-                    { id: 'blood_sugar_evening', type: 'text', label: 'Evening blood sugar', placeholder: 'e.g., 140 mg/dL' },
-                    { id: 'hypo_episode', type: 'checkbox', label: 'Did you have a hypoglycemic episode?' },
-                    { id: 'insulin_doses', type: 'text', label: 'Insulin doses taken', placeholder: 'e.g., 10 units morning, 8 units evening' }
-                ],
-                'mental_health': [
-                    { id: 'anxiety_level', type: 'select', label: 'Anxiety level today', options: ['Very Low', 'Low', 'Moderate', 'High', 'Very High'] },
-                    { id: 'panic_attack', type: 'checkbox', label: 'Did you have a panic attack?' },
-                    { id: 'mood_rating', type: 'select', label: 'Overall mood', options: ['Very Low', 'Low', 'Neutral', 'Good', 'Very Good'] },
-                    { id: 'sleep_quality', type: 'select', label: 'Sleep quality last night', options: ['Very Poor', 'Poor', 'Fair', 'Good', 'Excellent'] }
-                ],
-                'chronic_pain': [
-                    { id: 'pain_level_morning', type: 'select', label: 'Pain level (morning)', options: ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10'] },
-                    { id: 'pain_level_evening', type: 'select', label: 'Pain level (evening)', options: ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10'] },
-                    { id: 'flare_up', type: 'checkbox', label: 'Did you experience a flare-up?' },
-                    { id: 'medication_effectiveness', type: 'select', label: 'Pain medication effectiveness', options: ['Not effective', 'Slightly effective', 'Moderately effective', 'Very effective', 'Completely effective'] }
-                ],
-                'heart_condition': [
-                    { id: 'heart_rate_resting', type: 'text', label: 'Resting heart rate', placeholder: 'e.g., 72 bpm' },
-                    { id: 'blood_pressure', type: 'text', label: 'Blood pressure', placeholder: 'e.g., 120/80' },
-                    { id: 'chest_pain', type: 'checkbox', label: 'Did you experience chest pain?' },
-                    { id: 'palpitations', type: 'checkbox', label: 'Did you notice palpitations?' }
-                ],
-                'respiratory': [
-                    { id: 'breathing_difficulty', type: 'select', label: 'Breathing difficulty level', options: ['None', 'Mild', 'Moderate', 'Severe'] },
-                    { id: 'peak_flow', type: 'text', label: 'Peak flow reading', placeholder: 'e.g., 450 L/min' },
-                    { id: 'inhaler_usage', type: 'text', label: 'Inhaler uses today', placeholder: 'e.g., 3 times' },
-                    { id: 'oxygen_saturation', type: 'text', label: 'Oxygen saturation', placeholder: 'e.g., 98%' }
-                ],
-                'autoimmune': [
-                    { id: 'flare_severity', type: 'select', label: 'Flare-up severity', options: ['None', 'Mild', 'Moderate', 'Severe'] },
-                    { id: 'fatigue_level', type: 'select', label: 'Fatigue level', options: ['None', 'Mild', 'Moderate', 'Severe', 'Debilitating'] },
-                    { id: 'joint_pain', type: 'select', label: 'Joint pain level', options: ['None', 'Mild', 'Moderate', 'Severe'] },
-                    { id: 'medication_side_effects', type: 'checkbox', label: 'Did you experience medication side effects?' }
-                ],
-                'neurological': [
-                    { id: 'migraine_occurred', type: 'checkbox', label: 'Did you have a migraine?' },
-                    { id: 'coordination_issues', type: 'checkbox', label: 'Did you notice coordination problems?' },
-                    { id: 'memory_problems', type: 'checkbox', label: 'Did you experience memory issues?' },
-                    { id: 'speech_difficulties', type: 'checkbox', label: 'Did you have speech difficulties?' }
-                ],
-                'gastrointestinal': [
-                    { id: 'symptom_severity', type: 'select', label: 'Symptom severity today', options: ['None', 'Mild', 'Moderate', 'Severe'] },
-                    { id: 'food_triggers', type: 'text', label: 'Food triggers (if any)', placeholder: 'e.g., dairy, gluten' },
-                    { id: 'bathroom_urgency', type: 'select', label: 'Bathroom urgency episodes', options: ['None', '1-2', '3-5', '6-10', 'More than 10'] },
-                    { id: 'medication_response', type: 'select', label: 'Medication effectiveness', options: ['Not taken', 'Not effective', 'Somewhat effective', 'Very effective'] }
-                ]
-            };
-            let questionsHTML = '';
-            userConditions.forEach(condition => {
-                const questions = conditionQuestions[condition];
-                if (questions) {
-                    questionsHTML += `
-                <div class="mb-4 p-3 bg-white rounded-lg border border-gray-200">
-                    <h5 class="font-medium text-gray-900 mb-3 capitalize">${condition.replace('_', ' ')} Tracking</h5>
-                    <div class="space-y-3">
-                        ${questions.map(q => {
-                            switch (q.type) {
-                                case 'checkbox':
-                                    return `
-                                        <label class="flex items-center">
-                                            <input type="checkbox" name="condition_${condition}_${q.id}" 
-                                                   class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
-                                            <span class="ml-2 text-sm text-gray-700">${q.label}</span>
-                                        </label>
-                                    `;
-                                case 'select':
-                                    return `
-                                        <div>
-                                            <label class="block text-sm font-medium text-gray-700 mb-1">${q.label}</label>
-                                            <select name="condition_${condition}_${q.id}" 
-                                                    class="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                                                <option value="">Select...</option>
-                                                ${q.options.map(opt => `<option value="${opt}">${opt}</option>`).join('')}
-                                            </select>
-                                        </div>
-                                    `;
-                                default: // text
-                                    return `
-                                        <div>
-                                            <label class="block text-sm font-medium text-gray-700 mb-1">${q.label}</label>
-                                            <input type="text" name="condition_${condition}_${q.id}" 
-                                                   placeholder="${q.placeholder || ''}"
-                                                   class="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                                        </div>
-                                    `;
-                            }
-                        }).join('')}
-                    </div>
-                </div>
-            `;
-                }
-            });
-            return questionsHTML;
-        }
-
-        // Only add guest-login-btn event listener if the element exists
-        const guestLoginBtn = document.getElementById('guest-login-btn');
-        if (guestLoginBtn) {
-            guestLoginBtn.addEventListener('click', () => {
-                signInAnonymously(auth)
-                    .then(() => {
-                        // Redirect to profile or main app page
-                        window.location.href = 'profile.html';
-                    })
-                    .catch((error) => {
-                        alert('Guest login failed: ' + error.message);
-                    });
-            });
-        }
+        // ... existing code ...
+        // Example usage: showFullPageLoader(40, 'Loading your data...');
+        // When done: hideFullPageLoader();
 
         // --- Add Recent Activity Section (replaces Symptom Tracking) ---
         function addRecentActivitySection() {
@@ -2183,6 +1701,19 @@
             buildDiv.style.pointerEvents = 'none';
             document.body.appendChild(buildDiv);
         });
+
+        // Add personalized greeting to the top of the page
+        function renderGreeting() {
+            let name = localData.userProfile?.displayName?.trim();
+            if (!name) {
+                const user = auth?.currentUser;
+                name = user?.displayName || user?.email || (user?.isAnonymous ? 'Guest' : 'User');
+            }
+            const greetingDiv = document.getElementById('personal-greeting');
+            if (greetingDiv) {
+                greetingDiv.textContent = `Hello, ${name}!`;
+            }
+        }
     </script>
 </body>
 
