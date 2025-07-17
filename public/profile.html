@@ -678,6 +678,157 @@
             });
         }
 
+        // --- Help Modal ---
+        function showHelpModal() {
+            const userIdText = userId ? userId : 'Not signed in';
+            const helpContent = `
+                <div class="space-y-4">
+                    <div class="text-center pb-3 border-b">
+                        <h3 class="text-xl font-semibold text-gray-900">Help & Support</h3>
+                        <p class="text-sm text-gray-600 mt-1">Everything you need to know about myHealthTracker</p>
+                    </div>
+                    
+                    <!-- Main Content Grid -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        
+                        <!-- Left Column: Quick Start & Features -->
+                        <div class="space-y-4">
+                            <!-- Quick Start -->
+                            <div class="bg-green-50 p-4 rounded-lg">
+                                <h4 class="font-semibold text-green-900 mb-3 flex items-center">
+                                    🚀 Quick Start Guide
+                                </h4>
+                                <ul class="text-sm text-green-800 space-y-1.5">
+                                    <li class="flex items-start">
+                                        <span class="text-green-600 mr-2">1.</span>
+                                        <span>Sign in to save progress across devices</span>
+                                    </li>
+                                    <li class="flex items-start">
+                                        <span class="text-green-600 mr-2">2.</span>
+                                        <span>Check off hospitals and trusts you've visited</span>
+                                    </li>
+                                    <li class="flex items-start">
+                                        <span class="text-green-600 mr-2">3.</span>
+                                        <span>Use +/- buttons for multiple visits</span>
+                                    </li>
+                                    <li class="flex items-start">
+                                        <span class="text-green-600 mr-2">4.</span>
+                                        <span>Add detailed records with "Add Record"</span>
+                                    </li>
+                                    <li class="flex items-start">
+                                        <span class="text-green-600 mr-2">5.</span>
+                                        <span>View progress and awards in your profile</span>
+                                    </li>
+                                </ul>
+                            </div>
+
+                            <!-- Features -->
+                            <div class="bg-blue-50 p-4 rounded-lg">
+                                <h4 class="font-semibold text-blue-900 mb-3 flex items-center">
+                                    ✨ Key Features
+                                </h4>
+                                <div class="grid grid-cols-1 gap-2 text-sm text-blue-800">
+                                    <div class="flex items-center">
+                                        <span class="text-blue-600 mr-2">🏥</span>
+                                        <span>Track hospital visits</span>
+                                    </div>
+                                    <div class="flex items-center">
+                                        <span class="text-blue-600 mr-2">🚑</span>
+                                        <span>Monitor ambulance trusts</span>
+                                    </div>
+                                    <div class="flex items-center">
+                                        <span class="text-blue-600 mr-2">📊</span>
+                                        <span>View statistics & maps</span>
+                                    </div>
+                                    <div class="flex items-center">
+                                        <span class="text-blue-600 mr-2">🏆</span>
+                                        <span>Unlock achievements</span>
+                                    </div>
+                                    <div class="flex items-center">
+                                        <span class="text-blue-600 mr-2">📋</span>
+                                        <span>Log medical records</span>
+                                    </div>
+                                    <div class="flex items-center">
+                                        <span class="text-blue-600 mr-2">📈</span>
+                                        <span>Track symptoms</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Right Column: Support & Privacy -->
+                        <div class="space-y-4">
+                            <!-- Support Contact -->
+                            <div class="bg-purple-50 p-4 rounded-lg">
+                                <h4 class="font-semibold text-purple-900 mb-3 flex items-center">
+                                    📧 Get Support
+                                </h4>
+                                <p class="text-sm text-purple-800 mb-3">Need help or found a bug? Contact support:</p>
+                                <div class="bg-white p-3 rounded border text-xs font-mono text-gray-600 space-y-1">
+                                    <div class="flex justify-between">
+                                        <span class="font-medium">User ID:</span>
+                                        <span class="text-purple-600">${userIdText}</span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span class="font-medium">Email:</span>
+                                        <a href="mailto:jack@whitehill.group?subject=Support Request - ${userIdText}" 
+                                           class="text-purple-600 hover:underline">jack@whitehill.group</a>
+                                    </div>
+                                </div>
+                                <p class="text-xs text-purple-600 mt-2">
+                                    💡 Include your User ID for faster assistance
+                                </p>
+                            </div>
+
+                            <!-- Privacy & Community -->
+                            <div class="bg-yellow-50 p-4 rounded-lg">
+                                <h4 class="font-semibold text-yellow-900 mb-3 flex items-center">
+                                    🛡️ Privacy & Community
+                                </h4>
+                                <div class="text-sm text-yellow-800 space-y-2">
+                                    <p><strong>Your Privacy:</strong> Health data stays secure and private</p>
+                                    <p><strong>Community Use:</strong> Please don't misuse NHS services for tracking</p>
+                                    <p><strong>Purpose:</strong> Find encouragement in your health journey</p>
+                                </div>
+                            </div>
+
+                            <!-- Keyboard Shortcuts -->
+                            <div class="bg-gray-50 p-4 rounded-lg">
+                                <h4 class="font-semibold text-gray-900 mb-3 flex items-center">
+                                    ⌨️ Tips & Shortcuts
+                                </h4>
+                                <div class="text-sm text-gray-700 space-y-1">
+                                    <div class="flex justify-between">
+                                        <span>Search lists:</span>
+                                        <span class="font-mono bg-gray-200 px-1 rounded text-xs">Type to filter</span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span>Quick add:</span>
+                                        <span class="font-mono bg-gray-200 px-1 rounded text-xs">+ button</span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span>View profile:</span>
+                                        <span class="font-mono bg-gray-200 px-1 rounded text-xs">My Profile button</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Close Button -->
+                    <div class="flex justify-end pt-3 border-t">
+                        <button onclick="closeModal(document.getElementById('help-modal'))" 
+                                class="px-6 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors font-medium">
+                            Close
+                        </button>
+                    </div>
+                </div>
+            `;
+
+            const modal = createModal('help-modal', 'Help & Support', helpContent, 'max-w-4xl');
+            openModal(modal);
+        }
+                
         // --- Setup Event Listeners ---
         function setupEventListeners() {
             document.getElementById('signout-btn').addEventListener('click', () => signOut(auth));
