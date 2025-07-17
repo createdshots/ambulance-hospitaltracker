@@ -336,7 +336,39 @@
         function createRecordsTab() { return `<div class="text-center py-12">Medical Records content goes here.</div>`; }
         function createAchievementsTab() { return `<div class="text-center py-12">Achievements content goes here.</div>`; }
         function createAnalyticsTab() { return `<div class="text-center py-12">Analytics content goes here.</div>`; }
-        function createSymptomsTab() { return `<div class="text-center py-12">Symptoms content goes here.</div>`; }
+        function createSymptomsTab() {
+            // Add a Log Symptoms button and show recent symptom entries
+            const recentSymptoms = (localData.symptomTracking || []).slice(0, 10);
+            return `
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-xl font-semibold text-purple-900">Symptom Tracking</h3>
+                    <button id="profile-log-symptom-btn" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm">
+                        Log Symptoms
+                    </button>
+                </div>
+                ${recentSymptoms.length > 0 ? `
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        ${recentSymptoms.map(entry => {
+                            const date = new Date(entry.date);
+                            return `
+                                <div class="bg-white p-4 rounded-lg border border-blue-200">
+                                    <div class="font-medium text-gray-900 text-sm mb-1">${entry.isSymptomOnly ? 'Symptom Log' : (entry.hospital || 'Symptom Log')}</div>
+                                    <div class="text-xs text-gray-600 mb-2">${date.toLocaleDateString()}</div>
+                                    <div class="mb-1">
+                                        ${Object.keys(entry.conditions || {}).map(condition =>
+                                            `<span class="inline-block bg-blue-100 text-blue-800 px-1 py-0.5 rounded text-xs mr-1">${condition.replace('_', ' ')}</span>`
+                                        ).join('')}
+                                    </div>
+                                    <div class="text-xs text-gray-700">${entry.notes ? entry.notes : ''}</div>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                ` : `
+                    <div class="text-center py-8 text-blue-700">No symptoms logged yet. Click 'Log Symptoms' to get started!</div>
+                `}
+            `;
+        }
         // --- Edit Profile Modal (enhanced layout) ---
         function showEditProfileModal() {
             const currentProfile = localData.userProfile || {};
@@ -916,6 +948,8 @@
                     }
                 } else if (target.id === 'edit-profile-btn') {
                     showEditProfileModal();
+                } else if (target.id === 'profile-log-symptom-btn') {
+                    showProfileLogSymptomModal();
                 }
             });
         }
