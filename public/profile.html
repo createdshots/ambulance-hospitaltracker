@@ -280,7 +280,7 @@
             setupAddRecordEventListeners(modal);
         }
         window.showAddRecordModal = showAddRecordModal;
-        
+
         function renderProfileHeader() {
             const history = localData.visitHistory || [];
             const totalVisits = (localData.hospitals?.reduce((s, h) => s + h.count, 0) || 0) + (localData.ambulance?.reduce((s, a) => s + a.count, 0) || 0);
@@ -892,7 +892,7 @@
             const modal = createModal('help-modal', 'Help & Support', helpContent, 'max-w-4xl');
             openModal(modal);
         }
-                
+        
         // --- Setup Event Listeners ---
         function setupEventListeners() {
             document.getElementById('signout-btn').addEventListener('click', () => signOut(auth));
