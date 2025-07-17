@@ -272,6 +272,15 @@
             renderProfileHeader();
         }
 
+        // --- Add Record Modal ---
+        function showAddRecordModal() {
+            const modalContent = createAddRecordForm();
+            const modal = createModal('add-record-modal', 'Add Medical Record', modalContent, 'max-w-2xl');
+            openModal(modal);
+            setupAddRecordEventListeners(modal);
+        }
+        window.showAddRecordModal = showAddRecordModal;
+        
         function renderProfileHeader() {
             const history = localData.visitHistory || [];
             const totalVisits = (localData.hospitals?.reduce((s, h) => s + h.count, 0) || 0) + (localData.ambulance?.reduce((s, a) => s + a.count, 0) || 0);
@@ -667,14 +676,6 @@
                 }
                 renderProfile();
             });
-        }
-
-        // --- Add Record Modal ---
-        function showAddRecordModal() {
-            const modalContent = createAddRecordForm();
-            const modal = createModal('add-record-modal', 'Add Medical Record', modalContent, 'max-w-2xl');
-            openModal(modal);
-            setupAddRecordEventListeners(modal);
         }
 
         // --- Setup Event Listeners ---
