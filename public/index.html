@@ -925,70 +925,76 @@
             const userConditions = localData.userProfile?.conditions || [];
             const conditionQuestions = generateConditionQuestionsForRecord(userConditions);
             return `
-                <form id="add-record-form" class="space-y-6">
+                <form id="add-record-form" class="space-y-4">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div>
-                            <label for="visit-date" class="block text-sm font-medium text-gray-700 mb-2">Visit Date</label>
-                            <input type="date" id="visit-date" required
-                                class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                                value="${new Date().toISOString().split('T')[0]}">
-                        </div>
-                        <div>
-                            <label for="visit-time" class="block text-sm font-medium text-gray-700 mb-2">Visit Time (Optional)</label>
-                            <input type="time" id="visit-time"
-                                class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
-                        </div>
-                        <div>
-                            <label for="hospital-select" class="block text-sm font-medium text-gray-700 mb-2">Hospital/Medical Facility</label>
-                            <select id="hospital-select" required
-                                class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
-                                <option value="">Select a hospital...</option>
-                                ${hospitalOptions}
-                            </select>
-                        </div>
-                        <div>
-                            <label class="flex items-center">
-                                <input type="checkbox" id="ambulance-involved"
-                                    class="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded">
-                                <span class="ml-2 text-sm font-medium text-gray-700">Ambulance service was involved</span>
-                            </label>
-                            <div id="ambulance-section" class="hidden mt-2">
-                                <label for="ambulance-select" class="block text-sm font-medium text-gray-700 mb-2">Ambulance Trust</label>
-                                <select id="ambulance-select"
+                        <!-- Left Column: Main Visit Info -->
+                        <div class="space-y-4">
+                            <div>
+                                <label for="visit-date" class="block text-sm font-medium text-gray-700 mb-2">Visit Date</label>
+                                <input type="date" id="visit-date" required
+                                    class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                                    value="${new Date().toISOString().split('T')[0]}">
+                            </div>
+                            <div>
+                                <label for="visit-time" class="block text-sm font-medium text-gray-700 mb-2">Visit Time (Optional)</label>
+                                <input type="time" id="visit-time"
                                     class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
-                                    <option value="">Select an ambulance trust...</option>
-                                    ${ambulanceOptions}
+                            </div>
+                            <div>
+                                <label for="hospital-select" class="block text-sm font-medium text-gray-700 mb-2">Hospital/Medical Facility</label>
+                                <select id="hospital-select" required
+                                    class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
+                                    <option value="">Select a hospital...</option>
+                                    ${hospitalOptions}
                                 </select>
                             </div>
+                            <div>
+                                <label class="flex items-center">
+                                    <input type="checkbox" id="ambulance-involved"
+                                        class="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded">
+                                    <span class="ml-2 text-sm font-medium text-gray-700">Ambulance service was involved</span>
+                                </label>
+                                <div id="ambulance-section" class="hidden mt-2">
+                                    <label for="ambulance-select" class="block text-sm font-medium text-gray-700 mb-2">Ambulance Trust</label>
+                                    <select id="ambulance-select"
+                                        class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
+                                        <option value="">Select an ambulance trust...</option>
+                                        ${ambulanceOptions}
+                                    </select>
+                                </div>
+                            </div>
+                            <div>
+                                <label for="visit-type" class="block text-sm font-medium text-gray-700 mb-2">Type of Visit</label>
+                                <select id="visit-type" required
+                                    class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
+                                    <option value="">Select visit type...</option>
+                                    <option value="emergency">Emergency</option>
+                                    <option value="outpatient">Outpatient Appointment</option>
+                                    <option value="inpatient">Inpatient Stay</option>
+                                    <option value="procedure">Procedure/Surgery</option>
+                                    <option value="test">Tests/Diagnostic</option>
+                                    <option value="other">Other</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="visit-notes" class="block text-sm font-medium text-gray-700 mb-2">Notes (Optional)</label>
+                                <textarea id="visit-notes" rows="4"
+                                    placeholder="Add any additional details about your visit..."
+                                    class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"></textarea>
+                            </div>
                         </div>
-                        <div>
-                            <label for="visit-type" class="block text-sm font-medium text-gray-700 mb-2">Type of Visit</label>
-                            <select id="visit-type" required
-                                class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
-                                <option value="">Select visit type...</option>
-                                <option value="emergency">Emergency</option>
-                                <option value="outpatient">Outpatient Appointment</option>
-                                <option value="inpatient">Inpatient Stay</option>
-                                <option value="procedure">Procedure/Surgery</option>
-                                <option value="test">Tests/Diagnostic</option>
-                                <option value="other">Other</option>
-                            </select>
+                        <!-- Right Column: Condition-Specific Questions -->
+                        <div class="space-y-4">
+                            ${conditionQuestions ? `
+                                <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 h-full flex flex-col">
+                                    <h4 class="font-semibold text-gray-900 mb-3">📋 Condition-Specific Questions</h4>
+                                    <p class="text-sm text-gray-600 mb-4">Based on your tracked conditions:</p>
+                                    <div class="flex-1 overflow-y-auto">${conditionQuestions}</div>
+                                </div>
+                            ` : `<div class='text-gray-500 text-sm'>No tracked conditions. Add some in your profile for personalized questions.</div>`}
                         </div>
                     </div>
-                    ${conditionQuestions ? `
-                        <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                            <h4 class="font-semibold text-gray-900 mb-3">📋 Condition-Specific Questions</h4>
-                            <p class="text-sm text-gray-600 mb-4">Based on your tracked conditions:</p>
-                            ${conditionQuestions}
-                        </div>
-                    ` : ''}
-                    <div>
-                        <label for="visit-notes" class="block text-sm font-medium text-gray-700 mb-2">Notes (Optional)</label>
-                        <textarea id="visit-notes" rows="4"
-                            placeholder="Add any additional details about your visit..."
-                            class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"></textarea>
-                    </div>
-                    <div class="flex justify-end space-x-3 pt-4 border-t">
+                    <div class="flex justify-end space-x-3 pt-4 border-t mt-4">
                         <button type="button" class="cancel-btn px-4 py-2 text-gray-600 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors">
                             Cancel
                         </button>
@@ -2157,6 +2163,26 @@
                 header.parentNode.insertBefore(section, gridContainer);
             }
         }
+
+        // Add a build tracker to the bottom right
+        const BUILD_VERSION = 'v0.9.0'; // Update as needed
+        window.addEventListener('DOMContentLoaded', () => {
+            const buildDiv = document.createElement('div');
+            buildDiv.id = 'build-tracker';
+            buildDiv.textContent = `Build: ${BUILD_VERSION}`;
+            buildDiv.style.position = 'fixed';
+            buildDiv.style.bottom = '2.5rem';
+            buildDiv.style.right = '1.5rem';
+            buildDiv.style.opacity = '0.3';
+            buildDiv.style.fontSize = '0.85rem';
+            buildDiv.style.background = '#fff';
+            buildDiv.style.padding = '2px 10px';
+            buildDiv.style.borderRadius = '8px';
+            buildDiv.style.boxShadow = '0 1px 4px rgba(0,0,0,0.04)';
+            buildDiv.style.zIndex = '9999';
+            buildDiv.style.pointerEvents = 'none';
+            document.body.appendChild(buildDiv);
+        });
     </script>
 </body>
 
