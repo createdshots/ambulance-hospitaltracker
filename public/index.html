@@ -215,7 +215,7 @@
 
         // Firebase Imports
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, onAuthStateChanged, signOut, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getAuth, onAuthStateChanged, signOut, GoogleAuthProvider, signInWithPopup, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, onSnapshot, setDoc, deleteDoc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // --- Firebase Configuration ---
@@ -2034,6 +2034,27 @@
                 });
             });
         }
+
+        document.getElementById('guest-login-btn').addEventListener('click', () => {
+          signInAnonymously(auth)
+            .then(() => {
+              // Redirect to profile or main app page
+              window.location.href = 'profile.html';
+            })
+            .catch((error) => {
+              alert('Guest login failed: ' + error.message);
+            });
+        });
+
+        // Optional: Detect if user is anonymous
+        onAuthStateChanged(auth, (user) => {
+          if (user) {
+            if (user.isAnonymous) {
+              // Handle guest user UI
+              console.log('Guest user signed in');
+            }
+          }
+        });
     </script>
 </body>
 
