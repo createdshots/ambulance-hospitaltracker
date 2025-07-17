@@ -473,7 +473,7 @@
                     const newList = [];
                     for (const [index, line] of lines.entries()) {
                         const name = line.trim();
-                        loaderText.textContent = `Loading ambulance trusts and geocoding hospitals (${index + 0.5}/${lines.length})...`;
+                        loaderText.textContent = `Loading data...`;
                         const coords = await geocodeLocation(name);
                         newList.push({ name, visited: false, count: 0, coords });
                         await new Promise(resolve => setTimeout(resolve, 250));
@@ -579,11 +579,8 @@
             try {
                 renderHospitals();
                 renderAmbulance();
-
-                // Add symptom tracking section if user has conditions
-                if (localData.userProfile?.conditions?.length > 0) {
-                    addSymptomTrackingSection();
-                }
+                // Add recent activity section (replaces symptom tracking)
+                addRecentActivitySection();
             } catch (error) {
                 console.error("Error rendering data:", error);
                 showStatusMessage("Error displaying data.", "error");
@@ -1110,68 +1107,56 @@
 
                     const modalContent = `
         <form id="edit-profile-form" class="space-y-4">
-            <!-- Main Content Grid -->
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                
-                <!-- Left Column -->
-                <div class="space-y-4">
-                    <!-- Personal Information -->
-                    <div class="bg-gray-50 p-4 rounded-lg border">
-                        <h3 class="text-lg font-semibold text-gray-900 mb-3">Personal Information</h3>
-                        <div class="grid grid-cols-1 gap-3">
-                            <div>
-                                <label for="display-name" class="block text-sm font-medium text-gray-700 mb-1">Display Name</label>
-                                <input type="text" id="display-name" 
-                                       value="${currentProfile.displayName || user?.displayName || ''}"
-                                       placeholder="How you'd like to be addressed"
-                                       class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm">
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
-                                <div class="w-full p-2 border border-gray-200 rounded-lg bg-gray-100 text-gray-600 text-sm">
-                                    ${user?.email || 'Not available'}
-                                </div>
-                                <p class="text-xs text-gray-500 mt-1">Managed by sign-in provider</p>
-                            </div>
-                            <div>
-                                <label for="date-of-birth" class="block text-sm font-medium text-gray-700 mb-1">Date of Birth (Optional)</label>
-                                <input type="date" id="date-of-birth" 
-                                       value="${currentProfile.dateOfBirth || ''}"
-                                       class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm">
-                            </div>
-                        </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label for="display-name" class="block text-sm font-medium text-gray-700 mb-2">Display Name</label>
+                    <input type="text" id="display-name" 
+                           value="${currentProfile.displayName || user?.displayName || ''}"
+                           placeholder="How you'd like to be addressed"
+                           class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
+                    <div class="w-full p-2 border border-gray-200 rounded-lg bg-gray-100 text-gray-600 text-sm">
+                        ${user?.email || 'Not available'}
                     </div>
+                    <p class="text-xs text-gray-500 mt-1">Managed by sign-in provider</p>
+                </div>
+                <div>
+                    <label for="date-of-birth" class="block text-sm font-medium text-gray-700 mb-1">Date of Birth (Optional)</label>
+                    <input type="date" id="date-of-birth" 
+                           value="${currentProfile.dateOfBirth || ''}"
+                           class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm">
+                </div>
+            </div>
 
-                    <!-- Emergency Information -->
-                    <div class="bg-red-50 p-4 rounded-lg border border-red-200">
-                        <h3 class="text-lg font-semibold text-red-900 mb-3">🚨 Emergency Information</h3>
-                        <div class="grid grid-cols-1 gap-3">
-                            <div>
-                                <label for="emergency-contact" class="block text-sm font-medium text-gray-700 mb-1">Emergency Contact</label>
-                                <input type="text" id="emergency-contact" 
-                                       value="${currentProfile.emergencyContact || ''}"
-                                       placeholder="Name and phone number (e.g., John Smith - 07123456789)"
-                                       class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 text-sm">
-                            </div>
-                            <div>
-                                <label for="medical-notes" class="block text-sm font-medium text-gray-700 mb-1">Important Medical Notes</label>
-                                <textarea id="medical-notes" rows="2"
-                                          placeholder="Allergies, current medications, medical conditions, special instructions for emergency responders..."
-                                          class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 text-sm">${currentProfile.medicalNotes || ''}</textarea>
-                                <p class="text-xs text-gray-500 mt-1">This information could be vital in an emergency</p>
-                            </div>
-                        </div>
+            <!-- Emergency Information -->
+            <div class="bg-red-50 p-4 rounded-lg border border-red-200">
+                <h3 class="text-lg font-semibold text-red-900 mb-3">🚨 Emergency Information</h3>
+                <div class="grid grid-cols-1 gap-3">
+                    <div>
+                        <label for="emergency-contact" class="block text-sm font-medium text-gray-700 mb-1">Emergency Contact</label>
+                        <input type="text" id="emergency-contact" 
+                               value="${currentProfile.emergencyContact || ''}"
+                               placeholder="Name and phone number (e.g., John Smith - 07123456789)"
+                               class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 text-sm">
+                    </div>
+                    <div>
+                        <label for="medical-notes" class="block text-sm font-medium text-gray-700 mb-1">Important Medical Notes</label>
+                        <textarea id="medical-notes" rows="2"
+                                  placeholder="Allergies, current medications, medical conditions, special instructions for emergency responders..."
+                                  class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 text-sm">${currentProfile.medicalNotes || ''}</textarea>
+                        <p class="text-xs text-gray-500 mt-1">This information could be vital in an emergency</p>
                     </div>
                 </div>
+            </div>
 
-                <!-- Right Column -->
-                <div class="space-y-4">
-                    <!-- Condition Tracking -->
-                    <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
-                        <h3 class="text-lg font-semibold text-gray-900 mb-3">🏥 Condition Tracking</h3>
-                        <p class="text-sm text-gray-600 mb-3">Select conditions you'd like to track. This enables personalized symptom questions and better analytics.</p>
-                        <div class="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto custom-scrollbar p-1">
-                            ${availableConditions.map(condition => {
+            <!-- Condition Tracking -->
+            <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h3 class="text-lg font-semibold text-gray-900 mb-3">🏥 Condition Tracking</h3>
+                <p class="text-sm text-gray-600 mb-3">Select conditions you'd like to track. This enables personalized symptom questions and better analytics.</p>
+                <div class="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto custom-scrollbar p-1">
+                    ${availableConditions.map(condition => {
                         const isSelected = currentProfile.conditions?.includes(condition) || false;
                         const conditionNames = {
                             'epilepsy': '🧠 Epilepsy',
@@ -1194,33 +1179,31 @@
                                 </label>
                             `;
                     }).join('')}
-                        </div>
-                    </div>
+                </div>
+            </div>
 
-                    <!-- Settings & Account Info -->
-                    <div class="bg-gray-50 p-4 rounded-lg border">
-                        <h3 class="text-lg font-semibold text-gray-900 mb-3">🔒 Privacy & Settings</h3>
-                        <div class="grid grid-cols-1 gap-2 mb-4">
-                            <label class="flex items-start p-2 border rounded hover:bg-gray-100 cursor-pointer">
-                                <input type="checkbox" id="data-sharing" 
-                                       ${currentProfile.dataSharing ? 'checked' : ''}
-                                       class="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded mt-1">
-                                <div class="ml-2">
-                                    <span class="text-sm font-medium text-gray-700">Help improve the app</span>
-                                    <p class="text-xs text-gray-500">Share anonymous usage analytics to help development</p>
-                                </div>
-                            </label>
+            <!-- Settings & Account Info -->
+            <div class="bg-gray-50 p-4 rounded-lg border">
+                <h3 class="text-lg font-semibold text-gray-900 mb-3">🔒 Privacy & Settings</h3>
+                <div class="grid grid-cols-1 gap-2 mb-4">
+                    <label class="flex items-start p-2 border rounded hover:bg-gray-100 cursor-pointer">
+                        <input type="checkbox" id="data-sharing" 
+                               ${currentProfile.dataSharing ? 'checked' : ''}
+                               class="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded mt-1">
+                        <div class="ml-2">
+                            <span class="text-sm font-medium text-gray-700">Help improve the app</span>
+                            <p class="text-xs text-gray-500">Share anonymous usage analytics to help development</p>
                         </div>
-                        <div class="grid grid-cols-2 gap-2 text-sm">
-                            <div class="bg-white p-2 rounded border">
-                                <p class="font-medium text-gray-700">Account Type</p>
-                                <p class="text-gray-600 text-xs">${user?.isAnonymous ? 'Guest Account' : 'Registered Account'}</p>
-                            </div>
-                            <div class="bg-white p-2 rounded border">
-                                <p class="font-medium text-gray-700">Sign-in Method</p>
-                                <p class="text-gray-600 text-xs">${isSSO ? 'Google SSO' : 'Anonymous'}</p>
-                            </div>
-                        </div>
+                    </label>
+                </div>
+                <div class="grid grid-cols-2 gap-2 text-sm">
+                    <div class="bg-white p-2 rounded border">
+                        <p class="font-medium text-gray-700">Account Type</p>
+                        <p class="text-gray-600 text-xs">${user?.isAnonymous ? 'Guest Account' : 'Registered Account'}</p>
+                    </div>
+                    <div class="bg-white p-2 rounded border">
+                        <p class="font-medium text-gray-700">Sign-in Method</p>
+                        <p class="text-gray-600 text-xs">${isSSO ? 'Google SSO' : 'Anonymous'}</p>
                     </div>
                 </div>
             </div>
@@ -1800,8 +1783,7 @@
         window.showAddRecordModal = showAddRecordModal;
 
         // --- Symptom Prompt Modal for New Record ---
- // --- Symptom Prompt Modal for New Record ---
- function showSymptomPromptModal(recordData, onComplete) {
+        function showSymptomPromptModal(recordData, onComplete) {
             const userConditions = localData.userProfile?.conditions || [];
             if (!userConditions.length) {
                 // No conditions tracked, skip symptom prompt
@@ -1810,19 +1792,27 @@
             }
             const conditionQuestions = generateConditionQuestionsForSymptoms(userConditions);
             const modalContent = `
-                <form id="symptom-prompt-form" class="space-y-6">
-                    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <form id="symptom-prompt-form" class="space-y-4">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label for="symptom-date" class="block text-sm font-medium text-gray-700 mb-2">Date</label>
+                            <input type="date" id="symptom-date" required
+                                class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                value="${recordData.date || new Date().toISOString().split('T')[0]}">
+                        </div>
+                        <div>
+                            <label for="symptom-notes" class="block text-sm font-medium text-gray-700 mb-2">Additional Notes (Optional)</label>
+                            <textarea id="symptom-notes" rows="3"
+                                placeholder="Any additional symptoms or notes..."
+                                class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"></textarea>
+                        </div>
+                    </div>
+                    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-4">
                         <h4 class="font-semibold text-gray-900 mb-3">📋 Symptom Questions</h4>
                         <p class="text-sm text-gray-600 mb-4">Based on your tracked conditions for this record:</p>
                         ${conditionQuestions}
                     </div>
-                    <div>
-                        <label for="symptom-notes" class="block text-sm font-medium text-gray-700 mb-2">Additional Notes (Optional)</label>
-                        <textarea id="symptom-notes" rows="3"
-                            placeholder="Any additional symptoms or notes..."
-                            class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"></textarea>
-                    </div>
-                    <div class="flex justify-end space-x-3 pt-4 border-t">
+                    <div class="flex justify-end space-x-3 pt-4 border-t mt-4">
                         <button type="button" class="cancel-btn px-4 py-2 text-gray-600 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors">
                             Cancel
                         </button>
@@ -1847,7 +1837,7 @@
                 const symptomData = {
                     id: recordData.id,
                     timestamp: recordData.timestamp,
-                    date: recordData.date,
+                    date: form.querySelector('#symptom-date').value,
                     hospital: recordData.hospital,
                     visitType: recordData.visitType,
                     conditions: {},
@@ -2086,6 +2076,86 @@
                         alert('Guest login failed: ' + error.message);
                     });
             });
+        }
+
+        // --- Add Recent Activity Section (replaces Symptom Tracking) ---
+        function addRecentActivitySection() {
+            const container = document.querySelector('.container');
+            const existingSection = document.getElementById('recent-activity-section');
+            if (existingSection) existingSection.remove();
+            // Gather recent activity from both symptomTracking and medicalRecords
+            const activities = [];
+            (localData.symptomTracking || []).forEach(entry => {
+                activities.push({
+                    type: 'symptom',
+                    date: entry.date,
+                    timestamp: entry.timestamp,
+                    entry
+                });
+            });
+            (localData.medicalRecords || []).forEach(entry => {
+                activities.push({
+                    type: 'record',
+                    date: entry.date,
+                    timestamp: entry.timestamp,
+                    entry
+                });
+            });
+            // Sort by timestamp descending
+            activities.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+            const recent = activities.slice(0, 5);
+            const section = document.createElement('div');
+            section.id = 'recent-activity-section';
+            section.className = 'mb-8 p-4 bg-blue-50 border border-blue-200 rounded-xl';
+            section.innerHTML = `
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3">
+                    <div>
+                        <h3 class="text-lg font-semibold text-blue-900">🕒 Recent Activity</h3>
+                        <p class="text-sm text-blue-700">Your latest symptom logs and medical records</p>
+                    </div>
+                </div>
+                ${recent.length > 0 ? `
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                        ${recent.map(act => {
+                    const date = new Date(act.date);
+                    if (act.type === 'symptom') {
+                        return `
+                            <div class="bg-white p-3 rounded-lg border border-blue-200">
+                                <div class="font-medium text-blue-900 text-sm mb-1">Symptom Log</div>
+                                <div class="text-xs text-gray-600 mb-2">${date.toLocaleDateString()}</div>
+                                <div class="mb-1">
+                                    ${Object.keys(act.entry.conditions || {}).map(condition =>
+                                        `<span class="inline-block bg-blue-100 text-blue-800 px-1 py-0.5 rounded text-xs mr-1">${condition.replace('_', ' ')}</span>`
+                                    ).join('')}
+                                </div>
+                                <div class="text-xs text-gray-700">${act.entry.notes ? act.entry.notes : ''}</div>
+                            </div>
+                        `;
+                    } else {
+                        return `
+                            <div class="bg-white p-3 rounded-lg border border-green-200">
+                                <div class="font-medium text-green-900 text-sm mb-1">Medical Record: ${act.entry.hospital || 'Unknown Hospital'}</div>
+                                <div class="text-xs text-gray-600 mb-2">${date.toLocaleDateString()}</div>
+                                <div class="mb-1">
+                                    ${act.entry.visitType ? `<span class="inline-block bg-green-100 text-green-800 px-1 py-0.5 rounded text-xs mr-1">${act.entry.visitType}</span>` : ''}
+                                </div>
+                                <div class="text-xs text-gray-700">${act.entry.notes ? act.entry.notes : ''}</div>
+                            </div>
+                        `;
+                    }
+                }).join('')}
+                    </div>
+                ` : `
+                    <div class="text-center py-4">
+                        <p class="text-blue-700 text-sm">No recent activity yet. Add a record or log symptoms to get started!</p>
+                    </div>
+                `}
+            `;
+            const header = document.querySelector('header');
+            const gridContainer = document.querySelector('.grid.grid-cols-1.md\\:grid-cols-2');
+            if (header && gridContainer) {
+                header.parentNode.insertBefore(section, gridContainer);
+            }
         }
     </script>
 </body>
