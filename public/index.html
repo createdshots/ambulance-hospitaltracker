@@ -207,6 +207,12 @@
     </footer>
 
     <script type="module">
+        // Defensive check for firebase-config.js
+        if (typeof userFirebaseConfig === 'undefined') {
+            alert('FATAL: firebase-config.js not loaded! Please ensure the file exists and is loaded before this script.');
+            throw new Error('FATAL: firebase-config.js not loaded!');
+        }
+
         // Firebase Imports
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, onAuthStateChanged, signOut, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
