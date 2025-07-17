@@ -1456,112 +1456,6 @@
         }
 
         // Update the setupAddRecordEventListeners function in index.html
-        function setupAddRecordEventListeners(modal) {
-            const form = modal.querySelector('#add-record-form');
-            const ambulanceCheckbox = modal.querySelector('#ambulance-involved');
-            const ambulanceSection = modal.querySelector('#ambulance-section');
-            const ambulanceSelect = modal.querySelector('#ambulance-select');
-            const cancelBtn = modal.querySelector('.cancel-btn');
-
-            // Show/hide ambulance section
-            ambulanceCheckbox.addEventListener('change', (e) => {
-                if (e.target.checked) {
-                    ambulanceSection.classList.remove('hidden');
-                    ambulanceSelect.required = true;
-                } else {
-                    ambulanceSection.classList.add('hidden');
-                    ambulanceSelect.required = false;
-                    ambulanceSelect.value = '';
-                }
-            });
-
-            // Cancel button
-            cancelBtn.addEventListener('click', () => {
-                closeModal(modal);
-            });
-
-            // Form submission
-            form.addEventListener('submit', async (e) => {
-                e.preventDefault();
-
-                // Collect condition-specific data
-                const conditionData = {};
-                const formData = new FormData(form);
-
-                for (let [key, value] of formData.entries()) {
-                    if (key.startsWith('condition_')) {
-                        const parts = key.split('_');
-                        const condition = parts[1];
-                        const field = parts.slice(2).join('_');
-
-                        if (!conditionData[condition]) conditionData[condition] = {};
-
-                        // Handle checkboxes
-                        if (form.querySelector(`[name="${key}"]`).type === 'checkbox') {
-                            conditionData[condition][field] = true;
-                        } else if (value) {
-                            conditionData[condition][field] = value;
-                        }
-                    }
-                }
-
-                const recordData = {
-                    id: `${new Date().toISOString()}_${Math.random().toString(36).substr(2, 9)}`,
-                    timestamp: new Date().toISOString(),
-                    date: modal.querySelector('#visit-date').value,
-                    time: modal.querySelector('#visit-time').value || null,
-                    hospital: modal.querySelector('#hospital-select').value,
-                    ambulanceInvolved: ambulanceCheckbox.checked,
-                    ambulanceTrust: ambulanceCheckbox.checked ? ambulanceSelect.value : null,
-                    visitType: modal.querySelector('#visit-type').value,
-                    notes: modal.querySelector('#visit-notes').value || null,
-                    conditionData: Object.keys(conditionData).length > 0 ? conditionData : null
-                };
-
-                // Add to records
-                if (!localData.medicalRecords) localData.medicalRecords = [];
-                localData.medicalRecords.unshift(recordData);
-
-                // Also add to symptom tracking if condition data exists
-                if (recordData.conditionData) {
-                    if (!localData.symptomTracking) localData.symptomTracking = [];
-                    const symptomEntry = {
-                        id: recordData.id,
-                        date: recordData.date,
-                        timestamp: recordData.timestamp,
-                        hospital: recordData.hospital,
-                        visitType: recordData.visitType,
-                        conditions: recordData.conditionData,
-                        isSymptomOnly: false
-                    };
-                    localData.symptomTracking.unshift(symptomEntry);
-                }
-
-                // Update visit counts for tracking
-                const hospitalIndex = localData.hospitals.findIndex(h => h.name === recordData.hospital);
-                if (hospitalIndex !== -1) {
-                    localData.hospitals[hospitalIndex].visited = true;
-                    localData.hospitals[hospitalIndex].count++;
-                }
-
-                const ambulanceIndex = localData.ambulance.findIndex(a => a.name === recordData.ambulanceTrust);
-                if (ambulanceIndex !== -1) {
-                    localData.ambulance[ambulanceIndex].visited = true;
-                    localData.ambulance[ambulanceIndex].count++;
-                }
-
-                // Save data
-                await saveData();
-
-                // Close modal
-                closeModal(modal);
-
-                // Re-render lists
-                renderAll();
-
-                showStatusMessage('Medical record added successfully!', 'success');
-            });
-        }
 
         // Replace the placeholder function with this full implementation
         function showQuickSymptomForm() {
@@ -2000,6 +1894,146 @@
             setupAddRecordEventListeners(modal);
         }
         window.showAddRecordModal = showAddRecordModal;
+
+        // --- Symptom Prompt Modal for New Record ---
+ // --- Symptom Prompt Modal for New Record ---
+ function showSymptomPromptModal(recordData, onComplete) {
+            const userConditions = localData.userProfile?.conditions || [];
+            if (!userConditions.length) {
+                // No conditions tracked, skip symptom prompt
+                onComplete(null);
+                return;
+            }
+            const conditionQuestions = generateConditionQuestionsForSymptoms(userConditions);
+            const modalContent = `
+                <form id="symptom-prompt-form" class="space-y-6">
+                    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                        <h4 class="font-semibold text-gray-900 mb-3">📋 Symptom Questions</h4>
+                        <p class="text-sm text-gray-600 mb-4">Based on your tracked conditions for this record:</p>
+                        ${conditionQuestions}
+                    </div>
+                    <div>
+                        <label for="symptom-notes" class="block text-sm font-medium text-gray-700 mb-2">Additional Notes (Optional)</label>
+                        <textarea id="symptom-notes" rows="3"
+                            placeholder="Any additional symptoms or notes..."
+                            class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"></textarea>
+                    </div>
+                    <div class="flex justify-end space-x-3 pt-4 border-t">
+                        <button type="button" class="cancel-btn px-4 py-2 text-gray-600 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors">
+                            Cancel
+                        </button>
+                        <button type="submit"
+                            class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                            Save Symptoms
+                        </button>
+                    </div>
+                </form>
+            `;
+            const modal = createModal('symptom-prompt-modal', 'Log Symptoms for This Record', modalContent, 'max-w-2xl');
+            openModal(modal);
+            // Cancel button
+            modal.querySelector('.cancel-btn').addEventListener('click', () => {
+                closeModal(modal);
+                onComplete(null);
+            });
+            // Form submit
+            modal.querySelector('#symptom-prompt-form').addEventListener('submit', (e) => {
+                e.preventDefault();
+                const form = e.target;
+                const symptomData = {
+                    id: recordData.id,
+                    timestamp: recordData.timestamp,
+                    date: recordData.date,
+                    hospital: recordData.hospital,
+                    visitType: recordData.visitType,
+                    conditions: {},
+                    notes: form.querySelector('#symptom-notes').value || null,
+                    isSymptomOnly: false
+                };
+                const formData = new FormData(form);
+                for (let [key, value] of formData.entries()) {
+                    if (key.startsWith('condition_')) {
+                        const parts = key.split('_');
+                        const condition = parts[1];
+                        const field = parts.slice(2).join('_');
+                        if (!symptomData.conditions[condition]) symptomData.conditions[condition] = {};
+                        if (form.querySelector(`[name="${key}"]`).type === 'checkbox') {
+                            symptomData.conditions[condition][field] = true;
+                        } else if (value) {
+                            symptomData.conditions[condition][field] = value;
+                        }
+                    }
+                }
+                closeModal(modal);
+                onComplete(symptomData);
+            });
+        }
+        // --- Update Add Record Modal Submission ---
+        function setupAddRecordEventListeners(modal) {
+            const form = modal.querySelector('#add-record-form');
+            const ambulanceCheckbox = modal.querySelector('#ambulance-involved');
+            const ambulanceSection = modal.querySelector('#ambulance-section');
+            const ambulanceSelect = modal.querySelector('#ambulance-select');
+            const cancelBtn = modal.querySelector('.cancel-btn');
+            ambulanceCheckbox.addEventListener('change', (e) => {
+                if (e.target.checked) {
+                    ambulanceSection.classList.remove('hidden');
+                    ambulanceSelect.required = true;
+                } else {
+                    ambulanceSection.classList.add('hidden');
+                    ambulanceSelect.required = false;
+                    ambulanceSelect.value = '';
+                }
+            });
+            cancelBtn.addEventListener('click', () => {
+                closeModal(modal);
+            });
+            form.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                // Collect condition-specific data
+                const conditionData = {};
+                const formData = new FormData(form);
+                for (let [key, value] of formData.entries()) {
+                    if (key.startsWith('condition_')) {
+                        const parts = key.split('_');
+                        const condition = parts[1];
+                        const field = parts.slice(2).join('_');
+                        if (!conditionData[condition]) conditionData[condition] = {};
+                        if (form.querySelector(`[name="${key}"]`).type === 'checkbox') {
+                            conditionData[condition][field] = true;
+                        } else if (value) {
+                            conditionData[condition][field] = value;
+                        }
+                    }
+                }
+                const recordData = {
+                    id: `${new Date().toISOString()}_${Math.random().toString(36).substr(2, 9)}`,
+                    timestamp: new Date().toISOString(),
+                    date: modal.querySelector('#visit-date').value,
+                    time: modal.querySelector('#visit-time').value || null,
+                    hospital: modal.querySelector('#hospital-select').value,
+                    ambulanceInvolved: ambulanceCheckbox.checked,
+                    ambulanceTrust: ambulanceCheckbox.checked ? ambulanceSelect.value : null,
+                    visitType: modal.querySelector('#visit-type').value,
+                    notes: modal.querySelector('#visit-notes').value || null,
+                    conditionData: Object.keys(conditionData).length > 0 ? conditionData : null
+                };
+                // Prompt for symptoms after record form
+                closeModal(modal);
+                showSymptomPromptModal(recordData, async (symptomData) => {
+                    // Save both record and symptoms
+                    if (!localData.medicalRecords) localData.medicalRecords = [];
+                    localData.medicalRecords.unshift(recordData);
+                    if (symptomData) {
+                        if (!localData.symptomTracking) localData.symptomTracking = [];
+                        localData.symptomTracking.unshift(symptomData);
+                    }
+                    await saveData();
+                    renderAll();
+                    showStatusMessage('Medical record and symptoms saved!', 'success');
+                });
+            });
+        }
     </script>
 </body>
 
