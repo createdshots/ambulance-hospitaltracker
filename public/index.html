@@ -259,6 +259,13 @@
             userProfile: {}
         };
         let unsubscribe = null;
+        // Ensure all DOM element references are defined at the top level
+        const userIdDisplay = document.getElementById('user-id-display');
+        const authSignedInView = document.getElementById('auth-signed-in-view');
+        const authSignedOutView = document.getElementById('auth-signed-out-view');
+        const loadingIndicator = document.getElementById('full-page-loader');
+        const loaderText = document.getElementById('loader-text');
+        const modalContainer = document.getElementById('modal-container');
         onAuthStateChanged(auth, (user) => {
             if (!user) {
                 window.location.href = '/login.html';
@@ -272,12 +279,6 @@
             // --- Firebase Configuration ---
             const appId = typeof __app_id !== 'undefined' ? __app_id : 'local-dev-app';
             let map;
-            const loadingIndicator = document.getElementById('full-page-loader');
-            const loaderText = document.getElementById('loader-text');
-            const modalContainer = document.getElementById('modal-container');
-            const authSignedInView = document.getElementById('auth-signed-in-view');
-            const authSignedOutView = document.getElementById('auth-signed-out-view');
-            const userIdDisplay = document.getElementById('user-id-display');
             // Set up UI for signed-in user (including guest)
             authSignedOutView.style.display = 'none';
             authSignedInView.style.display = 'flex';
