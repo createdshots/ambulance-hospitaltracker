@@ -460,42 +460,38 @@
             }
             
             // --- All other functions are defined here ---
-            function createHistoryTab(history) { return `<div class="text-center py-12">History content goes here.</div>`; }
-            function createRecordsTab() { return `<div class="text-center py-12">Medical Records content goes here.</div>`; }
-            function createAchievementsTab() { return `<div class="text-center py-12">Achievements content goes here.</div>`; }
-            function createAnalyticsTab() { return `<div class="text-center py-12">Analytics content goes here.</div>`; }
-            function createSymptomsTab() {
-                // Add a Log Symptoms button and show recent symptom entries
-                const recentSymptoms = (localData.symptomTracking || []).slice(0, 10);
-                return `
-                    <div class="flex justify-between items-center mb-4">
-                        <h3 class="text-xl font-semibold text-purple-900">Symptom Tracking</h3>
-                        <button id="profile-log-symptom-btn" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm">
-                            Log Symptoms
-                        </button>
-                    </div>
-                    ${recentSymptoms.length > 0 ? `
-                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                            ${recentSymptoms.map(entry => {
-                                const date = new Date(entry.date);
-                                return `
-                                    <div class="bg-white p-4 rounded-lg border border-blue-200">
-                                        <div class="font-medium text-gray-900 text-sm mb-1">${entry.isSymptomOnly ? 'Symptom Log' : (entry.hospital || 'Symptom Log')}</div>
-                                        <div class="text-xs text-gray-600 mb-2">${date.toLocaleDateString()}</div>
-                                        <div class="mb-1">
-                                            ${Object.keys(entry.conditions || {}).map(condition =>
-                                                `<span class="inline-block bg-blue-100 text-blue-800 px-1 py-0.5 rounded text-xs mr-1">${condition.replace('_', ' ')}</span>`
-                                            ).join('')}
-                                        </div>
-                                        <div class="text-xs text-gray-700">${entry.notes ? entry.notes : ''}</div>
-                                    </div>
-                                `;
-                            }).join('')}
-                        </div>
-                    ` : `
-                        <div class="text-center py-8 text-blue-700">No symptoms logged yet. Click 'Log Symptoms' to get started!</div>
-                    `}
-                `;
+            // --- Tab Content Functions ---
+            function createHistoryTab(history) {
+                debugLog('Rendering History Tab', history);
+                if (!history || history.length === 0) {
+                    return `<div class="text-center py-12 text-gray-500">No visit history yet.</div>`;
+                }
+                return `<ul class="divide-y divide-gray-200">${history.map(entry => `<li class="py-2 flex flex-col md:flex-row md:items-center md:justify-between"><span class="font-medium text-gray-800">${entry.name || 'Unknown'}</span><span class="text-xs text-gray-500">${entry.timestamp ? new Date(entry.timestamp).toLocaleString() : ''}</span><span class="text-xs text-gray-600">${entry.action || ''}</span></li>`).join('')}</ul>`;
+            }
+            function createRecordsTab(records) {
+                debugLog('Rendering Records Tab', records);
+                if (!records || records.length === 0) {
+                    return `<div class="text-center py-12 text-gray-500">No medical records yet.</div>`;
+                }
+                return `<ul class="divide-y divide-gray-200">${records.map(entry => `<li class="py-2 flex flex-col md:flex-row md:items-center md:justify-between"><span class="font-medium text-gray-800">${entry.hospital || 'Unknown Facility'}</span><span class="text-xs text-gray-500">${entry.date ? new Date(entry.date).toLocaleDateString() : ''}</span><span class="text-xs text-gray-600">${entry.visitType || ''}</span></li>`).join('')}</ul>`;
+            }
+            function createAchievementsTab(awards) {
+                debugLog('Rendering Achievements Tab', awards);
+                if (!awards || awards.length === 0) {
+                    return `<div class="text-center py-12 text-gray-500">No awards unlocked yet.</div>`;
+                }
+                return `<ul class="grid grid-cols-2 md:grid-cols-3 gap-4">${awards.map(id => `<li class="p-4 bg-white rounded-lg border text-center"><span class="text-3xl">🏆</span><div class="font-bold mt-2">${id}</div></li>`).join('')}</ul>`;
+            }
+            function createAnalyticsTab() {
+                debugLog('Rendering Analytics Tab');
+                return `<div class="text-center py-12 text-gray-500">Analytics coming soon!</div>`;
+            }
+            function createSymptomsTab(symptoms) {
+                debugLog('Rendering Symptoms Tab', symptoms);
+                if (!symptoms || symptoms.length === 0) {
+                    return `<div class="text-center py-12 text-gray-500">No symptom logs yet.</div>`;
+                }
+                return `<ul class="divide-y divide-gray-200">${symptoms.map(entry => `<li class="py-2 flex flex-col md:flex-row md:items-center md:justify-between"><span class="font-medium text-gray-800">${entry.date ? new Date(entry.date).toLocaleDateString() : ''}</span><span class="text-xs text-gray-600">${entry.notes || ''}</span></li>`).join('')}</ul>`;
             }
             // --- Edit Profile Modal (enhanced layout) ---
             function showEditProfileModal() {
@@ -940,6 +936,7 @@
                     const target = e.target;
                     if (target.closest('.profile-tab-btn')) {
                         const targetTab = target.closest('.profile-tab-btn').dataset.tab;
+                        debugLog('Switching to tab:', targetTab);
                         document.querySelectorAll('.profile-tab-btn').forEach(b => {
                             b.className = 'profile-tab-btn border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm';
                         });
@@ -947,11 +944,26 @@
                         
                         const contentArea = document.getElementById('profile-tab-content');
                         switch (targetTab) {
-                            case 'history': contentArea.innerHTML = createHistoryTab(localData.visitHistory || []); break;
-                            case 'records': contentArea.innerHTML = createRecordsTab(); break;
-                            case 'achievements': contentArea.innerHTML = createAchievementsTab(); break;
-                            case 'analytics': contentArea.innerHTML = createAnalyticsTab(); break;
-                            case 'symptoms': contentArea.innerHTML = createSymptomsTab(); break;
+                            case 'history': 
+                                debugLog('Rendering History Tab');
+                                contentArea.innerHTML = createHistoryTab(localData.visitHistory || []); 
+                                break;
+                            case 'records': 
+                                debugLog('Rendering Records Tab');
+                                contentArea.innerHTML = createRecordsTab(localData.medicalRecords || []); 
+                                break;
+                            case 'achievements': 
+                                debugLog('Rendering Achievements Tab');
+                                contentArea.innerHTML = createAchievementsTab(localData.awards || []); 
+                                break;
+                            case 'analytics': 
+                                debugLog('Rendering Analytics Tab');
+                                contentArea.innerHTML = createAnalyticsTab(); 
+                                break;
+                            case 'symptoms': 
+                                debugLog('Rendering Symptoms Tab');
+                                contentArea.innerHTML = createSymptomsTab(localData.symptomTracking || []); 
+                                break;
                         }
                     } else if (target.id === 'edit-profile-btn') {
                         showEditProfileModal();

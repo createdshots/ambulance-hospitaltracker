@@ -1706,6 +1706,7 @@
 
         // --- Add Recent Activity Section (replaces Symptom Tracking) ---
         function addRecentActivitySection() {
+            console.log('[DEBUG] addRecentActivitySection called');
             const container = document.querySelector('.container');
             const existingSection = document.getElementById('recent-activity-section');
             if (existingSection) existingSection.remove();
@@ -1727,6 +1728,7 @@
                     entry
                 });
             });
+            console.log('[DEBUG] activities for recent activity:', activities);
             // Sort by timestamp descending
             activities.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
             const recent = activities.slice(0, 5);
