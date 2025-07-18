@@ -114,9 +114,23 @@
         </div>
     </footer>
 
+    <div id="debug-log" style="background:#f3f4f6;color:#374151;padding:8px 12px;border-radius:6px;font-size:12px;overflow-x:auto;margin:12px 0;"></div>
+
     <script type="module">
+        // Debug log helper
+        function debugLog(msg, obj) {
+            const logDiv = document.getElementById('debug-log');
+            const time = new Date().toISOString().split('T')[1].split('.')[0];
+            let out = `[${time}] ${msg}`;
+            if (obj !== undefined) {
+                try { out += '\n' + JSON.stringify(obj, null, 2); } catch {}
+            }
+            if (logDiv) logDiv.innerText += out + '\n';
+            console.log('[DEBUG]', msg, obj);
+        }
         // Defensive check for firebase-config.js
         if (typeof userFirebaseConfig === 'undefined') {
+            debugLog('FATAL: firebase-config.js not loaded!');
             document.body.innerHTML = '<div class="flex items-center justify-center min-h-screen"><div class="bg-white p-8 rounded shadow text-center"><h2 class="text-2xl font-bold mb-2 text-red-600">Configuration Error</h2><p class="text-gray-700 mb-4">firebase-config.js is missing or not loaded.<br>Please contact the site owner or try again later.</p></div></div>';
             throw new Error('FATAL: firebase-config.js not loaded!');
         }
@@ -132,14 +146,18 @@
         let docRef = null;
         let localData = { hospitals: [], ambulance: [], awards: [], visitHistory: [], medicalRecords: [], symptomTracking: [], userProfile: {} };
         let unsubscribe = null;
+        debugLog('Script loaded, waiting for auth state...');
         onAuthStateChanged(auth, (user) => {
+            debugLog('onAuthStateChanged fired', user);
             if (!user) {
+                debugLog('No user, redirecting to /login.html');
                 window.location.href = '/login.html';
                 return;
             }
             startApp(user);
         });
         function startApp(user) {
+            debugLog('startApp called', user);
             // Set userId and docRef at the top
             userId = user.uid;
             docRef = doc(db, "users", userId);
@@ -159,6 +177,9 @@
             const statusMessageArea = document.getElementById('status-message-area');
             const profileContent = document.getElementById('profile-content');
             const modalContainer = document.getElementById('modal-container');
+            debugLog('Calling setupSnapshotListener...');
+            setupSnapshotListener();
+        }
 
             // --- Awards Definition ---
             const awardsDefinition = {
@@ -333,6 +354,7 @@
             }
 
             function renderProfile() {
+                debugLog('renderProfile called', localData);
                 // Debug: Log localData and show a summary at the top
                 console.log('[DEBUG] renderProfile localData:', localData);
                 const debugSummary = `<pre style="background:#f3f4f6;color:#374151;padding:8px;border-radius:6px;font-size:12px;overflow-x:auto;">[DEBUG] localData:\n${JSON.stringify(Object.fromEntries(Object.entries(localData).map(([k,v])=>[k,Array.isArray(v)?`Array(${v.length})`:typeof v==='object'?JSON.stringify(v):typeof v])),null,2)}</pre>`;
@@ -698,6 +720,7 @@
 
             // --- Onboarding Modal (Edit Profile, Unskippable) ---
             function showOnboardingModal() {
+                debugLog('showOnboardingModal called');
                 const currentProfile = localData.userProfile || {};
                 const user = auth.currentUser;
                 const availableConditions = [
@@ -1011,16 +1034,18 @@
 
             // --- Firestore Data Handling ---
             function setupSnapshotListener() {
+                debugLog('setupSnapshotListener called', { docRef: docRef && docRef.path });
                 if (!docRef) {
-                    console.log("No docRef available for snapshot listener");
+                    debugLog('No docRef available for snapshot listener');
                     return;
                 }
 
                 unsubscribe = onSnapshot(docRef, async (snapshot) => {
+                    debugLog('onSnapshot fired', { exists: snapshot.exists(), id: snapshot.id });
                     try {
                         if (snapshot.exists()) {
-                            // Merge existing data with loaded data
                             const firestoreData = snapshot.data();
+                            debugLog('Snapshot exists, merging data', firestoreData);
                             localData = {
                                 hospitals: [],
                                 ambulance: [],
@@ -1031,22 +1056,26 @@
                                 userProfile: {},
                                 ...firestoreData
                             };
+                            debugLog('Calling renderProfile with localData', localData);
                             renderProfile();
-                            // Ensure profile content is visible
                             const profileContent = document.getElementById('profile-content');
                             if (profileContent) profileContent.classList.remove('hidden');
                             if (!localData.userProfile?.onboardingCompleted) {
+                                debugLog('Onboarding not completed, showing onboarding modal');
                                 setTimeout(() => {
+                                    debugLog('Triggering showOnboardingModal()');
                                     showOnboardingModal();
                                 }, 500);
+                            } else {
+                                debugLog('Onboarding already completed');
                             }
                         } else {
-                            // Document doesn't exist, initialize with default data
+                            debugLog('Snapshot does not exist, initializing default data');
                             showStatusMessage('No user data found. Importing default hospitals and ambulances...', 'error');
                             await initializeDefaultData();
-                            // After initializing, fetch the new data
                             const userDocSnap = await getDoc(docRef);
                             if (userDocSnap.exists()) {
+                                debugLog('User doc created, merging data', userDocSnap.data());
                                 localData = {
                                     hospitals: [],
                                     ambulance: [],
@@ -1058,22 +1087,24 @@
                                     ...userDocSnap.data()
                                 };
                                 renderProfile();
-                                // Ensure profile content is visible
                                 const profileContent = document.getElementById('profile-content');
                                 if (profileContent) profileContent.classList.remove('hidden');
                                 showStatusMessage('Default data imported successfully!', 'success');
                                 if (!localData.userProfile?.onboardingCompleted) {
+                                    debugLog('Onboarding not completed after init, showing onboarding modal');
                                     setTimeout(() => {
+                                        debugLog('Triggering showOnboardingModal() after init');
                                         showOnboardingModal();
                                     }, 500);
                                 }
                             } else {
+                                debugLog('Failed to create user doc after init');
                                 showStatusMessage('Failed to import default data. Please refresh or contact support.', 'error');
                             }
                         }
                     } catch (error) {
+                        debugLog('Error in onSnapshot', error);
                         showStatusMessage("Error loading data.", "error");
-                        // Show error in profile content area
                         const profileContent = document.getElementById('profile-content');
                         if (profileContent) {
                             profileContent.classList.remove('hidden');
@@ -1085,12 +1116,14 @@
 
             // --- Default Data Initialization for New Users (including guests) ---
             async function initializeDefaultData() {
+                debugLog('initializeDefaultData called');
                 try {
                     loaderText.textContent = 'Setting up your data...';
                     // Load hospitals
                     const hospitals = await loadListFromFile('hospitals');
                     // Load ambulances
                     const ambulance = await loadListFromFile('ambulance');
+                    debugLog('Loaded hospitals and ambulance', { hospitalsLen: hospitals?.length, ambulanceLen: ambulance?.length });
                     // Set up localData
                     localData = {
                         hospitals: hospitals || [],
@@ -1101,10 +1134,12 @@
                         symptomTracking: [],
                         userProfile: {}
                     };
-                    // Save to Firestore
+                    debugLog('Saving localData to Firestore', localData);
                     await saveData();
+                    debugLog('Default data saved to Firestore');
                     showStatusMessage('Default data initialized!', 'success');
                 } catch (error) {
+                    debugLog('Error in initializeDefaultData', error);
                     showStatusMessage('Failed to initialize default data.', 'error');
                 }
             }
