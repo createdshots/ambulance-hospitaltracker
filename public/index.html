@@ -246,7 +246,18 @@
         const db = getFirestore(app);
         // Make statusMessageArea available everywhere
         const statusMessageArea = document.getElementById('status-message-area');
-        // Ensure unsubscribe is always defined
+        // Ensure all state variables are defined at the top level
+        let userId = null;
+        let docRef = null;
+        let localData = {
+            hospitals: [],
+            ambulance: [],
+            awards: [],
+            visitHistory: [],
+            medicalRecords: [],
+            symptomTracking: [],
+            userProfile: {}
+        };
         let unsubscribe = null;
         onAuthStateChanged(auth, (user) => {
             if (!user) {
@@ -260,11 +271,6 @@
             // Use the 'user' object as needed.
             // --- Firebase Configuration ---
             const appId = typeof __app_id !== 'undefined' ? __app_id : 'local-dev-app';
-            let db = getFirestore(app);
-            let userId = user.uid;
-            let docRef;
-            let localData = { hospitals: [], ambulance: [], awards: [], visitHistory: [], medicalRecords: [], symptomTracking: [], userProfile: {} };
-            let unsubscribe; // To hold the onSnapshot listener
             let map;
             const loadingIndicator = document.getElementById('full-page-loader');
             const loaderText = document.getElementById('loader-text');
