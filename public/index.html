@@ -240,8 +240,12 @@
         import { getAuth, onAuthStateChanged, signOut, GoogleAuthProvider, signInWithPopup, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, onSnapshot, setDoc, deleteDoc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         const firebaseConfig = userFirebaseConfig;
+        // Only initialize Firebase ONCE
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
+        const db = getFirestore(app);
+        // Make statusMessageArea available everywhere
+        const statusMessageArea = document.getElementById('status-message-area');
         onAuthStateChanged(auth, (user) => {
             if (!user) {
                 window.location.href = '/login.html';
@@ -262,7 +266,6 @@
             let map;
             const loadingIndicator = document.getElementById('full-page-loader');
             const loaderText = document.getElementById('loader-text');
-            const statusMessageArea = document.getElementById('status-message-area');
             const modalContainer = document.getElementById('modal-container');
             const authSignedInView = document.getElementById('auth-signed-in-view');
             const authSignedOutView = document.getElementById('auth-signed-out-view');
@@ -285,9 +288,7 @@
 
         try {
             console.log("Initializing Firebase with config:", firebaseConfig);
-            app = initializeApp(firebaseConfig);
-            db = getFirestore(app);
-            auth = getAuth(app);
+            // app, db, and auth are already initialized above
             console.log("Firebase initialized successfully");
         } catch (e) {
             console.error("Firebase initialization failed:", e);
