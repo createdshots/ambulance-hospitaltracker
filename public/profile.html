@@ -501,7 +501,7 @@
                 return `<div class="text-center py-12 text-gray-500">Analytics coming soon!</div>`;
             }
             function createSymptomsTab(symptoms) {
-                debugLog('Rendering Symptoms Tab', symptoms);
+                // // // debugLog('Rendering Symptoms Tab', symptoms);
                 if (!symptoms || symptoms.length === 0) {
                     return `<div class="text-center py-12 text-gray-500">No symptom logs yet.</div>`;
                 }
@@ -742,7 +742,7 @@
 
             // --- Onboarding Modal (Edit Profile, Unskippable) ---
             function showOnboardingModal() {
-                debugLog('showOnboardingModal called');
+                // // // debugLog('showOnboardingModal called');
                 const modalContainer = document.getElementById('modal-container');
                 if (!modalContainer) return;
                 const currentProfile = localData.userProfile || {};
@@ -950,7 +950,7 @@
                     const target = e.target;
                     if (target.closest('.profile-tab-btn')) {
                         const targetTab = target.closest('.profile-tab-btn').dataset.tab;
-                        debugLog('Switching to tab:', targetTab);
+                        // // // debugLog('Switching to tab:', targetTab);
                         document.querySelectorAll('.profile-tab-btn').forEach(b => {
                             b.className = 'profile-tab-btn border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm';
                         });
@@ -959,23 +959,23 @@
                         const contentArea = document.getElementById('profile-tab-content');
                         switch (targetTab) {
                             case 'history': 
-                                debugLog('Rendering History Tab');
+                                // // // debugLog('Rendering History Tab');
                                 contentArea.innerHTML = createHistoryTab(localData.visitHistory || []); 
                                 break;
                             case 'records': 
-                                debugLog('Rendering Records Tab');
+                                // // // debugLog('Rendering Records Tab');
                                 contentArea.innerHTML = createRecordsTab(localData.medicalRecords || []); 
                                 break;
                             case 'achievements': 
-                                debugLog('Rendering Achievements Tab');
+                                // // // debugLog('Rendering Achievements Tab');
                                 contentArea.innerHTML = createAchievementsTab(localData.awards || []); 
                                 break;
                             case 'analytics': 
-                                debugLog('Rendering Analytics Tab');
+                                // // // debugLog('Rendering Analytics Tab');
                                 contentArea.innerHTML = createAnalyticsTab(); 
                                 break;
                             case 'symptoms': 
-                                debugLog('Rendering Symptoms Tab');
+                                // // // debugLog('Rendering Symptoms Tab');
                                 contentArea.innerHTML = createSymptomsTab(localData.symptomTracking || []); 
                                 break;
                         }
@@ -1079,18 +1079,18 @@
 
             // --- Firestore Data Handling ---
             function setupSnapshotListener() {
-                debugLog('setupSnapshotListener called', { docRef: docRef && docRef.path });
+                // // // debugLog('setupSnapshotListener called', { docRef: docRef && docRef.path });
                 if (!docRef) {
-                    debugLog('No docRef available for snapshot listener');
+                    // // // debugLog('No docRef available for snapshot listener');
                     return;
                 }
 
                 unsubscribe = onSnapshot(docRef, async (snapshot) => {
-                    debugLog('onSnapshot fired', { exists: snapshot.exists(), id: snapshot.id });
+                    // // debugLog('onSnapshot fired', { exists: snapshot.exists(), id: snapshot.id });
                     try {
                         if (snapshot.exists()) {
                             const firestoreData = snapshot.data();
-                            debugLog('Snapshot exists, merging data', firestoreData);
+                            // // debugLog('Snapshot exists, merging data', firestoreData);
                             localData = {
                                 hospitals: [],
                                 ambulance: [],
@@ -1106,34 +1106,34 @@
                                 !Array.isArray(localData.ambulance) || localData.ambulance.length === 0 ||
                                 !localData.userProfile || Object.keys(localData.userProfile).length === 0;
                             if (needsDefaultData) {
-                                debugLog('User doc exists but is missing data, initializing default data and onboarding');
+                                // // debugLog('User doc exists but is missing data, initializing default data and onboarding');
                                 await initializeDefaultData();
                                 setTimeout(() => {
-                                    debugLog('Triggering showOnboardingModal() for missing data');
+                                    // // debugLog('Triggering showOnboardingModal() for missing data');
                                     showOnboardingModal();
                                 }, 500);
                                 return;
                             }
-                            debugLog('Calling renderProfile with localData', localData);
+                            // // debugLog('Calling renderProfile with localData', localData);
                             renderProfile();
                             const profileContent = document.getElementById('profile-content');
                             if (profileContent) profileContent.classList.remove('hidden');
                             if (!localData.userProfile?.onboardingCompleted) {
-                                debugLog('Onboarding not completed, showing onboarding modal');
+                                // // debugLog('Onboarding not completed, showing onboarding modal');
                                 setTimeout(() => {
-                                    debugLog('Triggering showOnboardingModal()');
+                                    // // debugLog('Triggering showOnboardingModal()');
                                     showOnboardingModal();
                                 }, 500);
                             } else {
-                                debugLog('Onboarding already completed');
+                                // // debugLog('Onboarding already completed');
                             }
                         } else {
-                            debugLog('Snapshot does not exist, initializing default data');
+                            // // debugLog('Snapshot does not exist, initializing default data');
                             showStatusMessage('No user data found. Importing default hospitals and ambulances...', 'error');
                             await initializeDefaultData();
                             const userDocSnap = await getDoc(docRef);
                             if (userDocSnap.exists()) {
-                                debugLog('User doc created, merging data', userDocSnap.data());
+                                // // debugLog('User doc created, merging data', userDocSnap.data());
                                 localData = {
                                     hospitals: [],
                                     ambulance: [],
@@ -1149,19 +1149,19 @@
                                 if (profileContent) profileContent.classList.remove('hidden');
                                 showStatusMessage('Default data imported successfully!', 'success');
                                 if (!localData.userProfile?.onboardingCompleted) {
-                                    debugLog('Onboarding not completed after init, showing onboarding modal');
+                                    // // debugLog('Onboarding not completed after init, showing onboarding modal');
                                     setTimeout(() => {
-                                        debugLog('Triggering showOnboardingModal() after init');
+                                        // // debugLog('Triggering showOnboardingModal() after init');
                                         showOnboardingModal();
                                     }, 500);
                                 }
                             } else {
-                                debugLog('Failed to create user doc after init');
+                                // // debugLog('Failed to create user doc after init');
                                 showStatusMessage('Failed to import default data. Please refresh or contact support.', 'error');
                             }
                         }
                     } catch (error) {
-                        debugLog('Error in onSnapshot', error);
+                        // // debugLog('Error in onSnapshot', error);
                         showStatusMessage("Error loading data.", "error");
                         const profileContent = document.getElementById('profile-content');
                         if (profileContent) {
@@ -1174,13 +1174,13 @@
 
             // --- Default Data Initialization for New Users (including guests) ---
             async function initializeDefaultData() {
-                debugLog('initializeDefaultData called');
+                // // debugLog('initializeDefaultData called');
                 try {
                     const loaderText = document.getElementById('loader-text');
                     if (loaderText) loaderText.textContent = 'Setting up your data...';
                     const hospitals = await loadListFromFile('hospitals');
                     const ambulance = await loadListFromFile('ambulance');
-                    debugLog('Loaded hospitals and ambulance', { hospitalsLen: hospitals?.length, ambulanceLen: ambulance?.length });
+                    // // debugLog('Loaded hospitals and ambulance', { hospitalsLen: hospitals?.length, ambulanceLen: ambulance?.length });
                     localData = {
                         hospitals: hospitals || [],
                         ambulance: ambulance || [],
@@ -1190,14 +1190,14 @@
                         symptomTracking: [],
                         userProfile: {}
                     };
-                    debugLog('Saving localData to Firestore', { docRef: docRef && docRef.path, localData });
+                    // // debugLog('Saving localData to Firestore', { docRef: docRef && docRef.path, localData });
                     await saveData();
-                    debugLog('Default data saved to Firestore, checking doc existence...', { docRef: docRef && docRef.path });
+                    // // debugLog('Default data saved to Firestore, checking doc existence...', { docRef: docRef && docRef.path });
                     const userDocSnap = await getDoc(docRef);
-                    debugLog('getDoc after saveData', { exists: userDocSnap.exists(), data: userDocSnap.data() });
+                    // // debugLog('getDoc after saveData', { exists: userDocSnap.exists(), data: userDocSnap.data() });
                     showStatusMessage('Default data initialized!', 'success');
                 } catch (error) {
-                    debugLog('Error in initializeDefaultData', error);
+                    // // debugLog('Error in initializeDefaultData', error);
                     showStatusMessage('Failed to initialize default data.', 'error');
                 }
             }
