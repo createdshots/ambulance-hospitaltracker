@@ -93,17 +93,12 @@
           <img src="https://www.svgrepo.com/show/475656/google-color.svg" alt="Google" class="w-5 h-5"> Sign in with Google
         </button>
         <button id="microsoft-signin-btn" class="w-full flex items-center justify-center gap-2 bg-white border border-gray-300 rounded-lg py-2 font-semibold text-gray-700 hover:bg-gray-50 shadow transition">
-          <img src="https://www.svgrepo.com/show/303157/microsoft.svg" alt="Microsoft" class="w-5 h-5"> Sign in with Microsoft
+          <svg class="w-5 h-5" viewBox="0 0 24 24"><rect fill="#F25022" x="1" y="1" width="10" height="10"/><rect fill="#7FBA00" x="13" y="1" width="10" height="10"/><rect fill="#00A4EF" x="1" y="13" width="10" height="10"/><rect fill="#FFB900" x="13" y="13" width="10" height="10"/></svg> Sign in with Microsoft
         </button>
         <button id="email-signin-btn" class="w-full flex items-center justify-center gap-2 bg-white border border-gray-300 rounded-lg py-2 font-semibold text-gray-700 hover:bg-gray-50 shadow transition">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
-          </svg> Sign in with Email
-        </button>
-        <button id="email-link-signin-btn" class="w-full flex items-center justify-center gap-2 bg-white border border-gray-300 rounded-lg py-2 font-semibold text-gray-700 hover:bg-gray-50 shadow transition">
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 12H8m0 0l4-4m-4 4l4 4" />
-          </svg> Sign in with Email Link
+          </svg> Sign in with Email or Magic Link
         </button>
         <button id="phone-signin-btn" class="w-full flex items-center justify-center gap-2 bg-white border border-gray-300 rounded-lg py-2 font-semibold text-gray-700 hover:bg-gray-50 shadow transition">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -136,7 +131,7 @@
   <script type="module">
     // Defensive check for firebase-config.js
     if (typeof userFirebaseConfig === 'undefined') {
-      alert('FATAL: firebase-config.js not loaded! Please ensure the file exists and is loaded before this script.');
+      document.body.innerHTML = '<div class="flex items-center justify-center min-h-screen"><div class="bg-white p-8 rounded shadow text-center"><h2 class="text-2xl font-bold mb-2 text-red-600">Configuration Error</h2><p class="text-gray-700 mb-4">firebase-config.js is missing or not loaded.<br>Please contact the site owner or try again later.</p></div></div>';
       throw new Error('FATAL: firebase-config.js not loaded!');
     }
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
@@ -168,26 +163,27 @@
         alert('Microsoft sign-in failed: ' + error.message + '\n\nMake sure Microsoft SSO is enabled in your Firebase Console.');
       }
     });
-    // Email/Password Sign-in
+    // Email/Password and Magic Link Modal
     document.getElementById('email-signin-btn').addEventListener('click', () => {
-      showEmailSignInModal();
+      showEmailCombinedModal();
     });
-    // Email Link Sign-in
-    document.getElementById('email-link-signin-btn').addEventListener('click', () => {
-      showEmailLinkSignInModal();
-    });
-    function showEmailLinkSignInModal() {
+    function showEmailCombinedModal() {
       const modalContent = `
         <div class="bg-white rounded-xl shadow-2xl p-6 w-full max-w-sm">
-          <h3 class="text-lg font-bold text-gray-900 mb-4">Sign in with Email Link</h3>
-          <form id="email-link-form" class="space-y-4">
+          <h3 class="text-lg font-bold text-gray-900 mb-4">Sign in with Email</h3>
+          <form id="email-signin-form" class="space-y-4">
             <div>
-              <label for="email-link" class="block text-sm font-medium text-gray-700 mb-1">Email</label>
-              <input type="email" id="email-link" required class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
+              <label for="email" class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+              <input type="email" id="email" required class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
             </div>
-            <div class="flex justify-end gap-2">
-              <button type="button" id="email-link-cancel-btn" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300">Cancel</button>
-              <button type="submit" class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700">Send Link</button>
+            <div id="password-section">
+              <label for="password" class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+              <input type="password" id="password" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
+            </div>
+            <div class="flex justify-between items-center">
+              <button type="button" id="toggle-magic-link" class="text-xs text-blue-600 underline">Send magic link instead</button>
+              <button type="button" id="email-cancel-btn" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300">Cancel</button>
+              <button type="submit" class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700">Sign In</button>
             </div>
           </form>
         </div>
@@ -196,20 +192,47 @@
       modal.className = 'fixed inset-0 bg-gray-900 bg-opacity-60 flex items-center justify-center z-50';
       modal.innerHTML = modalContent;
       document.body.appendChild(modal);
-      modal.querySelector('#email-link-cancel-btn').addEventListener('click', () => modal.remove());
-      modal.querySelector('#email-link-form').addEventListener('submit', async (e) => {
+      // Toggle magic link
+      let magicLinkMode = false;
+      modal.querySelector('#toggle-magic-link').addEventListener('click', () => {
+        magicLinkMode = !magicLinkMode;
+        const passwordSection = modal.querySelector('#password-section');
+        if (magicLinkMode) {
+          passwordSection.style.display = 'none';
+          modal.querySelector('#toggle-magic-link').textContent = 'Use password instead';
+        } else {
+          passwordSection.style.display = '';
+          modal.querySelector('#toggle-magic-link').textContent = 'Send magic link instead';
+        }
+      });
+      // Cancel button
+      modal.querySelector('#email-cancel-btn').addEventListener('click', () => modal.remove());
+      // Form submit
+      modal.querySelector('#email-signin-form').addEventListener('submit', async (e) => {
         e.preventDefault();
-        const email = modal.querySelector('#email-link').value;
-        try {
-          await sendSignInLinkToEmail(auth, email, {
-            url: window.location.origin + '/login.html',
-            handleCodeInApp: true
-          });
-          window.localStorage.setItem('emailForSignIn', email);
-          alert('A sign-in link has been sent to your email. Please check your inbox.');
-          modal.remove();
-        } catch (error) {
-          alert('Failed to send sign-in link: ' + error.message);
+        const email = modal.querySelector('#email').value;
+        if (magicLinkMode) {
+          try {
+            await sendSignInLinkToEmail(auth, email, {
+              url: window.location.origin + '/login.html',
+              handleCodeInApp: true
+            });
+            window.localStorage.setItem('emailForSignIn', email);
+            alert('A sign-in link has been sent to your email. Please check your inbox.');
+            modal.remove();
+          } catch (error) {
+            alert('Failed to send sign-in link: ' + error.message);
+          }
+        } else {
+          const password = modal.querySelector('#password').value;
+          try {
+            const credential = EmailAuthProvider.credential(email, password);
+            await signInWithPopup(auth, credential);
+            modal.remove();
+            window.location.href = '/';
+          } catch (error) {
+            alert('Email sign-in failed: ' + error.message);
+          }
         }
       });
     }
