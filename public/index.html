@@ -164,15 +164,6 @@
             <h1 class="text-4xl font-bold text-gray-900">myHealthTracker</h1>
             <p class="text-lg text-gray-600 mt-2">Check off hospitals and ambulance trusts you've visited.</p>
 
-            <div
-                class="mt-6 p-4 bg-yellow-100 border-l-4 border-yellow-500 text-yellow-800 rounded-r-lg text-left max-w-4xl mx-auto">
-                <p class="font-bold">A Note for Our Community</p>
-                <p><strong>Please understand: This is an unfinished and work-in-progress project.</strong> </n>This is a personal project designed for the chronically ill community to find a little bit of fun and
-                    a sense of accomplishment in their health journey. <strong>Please do not misuse health services for
-                        the purpose of checking off locations.</strong> Your health and the resources of the NHS are
-                    paramount.</p>
-            </div>
-
             <!-- Update the button section -->
             <div class="mt-6 flex justify-center space-x-2 flex-wrap">
                 <button id="show-stats-btn"
@@ -245,14 +236,20 @@
             alert('FATAL: firebase-config.js not loaded! Please ensure the file exists and is loaded before this script.');
             throw new Error('FATAL: firebase-config.js not loaded!');
         }
-
-        // Firebase Imports
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, onAuthStateChanged, signOut, GoogleAuthProvider, signInWithPopup, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, onSnapshot, setDoc, deleteDoc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        const firebaseConfig = typeof userFirebaseConfig !== 'undefined' ? userFirebaseConfig : {};
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        // Restrict access until signed in
+        onAuthStateChanged(auth, (user) => {
+            if (!user) {
+                window.location.href = '/login.html';
+            }
+        });
 
         // --- Firebase Configuration ---
-        const firebaseConfig = typeof userFirebaseConfig !== 'undefined' ? userFirebaseConfig : {};
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'local-dev-app';
 
         let app, db, auth, userId, docRef;

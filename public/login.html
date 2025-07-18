@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sign In | myHealthTracker</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+  <script src="firebase-config.js"></script>
+  <style>
+    body { font-family: 'Inter', sans-serif; }
+    /* Animated gradient background */
+    .animated-bg {
+      background: linear-gradient(120deg, #e0e7ef 0%, #ede9fe 40%, #e0e7ef 100%);
+      background-size: 200% 200%;
+      animation: gradientMove 8s ease-in-out infinite alternate;
+      position: relative;
+      overflow: hidden;
+    }
+    @keyframes gradientMove {
+      0% { background-position: 0% 50%; }
+      100% { background-position: 100% 50%; }
+    }
+    /* Floating shapes animation */
+    .float-shape {
+      position: absolute;
+      opacity: 0.13;
+      pointer-events: none;
+      z-index: 0;
+      animation: floatY 7s ease-in-out infinite alternate;
+    }
+    .float-shape2 {
+      animation-delay: 2s;
+      animation-duration: 10s;
+    }
+    .float-shape3 {
+      animation-delay: 4s;
+      animation-duration: 12s;
+    }
+    @keyframes floatY {
+      0% { transform: translateY(0) scale(1); }
+      100% { transform: translateY(-30px) scale(1.08); }
+    }
+    /* Subtle greyscale with color for headline */
+    .rainbow-text {
+      background: linear-gradient(90deg, #444 0%, #6366f1 40%, #444 60%, #a78bfa 100%);
+      background-size: 200% 200%;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      animation: rainbowFade 6s ease-in-out infinite alternate;
+      filter: grayscale(0.4) contrast(1.1);
+    }
+    @keyframes rainbowFade {
+      0% { background-position: 0% 50%; }
+      100% { background-position: 100% 50%; }
+    }
+  </style>
+</head>
+<body class="min-h-screen flex">
+  <!-- Left: Animated Mission -->
+  <div class="hidden md:flex w-1/2 animated-bg items-center justify-center relative">
+    <!-- Animated floating shapes -->
+    <svg width="340" height="340" class="float-shape" style="top:3rem;left:2rem;">
+      <circle cx="170" cy="170" r="160" fill="#6366f1" />
+    </svg>
+    <svg width="220" height="220" class="float-shape float-shape2" style="bottom:2rem;right:3rem;">
+      <rect width="220" height="220" rx="70" fill="#a78bfa" />
+    </svg>
+    <svg width="120" height="120" class="float-shape float-shape3" style="top:8rem;right:6rem;">
+      <ellipse cx="60" cy="60" rx="55" ry="45" fill="#f472b6" />
+    </svg>
+    <div class="z-10 max-w-lg mx-auto text-center px-8">
+      <h1 class="text-4xl font-extrabold mb-4 rainbow-text">Empowering the Chronically Ill</h1>
+      <p class="text-lg text-gray-700 mb-6">myHealthTracker helps you monitor symptoms, spot trends, and take control of your health journey. Designed for people with chronic conditions, by people who understand.</p>
+      <ul class="text-left text-base text-gray-600 space-y-2">
+        <li>✔️ Log symptoms and medical visits</li>
+        <li>✔️ Track your conditions with personalized questions</li>
+        <li>✔️ Visualize your progress and trends</li>
+        <li>✔️ Your data, your privacy, always</li>
+      </ul>
+    </div>
+  </div>
+  <!-- Right: Auth Options -->
+  <div class="flex flex-col w-full md:w-1/2 justify-center items-center bg-white min-h-screen p-8 relative">
+    <div class="w-full max-w-md mx-auto bg-white rounded-xl shadow-lg p-8">
+      <div class="mb-8 text-center">
+        <img src="/logo.svg" alt="myHealthTracker logo" class="mx-auto mb-2 w-14 h-14">
+        <h2 class="text-2xl font-bold text-gray-900 mb-1">Sign in to myHealthTracker</h2>
+        <p class="text-gray-600 text-sm">Start tracking your health journey today.</p>
+      </div>
+      <div class="space-y-4">
+        <button id="google-signin-btn" class="w-full flex items-center justify-center gap-2 bg-white border border-gray-300 rounded-lg py-2 font-semibold text-gray-700 hover:bg-gray-50 shadow transition">
+          <img src="https://www.svgrepo.com/show/475656/google-color.svg" alt="Google" class="w-5 h-5"> Sign in with Google
+        </button>
+        <button id="microsoft-signin-btn" class="w-full flex items-center justify-center gap-2 bg-white border border-gray-300 rounded-lg py-2 font-semibold text-gray-700 hover:bg-gray-50 shadow transition">
+          <img src="https://www.svgrepo.com/show/303157/microsoft.svg" alt="Microsoft" class="w-5 h-5"> Sign in with Microsoft
+        </button>
+        <button id="email-signin-btn" class="w-full flex items-center justify-center gap-2 bg-white border border-gray-300 rounded-lg py-2 font-semibold text-gray-700 hover:bg-gray-50 shadow transition">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+          </svg> Sign in with Email
+        </button>
+        <button id="email-link-signin-btn" class="w-full flex items-center justify-center gap-2 bg-white border border-gray-300 rounded-lg py-2 font-semibold text-gray-700 hover:bg-gray-50 shadow transition">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 12H8m0 0l4-4m-4 4l4 4" />
+          </svg> Sign in with Email Link
+        </button>
+        <button id="phone-signin-btn" class="w-full flex items-center justify-center gap-2 bg-white border border-gray-300 rounded-lg py-2 font-semibold text-gray-700 hover:bg-gray-50 shadow transition">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"></path>
+          </svg> Sign in with Phone
+        </button>
+        <div class="flex items-center my-4">
+          <div class="flex-grow border-t border-gray-200"></div>
+          <span class="mx-2 text-gray-400 text-xs">or</span>
+          <div class="flex-grow border-t border-gray-200"></div>
+        </div>
+        <button id="guest-signin-btn" class="w-full flex items-center justify-center gap-2 bg-gray-700 text-white rounded-lg py-2 font-semibold hover:bg-gray-800 transition">
+          <span>Continue as Guest</span>
+        </button>
+      </div>
+      <div class="mt-6 text-xs text-gray-400 text-center">By signing in, you agree to our <a href="#" class="underline hover:text-purple-600">Terms</a> and <a href="#" class="underline hover:text-purple-600">Privacy Policy</a>.</div>
+    </div>
+    <!-- Guest Disclaimer Modal -->
+    <div id="guest-modal" class="fixed inset-0 bg-gray-900 bg-opacity-60 flex items-center justify-center z-50 hidden">
+      <div class="bg-white rounded-xl shadow-2xl p-6 w-full max-w-sm">
+        <h3 class="text-lg font-bold text-gray-900 mb-2">Guest Session Disclaimer</h3>
+        <p class="text-gray-700 mb-4">You are about to use myHealthTracker as a guest. <span class="font-semibold text-red-600">Your data will not be saved</span> after you leave or refresh the page. For a full experience, please sign in with Google.</p>
+        <div class="flex justify-end gap-2">
+          <button id="guest-cancel-btn" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300">Cancel</button>
+          <button id="guest-continue-btn" class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700">Continue as Guest</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script type="module">
+    // Defensive check for firebase-config.js
+    if (typeof userFirebaseConfig === 'undefined') {
+      alert('FATAL: firebase-config.js not loaded! Please ensure the file exists and is loaded before this script.');
+      throw new Error('FATAL: firebase-config.js not loaded!');
+    }
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { getAuth, signInWithPopup, GoogleAuthProvider, OAuthProvider, EmailAuthProvider, signInAnonymously, RecaptchaVerifier, sendSignInLinkToEmail, isSignInWithEmailLink, signInWithEmailLink, signInWithPhoneNumber } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    const firebaseConfig = userFirebaseConfig;
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    // Google SSO
+    document.getElementById('google-signin-btn').addEventListener('click', async () => {
+      try {
+        const provider = new GoogleAuthProvider();
+        provider.addScope('profile');
+        provider.addScope('email');
+        await signInWithPopup(auth, provider);
+        window.location.href = '/';
+      } catch (error) {
+        alert('Google sign-in failed: ' + error.message);
+      }
+    });
+    // Microsoft SSO
+    document.getElementById('microsoft-signin-btn').addEventListener('click', async () => {
+      try {
+        // Make sure you have enabled Microsoft provider in Firebase Console and set up Azure credentials
+        const provider = new OAuthProvider('microsoft.com');
+        // Optionally add scopes: provider.setCustomParameters({ prompt: 'consent' });
+        await signInWithPopup(auth, provider);
+        window.location.href = '/';
+      } catch (error) {
+        alert('Microsoft sign-in failed: ' + error.message + '\n\nMake sure Microsoft SSO is enabled in your Firebase Console.');
+      }
+    });
+    // Email/Password Sign-in
+    document.getElementById('email-signin-btn').addEventListener('click', () => {
+      showEmailSignInModal();
+    });
+    // Email Link Sign-in
+    document.getElementById('email-link-signin-btn').addEventListener('click', () => {
+      showEmailLinkSignInModal();
+    });
+    function showEmailLinkSignInModal() {
+      const modalContent = `
+        <div class="bg-white rounded-xl shadow-2xl p-6 w-full max-w-sm">
+          <h3 class="text-lg font-bold text-gray-900 mb-4">Sign in with Email Link</h3>
+          <form id="email-link-form" class="space-y-4">
+            <div>
+              <label for="email-link" class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+              <input type="email" id="email-link" required class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
+            </div>
+            <div class="flex justify-end gap-2">
+              <button type="button" id="email-link-cancel-btn" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300">Cancel</button>
+              <button type="submit" class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700">Send Link</button>
+            </div>
+          </form>
+        </div>
+      `;
+      const modal = document.createElement('div');
+      modal.className = 'fixed inset-0 bg-gray-900 bg-opacity-60 flex items-center justify-center z-50';
+      modal.innerHTML = modalContent;
+      document.body.appendChild(modal);
+      modal.querySelector('#email-link-cancel-btn').addEventListener('click', () => modal.remove());
+      modal.querySelector('#email-link-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const email = modal.querySelector('#email-link').value;
+        try {
+          await sendSignInLinkToEmail(auth, email, {
+            url: window.location.origin + '/login.html',
+            handleCodeInApp: true
+          });
+          window.localStorage.setItem('emailForSignIn', email);
+          alert('A sign-in link has been sent to your email. Please check your inbox.');
+          modal.remove();
+        } catch (error) {
+          alert('Failed to send sign-in link: ' + error.message);
+        }
+      });
+    }
+    // On page load, check for email link
+    if (isSignInWithEmailLink(auth, window.location.href)) {
+      let email = window.localStorage.getItem('emailForSignIn');
+      if (!email) {
+        email = window.prompt('Please provide your email for confirmation');
+      }
+      signInWithEmailLink(auth, email, window.location.href)
+        .then(() => {
+          window.localStorage.removeItem('emailForSignIn');
+          window.location.href = '/';
+        })
+        .catch(error => {
+          alert('Email link sign-in failed: ' + error.message);
+        });
+    }
+    // Phone Number Sign-in
+    document.getElementById('phone-signin-btn').addEventListener('click', () => {
+      showPhoneSignInModal();
+    });
+    // Email Sign-in Modal
+    function showEmailSignInModal() {
+      const modalContent = `
+        <div class="bg-white rounded-xl shadow-2xl p-6 w-full max-w-sm">
+          <h3 class="text-lg font-bold text-gray-900 mb-4">Sign in with Email</h3>
+          <form id="email-signin-form" class="space-y-4">
+            <div>
+              <label for="email" class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+              <input type="email" id="email" required class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
+            </div>
+            <div>
+              <label for="password" class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+              <input type="password" id="password" required class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
+            </div>
+            <div class="flex justify-end gap-2">
+              <button type="button" id="email-cancel-btn" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300">Cancel</button>
+              <button type="submit" class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700">Sign In</button>
+            </div>
+          </form>
+        </div>
+      `;
+      const modal = document.createElement('div');
+      modal.className = 'fixed inset-0 bg-gray-900 bg-opacity-60 flex items-center justify-center z-50';
+      modal.innerHTML = modalContent;
+      document.body.appendChild(modal);
+      // Event listeners
+      modal.querySelector('#email-cancel-btn').addEventListener('click', () => modal.remove());
+      modal.querySelector('#email-signin-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const email = modal.querySelector('#email').value;
+        const password = modal.querySelector('#password').value;
+        try {
+          const credential = EmailAuthProvider.credential(email, password);
+          await signInWithPopup(auth, credential);
+          modal.remove();
+          window.location.href = '/';
+        } catch (error) {
+          alert('Email sign-in failed: ' + error.message);
+        }
+      });
+    }
+    // Phone Sign-in Modal (updated to use signInWithPhoneNumber)
+    function showPhoneSignInModal() {
+      const modalContent = `
+        <div class="bg-white rounded-xl shadow-2xl p-6 w-full max-w-sm">
+          <h3 class="text-lg font-bold text-gray-900 mb-4">Sign in with Phone</h3>
+          <form id="phone-signin-form" class="space-y-4">
+            <div>
+              <label for="phone" class="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
+              <input type="tel" id="phone" required placeholder="+1234567890" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
+            </div>
+            <div id="recaptcha-container"></div>
+            <div class="flex justify-end gap-2">
+              <button type="button" id="phone-cancel-btn" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300">Cancel</button>
+              <button type="submit" class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700">Send Code</button>
+            </div>
+          </form>
+        </div>
+      `;
+      const modal = document.createElement('div');
+      modal.className = 'fixed inset-0 bg-gray-900 bg-opacity-60 flex items-center justify-center z-50';
+      modal.innerHTML = modalContent;
+      document.body.appendChild(modal);
+      // Setup reCAPTCHA
+      const recaptchaContainer = modal.querySelector('#recaptcha-container');
+      const recaptchaVerifier = new RecaptchaVerifier(auth, recaptchaContainer, {
+        'size': 'normal',
+        'callback': (response) => {
+          // reCAPTCHA solved, allow sending SMS
+        }
+      });
+      recaptchaVerifier.render();
+      // Event listeners
+      modal.querySelector('#phone-cancel-btn').addEventListener('click', () => modal.remove());
+      modal.querySelector('#phone-signin-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const phone = modal.querySelector('#phone').value;
+        try {
+          const confirmationResult = await signInWithPhoneNumber(auth, phone, recaptchaVerifier);
+          window.confirmationResult = confirmationResult;
+          showVerificationCodeModal(modal);
+        } catch (error) {
+          alert('Phone verification failed: ' + error.message);
+        }
+      });
+    }
+    // Verification Code Modal (updated for confirmationResult)
+    function showVerificationCodeModal(phoneModal) {
+      const codeModalContent = `
+        <div class="bg-white rounded-xl shadow-2xl p-6 w-full max-w-sm">
+          <h3 class="text-lg font-bold text-gray-900 mb-4">Enter Verification Code</h3>
+          <form id="code-form" class="space-y-4">
+            <div>
+              <label for="code" class="block text-sm font-medium text-gray-700 mb-1">6-digit Code</label>
+              <input type="text" id="code" required maxlength="6" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-center text-lg tracking-widest">
+            </div>
+            <div class="flex justify-end gap-2">
+              <button type="button" id="code-cancel-btn" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300">Cancel</button>
+              <button type="submit" class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700">Verify</button>
+            </div>
+          </form>
+        </div>
+      `;
+      const codeModal = document.createElement('div');
+      codeModal.className = 'fixed inset-0 bg-gray-900 bg-opacity-60 flex items-center justify-center z-50';
+      codeModal.innerHTML = codeModalContent;
+      document.body.appendChild(codeModal);
+      // Event listeners
+      codeModal.querySelector('#code-cancel-btn').addEventListener('click', () => {
+        codeModal.remove();
+        phoneModal.remove();
+      });
+      codeModal.querySelector('#code-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const code = codeModal.querySelector('#code').value;
+        try {
+          await window.confirmationResult.confirm(code);
+          codeModal.remove();
+          phoneModal.remove();
+          window.location.href = '/';
+        } catch (error) {
+          alert('Code verification failed: ' + error.message);
+        }
+      });
+    }
+    // Guest login with disclaimer
+    const guestBtn = document.getElementById('guest-signin-btn');
+    const guestModal = document.getElementById('guest-modal');
+    const guestCancel = document.getElementById('guest-cancel-btn');
+    const guestContinue = document.getElementById('guest-continue-btn');
+    guestBtn.addEventListener('click', () => {
+      guestModal.classList.remove('hidden');
+    });
+    guestCancel.addEventListener('click', () => {
+      guestModal.classList.add('hidden');
+    });
+    guestContinue.addEventListener('click', async () => {
+      try {
+        await signInAnonymously(auth);
+        window.location.href = '/';
+      } catch (error) {
+        alert('Guest sign-in failed: ' + error.message);
+      }
+    });
+  </script>
+</body>
+</html> 

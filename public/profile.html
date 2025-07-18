@@ -115,13 +115,26 @@
     </footer>
 
     <script type="module">
-        // Firebase Imports
+        // Defensive check for firebase-config.js
+        if (typeof userFirebaseConfig === 'undefined') {
+            alert('FATAL: firebase-config.js not loaded! Please ensure the file exists and is loaded before this script.');
+            throw new Error('FATAL: firebase-config.js not loaded!');
+        }
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, onSnapshot, setDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        const firebaseConfig = typeof userFirebaseConfig !== 'undefined' ? userFirebaseConfig : {};
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        // Restrict access until signed in
+        onAuthStateChanged(auth, (user) => {
+            if (!user) {
+                window.location.href = '/login.html';
+            }
+        });
 
         // --- Global Variables ---
-        let app, db, auth, userId, docRef;
+        let app, db, userId, docRef;
         let localData = { hospitals: [], ambulance: [], awards: [], visitHistory: [], medicalRecords: [], symptomTracking: [], userProfile: {} };
         let unsubscribe;
 
@@ -279,13 +292,13 @@
                 
                 app = initializeApp(userFirebaseConfig);
                 db = getFirestore(app);
-                auth = getAuth(app);
+                // auth is now handled globally by onAuthStateChanged
 
                 // Setup all event listeners for the page
                 setupEventListeners();
 
                 // Start listening for authentication state changes
-                onAuthStateChanged(auth, handleAuthStateChange);
+                // onAuthStateChanged(auth, handleAuthStateChange); // This line is now redundant as auth is global
 
                 // --- Onboarding check ---
                 if (window.location.search.includes('onboarding=1')) {
