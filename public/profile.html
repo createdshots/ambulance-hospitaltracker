@@ -1137,7 +1137,8 @@
             async function initializeDefaultData() {
                 debugLog('initializeDefaultData called');
                 try {
-                    loaderText.textContent = 'Setting up your data...';
+                    const loaderText = document.getElementById('loader-text');
+                    if (loaderText) loaderText.textContent = 'Setting up your data...';
                     const hospitals = await loadListFromFile('hospitals');
                     const ambulance = await loadListFromFile('ambulance');
                     debugLog('Loaded hospitals and ambulance', { hospitalsLen: hospitals?.length, ambulanceLen: ambulance?.length });
