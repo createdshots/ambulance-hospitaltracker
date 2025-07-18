@@ -727,11 +727,11 @@
             const historyEntry = {
                 id: `${timestamp}_${Math.random().toString(36).substr(2, 9)}`,
                 timestamp,
-                type, // 'hospitals' or 'ambulance'
-                name: item.name,
+                type: // 'hospitals' or 'ambulance'
+                item.name,
                 city: item.city || null,
-                action, // 'visited', 'unvisited', 'count_increased', 'count_decreased'
-                previousCount: item.count,
+                action: // 'visited', 'unvisited', 'count_increased', 'count_decreased'
+                item.count,
                 newCount: action === 'count_increased' ? item.count + 1 :
                     action === 'count_decreased' ? item.count - 1 : item.count,
                 coords: item.coords
@@ -1628,8 +1628,8 @@
             if (!container) {
                 return;
             }
-            const existingSection = document.getElementById('recent-activity-section');
-            if (existingSection) existingSection.remove();
+            container.innerHTML = ''; // Clear previous content
+
             // Gather recent activity from both symptomTracking and medicalRecords
             const activities = [];
             (localData.symptomTracking || []).forEach(entry => {
@@ -1648,65 +1648,61 @@
                     entry
                 });
             });
-            console.log('[DEBUG] activities for recent activity:', activities);
+            
             // Sort by timestamp descending
             activities.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
             const recent = activities.slice(0, 5);
-            const section = document.createElement('div');
-            section.id = 'recent-activity-section';
-            section.className = 'mb-8 p-4 bg-blue-50 border border-blue-200 rounded-xl';
-            section.innerHTML = `
-                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3">
-                    <div>
-                        <h3 class="text-lg font-semibold text-blue-900">🕒 Recent Activity</h3>
-                        <p class="text-sm text-blue-700">Your latest symptom logs and medical records</p>
+
+            if (recent.length === 0) {
+                // If there's no activity, don't show the section.
+                return;
+            }
+
+            const sectionHTML = `
+                <div id="recent-activity-section" class="mb-8 p-4 bg-blue-50 border border-blue-200 rounded-xl">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3">
+                        <div>
+                            <h3 class="text-lg font-semibold text-blue-900">🕒 Recent Activity</h3>
+                            <p class="text-sm text-blue-700">Your latest symptom logs and medical records</p>
+                        </div>
                     </div>
-                </div>
-                ${recent.length > 0 ? `
                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                         ${recent.map(act => {
-                    const date = new Date(act.date);
-                    if (act.type === 'symptom') {
-                        return `
-                            <div class="bg-white p-3 rounded-lg border border-blue-200">
-                                <div class="font-medium text-blue-900 text-sm mb-1">Symptom Log</div>
-                                <div class="text-xs text-gray-600 mb-2">${date.toLocaleDateString()}</div>
-                                <div class="mb-1">
-                                    ${Object.keys(act.entry.conditions || {}).map(condition =>
-                                        `<span class="inline-block bg-blue-100 text-blue-800 px-1 py-0.5 rounded text-xs mr-1">${condition.replace('_', ' ')}</span>`
-                                    ).join('')}
-                                </div>
-                                <div class="text-xs text-gray-700">${act.entry.notes ? act.entry.notes : ''}</div>
-                            </div>
-                        `;
-                    } else {
-                        return `
-                            <div class="bg-white p-3 rounded-lg border border-green-200">
-                                <div class="font-medium text-green-900 text-sm mb-1">Medical Record: ${act.entry.hospital || 'Unknown Hospital'}</div>
-                                <div class="text-xs text-gray-600 mb-2">${date.toLocaleDateString()}</div>
-                                <div class="mb-1">
-                                    ${act.entry.visitType ? `<span class="inline-block bg-green-100 text-green-800 px-1 py-0.5 rounded text-xs mr-1">${act.entry.visitType}</span>` : ''}
-                                </div>
-                                <div class="text-xs text-gray-700">${act.entry.notes ? act.entry.notes : ''}</div>
-                            </div>
-                        `;
-                    }
-                }).join('')}
+                            const date = new Date(act.date);
+                            const displayDate = date.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+                            const notes = act.entry.notes ? `<div class="text-xs text-gray-700 mt-1 italic">"${act.entry.notes}"</div>` : '';
+
+                            if (act.type === 'symptom') {
+                                const conditions = Object.keys(act.entry.conditions || {}).map(c => `<span class="inline-block bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded text-xs mr-1 capitalize">${c.replace(/_/g, ' ')}</span>`).join('');
+                                return `
+                                    <div class="bg-white p-3 rounded-lg border border-blue-200 flex flex-col">
+                                        <div class="flex-grow">
+                                            <div class="font-medium text-blue-900 text-sm mb-1">Symptom Log</div>
+                                            <div class="text-xs text-gray-600 mb-2">${displayDate}</div>
+                                            <div class="mb-1 flex flex-wrap gap-1">${conditions || '<span class="text-xs text-gray-500">General log</span>'}</div>
+                                        </div>
+                                        ${notes}
+                                    </div>
+                                `;
+                            } else { // 'record'
+                                const visitType = act.entry.visitType ? `<span class="inline-block bg-green-100 text-green-800 px-1.5 py-0.5 rounded text-xs mr-1 capitalize">${act.entry.visitType}</span>` : '';
+                                return `
+                                    <div class="bg-white p-3 rounded-lg border border-green-200 flex flex-col">
+                                        <div class="flex-grow">
+                                            <div class="font-medium text-green-900 text-sm mb-1">Medical Record</div>
+                                            <div class="text-xs text-gray-600 mb-2">${displayDate}</div>
+                                            <div class="font-semibold text-xs text-gray-800 mb-2">${act.entry.hospital || 'Unknown Facility'}</div>
+                                            <div class="mb-1 flex flex-wrap gap-1">${visitType}</div>
+                                        </div>
+                                        ${notes}
+                                    </div>
+                                `;
+                            }
+                        }).join('')}
                     </div>
-                ` : `
-                    <div class="text-center py-4">
-                        <p class="text-blue-700 text-sm">No recent activity yet. Add a record or log symptoms to get started!</p>
-                    </div>
-                `}
+                </div>
             `;
-            const header = document.querySelector('header');
-            const gridContainer = document.querySelector('.grid.grid-cols-1.md\\:grid-cols-2');
-            if (header && gridContainer) {
-                header.parentNode.insertBefore(section, gridContainer);
-            } else {
-                // If either is missing, append to container as fallback
-                if (container) container.appendChild(section);
-            }
+            container.innerHTML = sectionHTML;
         }
 
         // Add a build tracker to the bottom right
