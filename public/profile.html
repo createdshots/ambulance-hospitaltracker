@@ -337,13 +337,27 @@
             }
 
             async function saveData() {
-                if (!docRef) return;
+                if (!docRef) {
+                    debugLog('saveData: No docRef, skipping save');
+                    return;
+                }
                 try {
+                    debugLog('saveData: Attempting to save', {
+                        userId,
+                        docRef: docRef && docRef.path,
+                        authCurrentUser: auth.currentUser,
+                        localData
+                    });
                     await setDoc(docRef, localData, { merge: true });
-                    console.log("Data saved successfully.");
+                    debugLog('Data saved successfully to Firestore');
                 } catch (e) {
-                    console.error("Error saving data to Firestore: ", e);
-                    showStatusMessage("Error saving data.", "error");
+                    debugLog('Error saving data to Firestore:', {
+                        error: e,
+                        userId,
+                        docRef: docRef && docRef.path,
+                        authCurrentUser: auth.currentUser
+                    });
+                    showStatusMessage('Error saving data.', 'error');
                 }
             }
 
