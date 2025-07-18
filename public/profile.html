@@ -333,9 +333,13 @@
             }
 
             function renderProfile() {
+                // Debug: Log localData and show a summary at the top
+                console.log('[DEBUG] renderProfile localData:', localData);
+                const debugSummary = `<pre style="background:#f3f4f6;color:#374151;padding:8px;border-radius:6px;font-size:12px;overflow-x:auto;">[DEBUG] localData:\n${JSON.stringify(Object.fromEntries(Object.entries(localData).map(([k,v])=>[k,Array.isArray(v)?`Array(${v.length})`:typeof v==='object'?JSON.stringify(v):typeof v])),null,2)}</pre>`;
                 // ... (All your rendering functions like createHistoryTab, etc. will be called from here)
                 const history = localData.visitHistory || [];
                 profileContent.innerHTML = `
+                    ${debugSummary}
                     <!-- Profile Header and Stats Grid -->
                     <div id="profile-header-and-stats"></div>
                     <!-- Tabs -->
@@ -1028,6 +1032,9 @@
                                 ...firestoreData
                             };
                             renderProfile();
+                            // Ensure profile content is visible
+                            const profileContent = document.getElementById('profile-content');
+                            if (profileContent) profileContent.classList.remove('hidden');
                             if (!localData.userProfile?.onboardingCompleted) {
                                 setTimeout(() => {
                                     showOnboardingModal();
@@ -1051,6 +1058,9 @@
                                     ...userDocSnap.data()
                                 };
                                 renderProfile();
+                                // Ensure profile content is visible
+                                const profileContent = document.getElementById('profile-content');
+                                if (profileContent) profileContent.classList.remove('hidden');
                                 showStatusMessage('Default data imported successfully!', 'success');
                                 if (!localData.userProfile?.onboardingCompleted) {
                                     setTimeout(() => {
@@ -1063,6 +1073,12 @@
                         }
                     } catch (error) {
                         showStatusMessage("Error loading data.", "error");
+                        // Show error in profile content area
+                        const profileContent = document.getElementById('profile-content');
+                        if (profileContent) {
+                            profileContent.classList.remove('hidden');
+                            profileContent.innerHTML = '<div class="text-red-600 text-center p-8">Error loading your profile data. Please try again later.</div>';
+                        }
                     }
                 });
             }

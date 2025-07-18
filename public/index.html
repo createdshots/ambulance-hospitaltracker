@@ -447,11 +447,11 @@
                         renderAll();
                         loadingIndicator.classList.add('loader-hidden');
                         // Check for onboarding after data is loaded
-                        if (!localData.userProfile?.onboardingCompleted) {
-                            setTimeout(() => {
-                                showOnboardingQuestionnaire();
-                            }, 500);
-                        }
+                        // if (!localData.userProfile?.onboardingCompleted) {
+                        //     setTimeout(() => {
+                        //         showOnboardingQuestionnaire();
+                        //     }, 500);
+                        // }
                     } else {
                         // Document doesn't exist, initialize with default data
                         showStatusMessage('No user data found. Importing default hospitals and ambulances...', 'error');
@@ -472,11 +472,11 @@
                             renderAll();
                             loadingIndicator.classList.add('loader-hidden');
                             showStatusMessage('Default data imported successfully!', 'success');
-                            if (!localData.userProfile?.onboardingCompleted) {
-                                setTimeout(() => {
-                                    showOnboardingQuestionnaire();
-                                }, 500);
-                            }
+                            // if (!localData.userProfile?.onboardingCompleted) {
+                            //     setTimeout(() => {
+                            //         showOnboardingQuestionnaire();
+                            //     }, 500);
+                            // }
                         } else {
                             showStatusMessage('Failed to import default data. Please refresh or contact support.', 'error');
                         }
