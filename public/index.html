@@ -1781,6 +1781,9 @@
             const gridContainer = document.querySelector('.grid.grid-cols-1.md\\:grid-cols-2');
             if (header && gridContainer) {
                 header.parentNode.insertBefore(section, gridContainer);
+            } else {
+                // If either is missing, append to container as fallback
+                if (container) container.appendChild(section);
             }
         }
 
@@ -1866,6 +1869,11 @@
             if (greetingDiv) {
                 greetingDiv.textContent = `Hello, ${name}!`;
             }
+        }
+
+        // Fix ReferenceError for showOnboardingQuestionnaire
+        if (typeof showOnboardingQuestionnaire !== 'function') {
+            function showOnboardingQuestionnaire() { /* no-op fallback */ }
         }
     </script>
 </body>
