@@ -1003,6 +1003,70 @@
                 });
             }
 
+            // --- Firestore Data Handling ---
+            function setupSnapshotListener() {
+                if (!docRef) {
+                    console.log("No docRef available for snapshot listener");
+                    return;
+                }
+
+                unsubscribe = onSnapshot(docRef, async (snapshot) => {
+                    try {
+                        if (snapshot.exists()) {
+                            // Merge existing data with loaded data
+                            const firestoreData = snapshot.data();
+                            localData = {
+                                hospitals: [],
+                                ambulance: [],
+                                awards: [],
+                                visitHistory: [],
+                                medicalRecords: [],
+                                symptomTracking: [],
+                                userProfile: {},
+                                ...firestoreData
+                            };
+                        } else {
+                            // Document doesn't exist, initialize with default data
+                            await initializeDefaultData();
+                        }
+                        renderProfile();
+                        if (!localData.userProfile?.onboardingCompleted) {
+                            setTimeout(() => {
+                                showOnboardingModal();
+                            }, 500);
+                        }
+                    } catch (error) {
+                        showStatusMessage("Error loading data.", "error");
+                    }
+                });
+            }
+
+            // --- Default Data Initialization for New Users (including guests) ---
+            async function initializeDefaultData() {
+                try {
+                    loaderText.textContent = 'Setting up your data...';
+                    // Load hospitals
+                    const hospitals = await loadListFromFile('hospitals');
+                    // Load ambulances
+                    const ambulance = await loadListFromFile('ambulance');
+                    // Set up localData
+                    localData = {
+                        hospitals: hospitals || [],
+                        ambulance: ambulance || [],
+                        awards: [],
+                        visitHistory: [],
+                        medicalRecords: [],
+                        symptomTracking: [],
+                        userProfile: {}
+                    };
+                    // Save to Firestore
+                    await saveData();
+                    showStatusMessage('Default data initialized!', 'success');
+                } catch (error) {
+                    showStatusMessage('Failed to initialize default data.', 'error');
+                }
+            }
+
             // --- Run the app ---
             initializeAppLogic();
         }

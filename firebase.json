@@ -5,6 +5,15 @@
       "firebase.json",
       "**/.*",
       "**/node_modules/**"
+    ],
+    "rewrites": [
+      { "source": "/", "destination": "/index.html" },
+      { "source": "/profile", "destination": "/profile.html" }
+    ],
+    "redirects": [
+      { "source": "/test.html", "destination": "/login.html", "type": 302 },
+      { "source": "/404.html", "destination": "/login.html", "type": 302 }
+      // Add more redirects here for any other HTML files you want to protect
     ]
   },
   "firestore": {
