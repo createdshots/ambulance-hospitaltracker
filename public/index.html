@@ -267,6 +267,10 @@
             const authSignedInView = document.getElementById('auth-signed-in-view');
             const authSignedOutView = document.getElementById('auth-signed-out-view');
             const userIdDisplay = document.getElementById('user-id-display');
+            // Set up UI for signed-in user (including guest)
+            authSignedOutView.style.display = 'none';
+            authSignedInView.style.display = 'flex';
+            userIdDisplay.textContent = user.isAnonymous ? 'Guest' : user.displayName || user.email;
             // ... rest of your app logic ...
         }
 

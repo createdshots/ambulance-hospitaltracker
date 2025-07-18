@@ -141,15 +141,21 @@
             let docRef;
             let localData = { hospitals: [], ambulance: [], awards: [], visitHistory: [], medicalRecords: [], symptomTracking: [], userProfile: {} };
             let unsubscribe;
-
-            // --- DOM Element References ---
+            // Set up UI for signed-in user (including guest)
+            const authSignedInView = document.getElementById('auth-signed-in-view');
+            const userIdDisplay = document.getElementById('user-id-display');
+            const notSignedIn = document.getElementById('not-signed-in');
+            if (authSignedInView && userIdDisplay) {
+                authSignedInView.style.display = 'flex';
+                userIdDisplay.textContent = user.isAnonymous ? 'Guest' : user.displayName || user.email;
+            }
+            if (notSignedIn) {
+                notSignedIn.style.display = 'none';
+            }
             const loadingIndicator = document.getElementById('full-page-loader');
             const loaderText = document.getElementById('loader-text');
             const statusMessageArea = document.getElementById('status-message-area');
-            const authSignedInView = document.getElementById('auth-signed-in-view');
-            const userIdDisplay = document.getElementById('user-id-display');
             const profileContent = document.getElementById('profile-content');
-            const notSignedIn = document.getElementById('not-signed-in');
             const modalContainer = document.getElementById('modal-container');
 
             // --- Awards Definition ---
@@ -158,7 +164,7 @@
                 'hospitals_5': { name: 'Hospital Hopper', description: 'Visit 5 different hospitals.', icon: '🏥' },
                 'hospitals_10': { name: 'Hospital Hero', description: 'Visit 10 different hospitals.', icon: '🦸' },
                 'trusts_all': { name: 'Trust Titan', description: 'Visit every ambulance trust.', icon: '🚑' },
-                'visits_100': { name: 'Century Club', description: 'Accumulate 100 total visits.', icon: '��' }
+                'visits_100': { name: 'Century Club', description: 'Accumulate 100 total visits.', icon: '' }
             };
 
             // --- Helper Functions ---
@@ -311,57 +317,6 @@
                     console.error("Initialization failed:", e);
                     document.body.innerHTML = `<div class="p-8 text-center text-red-500"><h1 class="text-2xl font-bold">Fatal Error</h1><p class="mt-2">${e.message}</p></div>`;
                 }
-            }
-
-            async function handleAuthStateChange(user) {
-                if (unsubscribe) unsubscribe();
-
-                if (user) {
-                    userId = user.uid;
-                    userIdDisplay.textContent = user.isAnonymous ? 'Guest' : user.displayName || user.email;
-                    authSignedInView.style.display = 'flex';
-                    notSignedIn.style.display = 'none';
-                    
-                    docRef = doc(db, `users/${userId}`);
-                    loadingIndicator.classList.remove('loader-hidden');
-                    loaderText.textContent = 'Loading profile...';
-                    setupSnapshotListener();
-                } else {
-                    userId = null;
-                    docRef = null;
-                    authSignedInView.style.display = 'none';
-                    notSignedIn.style.display = 'block';
-                    loadingIndicator.classList.add('loader-hidden');
-                    localData = { hospitals: [], ambulance: [], awards: [], visitHistory: [], medicalRecords: [], userProfile: {} };
-                    renderProfile();
-                }
-            }
-
-            function setupSnapshotListener() {
-                if (!docRef) return;
-                let initialLoadComplete = false;
-
-                unsubscribe = onSnapshot(docRef, (snapshot) => {
-                    if (snapshot.exists()) {
-                        localData = { ...localData, ...snapshot.data() };
-                    }
-                    
-                    if (!initialLoadComplete) {
-                        renderProfile();
-                        profileContent.style.display = 'block';
-                        loadingIndicator.classList.add('loader-hidden');
-                        initialLoadComplete = true;
-
-                        // --- Onboarding Modal Logic ---
-                        if (window._forceOnboarding || (localData.userProfile && !localData.userProfile.onboardingCompleted)) {
-                            showOnboardingModal();
-                        }
-                    }
-                }, (error) => {
-                    console.error("Snapshot listener error:", error);
-                    showStatusMessage("Error loading data.", "error");
-                    loadingIndicator.classList.add('loader-hidden');
-                });
             }
 
             async function saveData() {
