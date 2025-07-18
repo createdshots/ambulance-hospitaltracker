@@ -122,7 +122,7 @@
         }
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, onSnapshot, setDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, doc, onSnapshot, setDoc, deleteDoc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         const firebaseConfig = userFirebaseConfig;
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
@@ -1025,15 +1025,39 @@
                                 userProfile: {},
                                 ...firestoreData
                             };
+                            renderProfile();
+                            if (!localData.userProfile?.onboardingCompleted) {
+                                setTimeout(() => {
+                                    showOnboardingModal();
+                                }, 500);
+                            }
                         } else {
                             // Document doesn't exist, initialize with default data
+                            showStatusMessage('No user data found. Importing default hospitals and ambulances...', 'error');
                             await initializeDefaultData();
-                        }
-                        renderProfile();
-                        if (!localData.userProfile?.onboardingCompleted) {
-                            setTimeout(() => {
-                                showOnboardingModal();
-                            }, 500);
+                            // After initializing, fetch the new data
+                            const userDocSnap = await getDoc(docRef);
+                            if (userDocSnap.exists()) {
+                                localData = {
+                                    hospitals: [],
+                                    ambulance: [],
+                                    awards: [],
+                                    visitHistory: [],
+                                    medicalRecords: [],
+                                    symptomTracking: [],
+                                    userProfile: {},
+                                    ...userDocSnap.data()
+                                };
+                                renderProfile();
+                                showStatusMessage('Default data imported successfully!', 'success');
+                                if (!localData.userProfile?.onboardingCompleted) {
+                                    setTimeout(() => {
+                                        showOnboardingModal();
+                                    }, 500);
+                                }
+                            } else {
+                                showStatusMessage('Failed to import default data. Please refresh or contact support.', 'error');
+                            }
                         }
                     } catch (error) {
                         showStatusMessage("Error loading data.", "error");

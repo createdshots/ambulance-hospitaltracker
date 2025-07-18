@@ -421,16 +421,9 @@
 
             unsubscribe = onSnapshot(docRef, async (snapshot) => {
                 try {
-                    console.log("Snapshot received:", {
-                        exists: snapshot.exists(),
-                        id: snapshot.id,
-                        metadata: snapshot.metadata
-                    });
-
                     if (snapshot.exists()) {
                         // Merge existing data with loaded data
                         const firestoreData = snapshot.data();
-                        console.log("Firestore data loaded:", Object.keys(firestoreData));
                         localData = {
                             hospitals: [],
                             ambulance: [],
@@ -441,20 +434,42 @@
                             userProfile: {},
                             ...firestoreData
                         };
+                        renderAll();
+                        loadingIndicator.classList.add('loader-hidden');
+                        // Check for onboarding after data is loaded
+                        if (!localData.userProfile?.onboardingCompleted) {
+                            setTimeout(() => {
+                                showOnboardingQuestionnaire();
+                            }, 500);
+                        }
                     } else {
                         // Document doesn't exist, initialize with default data
-                        console.log("No existing document found, initializing with default data");
+                        showStatusMessage('No user data found. Importing default hospitals and ambulances...', 'error');
                         await initializeDefaultData();
-                    }
-
-                    renderAll();
-                    loadingIndicator.classList.add('loader-hidden');
-
-                    // Check for onboarding after data is loaded
-                    if (!localData.userProfile?.onboardingCompleted) {
-                        setTimeout(() => {
-                            showOnboardingQuestionnaire();
-                        }, 500);
+                        // After initializing, fetch the new data
+                        const userDocSnap = await getDoc(docRef);
+                        if (userDocSnap.exists()) {
+                            localData = {
+                                hospitals: [],
+                                ambulance: [],
+                                awards: [],
+                                visitHistory: [],
+                                medicalRecords: [],
+                                symptomTracking: [],
+                                userProfile: {},
+                                ...userDocSnap.data()
+                            };
+                            renderAll();
+                            loadingIndicator.classList.add('loader-hidden');
+                            showStatusMessage('Default data imported successfully!', 'success');
+                            if (!localData.userProfile?.onboardingCompleted) {
+                                setTimeout(() => {
+                                    showOnboardingQuestionnaire();
+                                }, 500);
+                            }
+                        } else {
+                            showStatusMessage('Failed to import default data. Please refresh or contact support.', 'error');
+                        }
                     }
                 } catch (error) {
                     console.error("Error processing snapshot:", error);
