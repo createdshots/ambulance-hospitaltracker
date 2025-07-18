@@ -159,6 +159,11 @@
 
 
     <div class="container mx-auto p-4 md:p-8 max-w-7xl">
+
+        <header class="text-center mb-8">
+            <h1 class="text-4xl font-bold text-gray-900">myHealthTracker</h1>
+            <p class="text-lg text-gray-600 mt-2">Check off hospitals and ambulance trusts you've visited.</p>
+
             <!-- Update the button section -->
             <div class="mt-6 flex justify-center space-x-2 flex-wrap">
                 <button id="show-stats-btn"
@@ -178,6 +183,7 @@
                     Profile</button>
             </div>
             <div id="status-message-area" class="mt-4 h-6"></div>
+        </header>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
             <!-- Hospitals Column -->
@@ -260,26 +266,7 @@
         const loadingIndicator = document.getElementById('full-page-loader');
         const loaderText = document.getElementById('loader-text');
         const modalContainer = document.getElementById('modal-container');
-        onAuthStateChanged(auth, (user) => {
-            if (!user) {
-                window.location.href = '/login.html';
-                return;
-            }
-            startApp(user);
-        });
-        function startApp(user) {
-            // All your app logic, Firestore, rendering, etc. goes here.
-            // Use the 'user' object as needed.
-            // --- Firebase Configuration ---
-            const appId = typeof __app_id !== 'undefined' ? __app_id : 'local-dev-app';
-            let map;
-            // Set up UI for signed-in user (including guest)
-            authSignedOutView.style.display = 'none';
-            authSignedInView.style.display = 'flex';
-            userIdDisplay.textContent = user.isAnonymous ? 'Guest' : user.displayName || user.email;
-            // ... rest of your app logic ...
-        }
-
+        
         // --- Awards Definition ---
         const awardsDefinition = {
             'first_visit': { name: 'First Visit!', description: 'Log your first visit to any location.', icon: '&#127881;' },
@@ -895,6 +882,7 @@
         // --- Event Listeners ---
         document.getElementById('hospital-search').addEventListener('input', (e) => renderList('hospitals', localData.hospitals, e.target.value));
         document.getElementById('ambulance-search').addEventListener('input', (e) => renderList('ambulance', localData.ambulance, e.target.value));
+        document.getElementById('help-btn').addEventListener('click', showHelpModal);
 
         document.getElementById('show-stats-btn').addEventListener('click', () => {
             const content = `<div class="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -1701,7 +1689,11 @@
         // --- Add Recent Activity Section (replaces Symptom Tracking) ---
         function addRecentActivitySection() {
             console.log('[DEBUG] addRecentActivitySection called');
-            const container = document.querySelector('.container');
+            const container = document.querySelector('.container.mx-auto');
+            if (!container) {
+                console.error('Container not found for recent activity section');
+                return;
+            }
             const existingSection = document.getElementById('recent-activity-section');
             if (existingSection) existingSection.remove();
             // Gather recent activity from both symptomTracking and medicalRecords
