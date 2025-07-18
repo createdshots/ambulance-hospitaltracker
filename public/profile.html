@@ -1116,12 +1116,9 @@
                 debugLog('initializeDefaultData called');
                 try {
                     loaderText.textContent = 'Setting up your data...';
-                    // Load hospitals
                     const hospitals = await loadListFromFile('hospitals');
-                    // Load ambulances
                     const ambulance = await loadListFromFile('ambulance');
                     debugLog('Loaded hospitals and ambulance', { hospitalsLen: hospitals?.length, ambulanceLen: ambulance?.length });
-                    // Set up localData
                     localData = {
                         hospitals: hospitals || [],
                         ambulance: ambulance || [],
@@ -1131,9 +1128,11 @@
                         symptomTracking: [],
                         userProfile: {}
                     };
-                    debugLog('Saving localData to Firestore', localData);
+                    debugLog('Saving localData to Firestore', { docRef: docRef && docRef.path, localData });
                     await saveData();
-                    debugLog('Default data saved to Firestore');
+                    debugLog('Default data saved to Firestore, checking doc existence...', { docRef: docRef && docRef.path });
+                    const userDocSnap = await getDoc(docRef);
+                    debugLog('getDoc after saveData', { exists: userDocSnap.exists(), data: userDocSnap.data() });
                     showStatusMessage('Default data initialized!', 'success');
                 } catch (error) {
                     debugLog('Error in initializeDefaultData', error);
