@@ -355,6 +355,7 @@
                 // ... (All your rendering functions like createHistoryTab, etc. will be called from here)
                 const history = localData.visitHistory || [];
                 const profileContent = document.getElementById('profile-content');
+                if (!profileContent) return;
                 profileContent.innerHTML = `
                     ${debugSummary}
                     <!-- Profile Header and Stats Grid -->
