@@ -192,6 +192,7 @@
 
             // --- Helper Functions ---
             function showStatusMessage(message, type = 'success') {
+                const statusMessageArea = document.getElementById('status-message-area');
                 const messageDiv = document.createElement('div');
                 messageDiv.className = `status-message p-4 rounded-lg shadow-lg font-medium mb-2 ${type === 'error' ? 'bg-red-100 text-red-800 border border-red-200' : 'bg-green-100 text-green-800 border border-green-200'}`;
                 messageDiv.textContent = message;
@@ -360,6 +361,7 @@
                 const debugSummary = `<pre style="background:#f3f4f6;color:#374151;padding:8px;border-radius:6px;font-size:12px;overflow-x:auto;">[DEBUG] localData:\n${JSON.stringify(Object.fromEntries(Object.entries(localData).map(([k,v])=>[k,Array.isArray(v)?`Array(${v.length})`:typeof v==='object'?JSON.stringify(v):typeof v])),null,2)}</pre>`;
                 // ... (All your rendering functions like createHistoryTab, etc. will be called from here)
                 const history = localData.visitHistory || [];
+                const profileContent = document.getElementById('profile-content');
                 profileContent.innerHTML = `
                     ${debugSummary}
                     <!-- Profile Header and Stats Grid -->
