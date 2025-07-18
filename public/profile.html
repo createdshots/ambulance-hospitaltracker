@@ -324,18 +324,10 @@
                     if (typeof userFirebaseConfig === 'undefined') {
                         throw new Error("firebase-config.js not found. App cannot start.");
                     }
-                    
-                    // app and auth are now initialized globally by onAuthStateChanged
-
-                    // Setup all event listeners for the page
+    
                     setupEventListeners();
 
-                    // Start listening for authentication state changes
-                    // onAuthStateChanged(auth, handleAuthStateChange); // This line is now redundant as auth is global
-
-                    // --- Onboarding check ---
                     if (window.location.search.includes('onboarding=1')) {
-                        // Wait for auth, then show onboarding modal if needed
                         window._forceOnboarding = true;
                     }
                 } catch (e) {
@@ -921,7 +913,8 @@
                 document.getElementById('signout-btn').addEventListener('click', () => signOut(auth));
                 document.getElementById('add-record-btn').addEventListener('click', showAddRecordModal);
                 document.getElementById('help-btn').addEventListener('click', showHelpModal);
-                
+                const profileContent = document.getElementById('profile-content');
+                if (!profileContent) return;
                 profileContent.addEventListener('click', (e) => {
                     const target = e.target;
                     if (target.closest('.profile-tab-btn')) {
@@ -1148,8 +1141,8 @@
             }
 
             // --- Run the app ---
-            initializeAppLogic();
             startApp();
+            initializeAppLogic();
     </script>
 </body>
 
