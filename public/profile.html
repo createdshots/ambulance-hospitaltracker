@@ -114,23 +114,11 @@
         </div>
     </footer>
 
-    <div id="debug-log" style="background:#f3f4f6;color:#374151;padding:8px 12px;border-radius:6px;font-size:12px;overflow-x:auto;margin:12px 0;"></div>
+    <div id="debug-log" style="display: none; background:#f3f4f6;color:#374151;padding:8px 12px;border-radius:6px;font-size:12px;overflow-x:auto;margin:12px 0;"></div>
 
     <script type="module">
-        // Debug log helper
-        function debugLog(msg, obj) {
-            const logDiv = document.getElementById('debug-log');
-            const time = new Date().toISOString().split('T')[1].split('.')[0];
-            let out = `[${time}] ${msg}`;
-            if (obj !== undefined) {
-                try { out += '\n' + JSON.stringify(obj, null, 2); } catch {}
-            }
-            if (logDiv) logDiv.innerText += out + '\n';
-            console.log('[DEBUG]', msg, obj);
-        }
         // Defensive check for firebase-config.js
         if (typeof userFirebaseConfig === 'undefined') {
-            debugLog('FATAL: firebase-config.js not loaded!');
             document.body.innerHTML = '<div class="flex items-center justify-center min-h-screen"><div class="bg-white p-8 rounded shadow text-center"><h2 class="text-2xl font-bold mb-2 text-red-600">Configuration Error</h2><p class="text-gray-700 mb-4">firebase-config.js is missing or not loaded.<br>Please contact the site owner or try again later.</p></div></div>';
             throw new Error('FATAL: firebase-config.js not loaded!');
         }
@@ -146,18 +134,14 @@
         let docRef = null;
         let localData = { hospitals: [], ambulance: [], awards: [], visitHistory: [], medicalRecords: [], symptomTracking: [], userProfile: {} };
         let unsubscribe = null;
-        debugLog('Script loaded, waiting for auth state...');
         onAuthStateChanged(auth, (user) => {
-            debugLog('onAuthStateChanged fired', user);
             if (!user) {
-                debugLog('No user, redirecting to /login.html');
                 window.location.href = '/login.html';
                 return;
             }
             startApp(user);
         });
         function startApp(user) {
-            debugLog('startApp called', user);
             // Set userId and docRef at the top
             userId = user.uid;
             docRef = doc(db, "users", userId);
@@ -177,7 +161,6 @@
             const statusMessageArea = document.getElementById('status-message-area');
             const profileContent = document.getElementById('profile-content');
             const modalContainer = document.getElementById('modal-container');
-            debugLog('Calling setupSnapshotListener...');
             setupSnapshotListener();
         }
 
@@ -338,40 +321,20 @@
 
             async function saveData() {
                 if (!docRef) {
-                    debugLog('saveData: No docRef, skipping save');
                     return;
                 }
                 try {
-                    debugLog('saveData: Attempting to save', {
-                        userId,
-                        docRef: docRef && docRef.path,
-                        authCurrentUser: auth.currentUser,
-                        localData
-                    });
                     await setDoc(docRef, localData, { merge: true });
-                    debugLog('Data saved successfully to Firestore');
                 } catch (e) {
-                    debugLog('Error saving data to Firestore:', {
-                        error: e,
-                        userId,
-                        docRef: docRef && docRef.path,
-                        authCurrentUser: auth.currentUser
-                    });
                     showStatusMessage('Error saving data.', 'error');
                 }
             }
 
             function renderProfile() {
-                debugLog('renderProfile called', localData);
-                // Debug: Log localData and show a summary at the top
-                console.log('[DEBUG] renderProfile localData:', localData);
-                const debugSummary = `<pre style="background:#f3f4f6;color:#374151;padding:8px;border-radius:6px;font-size:12px;overflow-x:auto;">[DEBUG] localData:\n${JSON.stringify(Object.fromEntries(Object.entries(localData).map(([k,v])=>[k,Array.isArray(v)?`Array(${v.length})`:typeof v==='object'?JSON.stringify(v):typeof v])),null,2)}</pre>`;
-                // ... (All your rendering functions like createHistoryTab, etc. will be called from here)
                 const history = localData.visitHistory || [];
                 const profileContent = document.getElementById('profile-content');
                 if (!profileContent) return;
                 profileContent.innerHTML = `
-                    ${debugSummary}
                     <!-- Profile Header and Stats Grid -->
                     <div id="profile-header-and-stats"></div>
                     <!-- Add Record Button (main content area) -->
@@ -412,6 +375,126 @@
                 setupAddRecordEventListeners(modal);
             }
             window.showAddRecordModal = showAddRecordModal;
+
+            function createAddRecordForm() {
+                const userConditions = localData.userProfile?.conditions || [];
+                const conditionQuestionsHTML = generateConditionQuestionsForSymptoms(userConditions);
+
+                return `
+                    <form id="add-record-form" class="space-y-6 p-1">
+                        <!-- Visit Details -->
+                        <div class="p-4 bg-gray-50 rounded-lg border">
+                            <h4 class="font-semibold text-gray-800 mb-3">Visit Details</h4>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label for="record-date" class="block text-sm font-medium text-gray-700 mb-1">Date of Visit</label>
+                                    <input type="date" id="record-date" name="date" required class="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500">
+                                </div>
+                                <div>
+                                    <label for="record-hospital" class="block text-sm font-medium text-gray-700 mb-1">Hospital/Clinic</label>
+                                    <input type="text" id="record-hospital" name="hospital" required class="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500" placeholder="e.g., St. Jude's Hospital">
+                                </div>
+                                <div>
+                                    <label for="record-visit-type" class="block text-sm font-medium text-gray-700 mb-1">Visit Type</label>
+                                    <select id="record-visit-type" name="visitType" required class="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500">
+                                        <option value="">Select type...</option>
+                                        <option value="routine-checkup">Routine Check-up</option>
+                                        <option value="specialist-consultation">Specialist Consultation</option>
+                                        <option value="emergency-visit">Emergency Visit</option>
+                                        <option value="diagnostic-test">Diagnostic Test (e.g., MRI, X-ray)</option>
+                                        <option value="therapy-session">Therapy Session (e.g., PT, OT)</option>
+                                        <option value="procedure">Minor Procedure</option>
+                                        <option value="follow-up">Follow-up</option>
+                                        <option value="telehealth">Telehealth</option>
+                                        <option value="other">Other</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label for="record-doctor" class="block text-sm font-medium text-gray-700 mb-1">Doctor/Specialist</label>
+                                    <input type="text" id="record-doctor" name="doctor" class="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500" placeholder="e.g., Dr. Evelyn Reed">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Symptoms & Conditions -->
+                        <div class="p-4 bg-gray-50 rounded-lg border">
+                            <h4 class="font-semibold text-gray-800 mb-3">Symptoms & Conditions</h4>
+                            <div>
+                                <label for="record-reason" class="block text-sm font-medium text-gray-700 mb-1">Reason for Visit / Symptoms</label>
+                                <textarea id="record-reason" name="reason" rows="3" class="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500" placeholder="Describe the primary symptoms or reason for this visit."></textarea>
+                            </div>
+                            ${conditionQuestionsHTML}
+                        </div>
+
+                        <!-- Outcome & Files -->
+                        <div class="p-4 bg-gray-50 rounded-lg border">
+                            <h4 class="font-semibold text-gray-800 mb-3">Outcome & Files</h4>
+                            <div class="space-y-4">
+                                <div>
+                                    <label for="record-outcome" class="block text-sm font-medium text-gray-700 mb-1">Visit Outcome / Diagnosis</label>
+                                    <textarea id="record-outcome" name="outcome" rows="3" class="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500" placeholder="Summarize the diagnosis, treatment plan, or next steps."></textarea>
+                                </div>
+                                <div>
+                                    <label for="record-files" class="block text-sm font-medium text-gray-700 mb-1">Attach Files (e.g., test results, prescriptions)</label>
+                                    <input type="file" id="record-files" name="files" multiple class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Buttons -->
+                        <div class="flex justify-end gap-4 pt-4">
+                            <button type="button" class="close-modal-btn px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300">Cancel</button>
+                            <button type="submit" class="px-6 py-2 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 shadow-sm">Save Record</button>
+                        </div>
+                    </form>
+                `;
+            }
+
+            function setupAddRecordEventListeners(modal) {
+                const form = modal.querySelector('#add-record-form');
+                form.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    const formData = new FormData(form);
+                    const newRecord = {
+                        id: `rec_${Date.now()}`,
+                        timestamp: Date.now(),
+                    };
+                    let symptomData = {
+                        id: `symp_${Date.now()}`,
+                        timestamp: Date.now(),
+                        relatedRecordId: newRecord.id,
+                        condition_specific: {}
+                    };
+
+                    for (let [key, value] of formData.entries()) {
+                        if (key.startsWith('condition_')) {
+                            const parts = key.split('_');
+                            const condition = parts[1];
+                            const questionId = parts.slice(2).join('_');
+                            if (!symptomData.condition_specific[condition]) {
+                                symptomData.condition_specific[condition] = {};
+                            }
+                            symptomData.condition_specific[condition][questionId] = value;
+                        } else {
+                            newRecord[key] = value;
+                        }
+                    }
+                    
+                    newRecord.date = new Date(newRecord.date).toISOString();
+                    symptomData.date = newRecord.date;
+
+                    if (!localData.medicalRecords) localData.medicalRecords = [];
+                    if (!localData.symptomTracking) localData.symptomTracking = [];
+
+                    localData.medicalRecords.push(newRecord);
+                    localData.symptomTracking.push(symptomData);
+
+                    await saveData();
+                    showStatusMessage('Record and symptoms saved successfully!', 'success');
+                    closeModal(modal);
+                    renderProfile(); // Re-render to show the new record
+                });
+            }
 
             function renderProfileHeader() {
                 const history = localData.visitHistory || [];
@@ -473,28 +556,24 @@
             // --- All other functions are defined here ---
             // --- Tab Content Functions ---
             function createHistoryTab(history) {
-                debugLog('Rendering History Tab', history);
                 if (!history || history.length === 0) {
                     return `<div class="text-center py-12 text-gray-500">No visit history yet.</div>`;
                 }
                 return `<ul class="divide-y divide-gray-200">${history.map(entry => `<li class="py-2 flex flex-col md:flex-row md:items-center md:justify-between"><span class="font-medium text-gray-800">${entry.name || 'Unknown'}</span><span class="text-xs text-gray-500">${entry.timestamp ? new Date(entry.timestamp).toLocaleString() : ''}</span><span class="text-xs text-gray-600">${entry.action || ''}</span></li>`).join('')}</ul>`;
             }
             function createRecordsTab(records) {
-                debugLog('Rendering Records Tab', records);
                 if (!records || records.length === 0) {
                     return `<div class="text-center py-12 text-gray-500">No medical records yet.</div>`;
                 }
                 return `<ul class="divide-y divide-gray-200">${records.map(entry => `<li class="py-2 flex flex-col md:flex-row md:items-center md:justify-between"><span class="font-medium text-gray-800">${entry.hospital || 'Unknown Facility'}</span><span class="text-xs text-gray-500">${entry.date ? new Date(entry.date).toLocaleDateString() : ''}</span><span class="text-xs text-gray-600">${entry.visitType || ''}</span></li>`).join('')}</ul>`;
             }
             function createAchievementsTab(awards) {
-                debugLog('Rendering Achievements Tab', awards);
                 if (!awards || awards.length === 0) {
                     return `<div class="text-center py-12 text-gray-500">No awards unlocked yet.</div>`;
                 }
                 return `<ul class="grid grid-cols-2 md:grid-cols-3 gap-4">${awards.map(id => `<li class="p-4 bg-white rounded-lg border text-center"><span class="text-3xl">🏆</span><div class="font-bold mt-2">${id}</div></li>`).join('')}</ul>`;
             }
             function createAnalyticsTab() {
-                debugLog('Rendering Analytics Tab');
                 return `<div class="text-center py-12 text-gray-500">Analytics coming soon!</div>`;
             }
             function createSymptomsTab(symptoms) {

@@ -185,6 +185,8 @@
             <div id="status-message-area" class="mt-4 h-6"></div>
         </header>
 
+        <div id="recent-activity-container"></div>
+
         <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
             <!-- Hospitals Column -->
             <div class="bg-white p-6 rounded-xl shadow-md flex flex-col">
@@ -1688,10 +1690,8 @@
 
         // --- Add Recent Activity Section (replaces Symptom Tracking) ---
         function addRecentActivitySection() {
-            console.log('[DEBUG] addRecentActivitySection called');
-            const container = document.querySelector('.container.mx-auto');
+            const container = document.getElementById('recent-activity-container');
             if (!container) {
-                console.error('Container not found for recent activity section');
                 return;
             }
             const existingSection = document.getElementById('recent-activity-section');

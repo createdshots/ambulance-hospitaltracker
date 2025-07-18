@@ -41,6 +41,47 @@
       0% { transform: translateY(0) scale(1); }
       100% { transform: translateY(-30px) scale(1.08); }
     }
+    /* Floating particles animation */
+    .particle {
+      position: absolute;
+      opacity: 0.08;
+      pointer-events: none;
+      z-index: 1;
+      border-radius: 50%;
+      animation: particleFloat 15s linear infinite;
+    }
+    .particle2 {
+      animation-delay: 3s;
+      animation-duration: 18s;
+    }
+    .particle3 {
+      animation-delay: 6s;
+      animation-duration: 12s;
+    }
+    .particle4 {
+      animation-delay: 9s;
+      animation-duration: 20s;
+    }
+    .particle5 {
+      animation-delay: 12s;
+      animation-duration: 16s;
+    }
+    @keyframes particleFloat {
+      0% { 
+        transform: translateY(100vh) translateX(0) rotate(0deg);
+        opacity: 0;
+      }
+      10% {
+        opacity: 0.08;
+      }
+      90% {
+        opacity: 0.08;
+      }
+      100% { 
+        transform: translateY(-100px) translateX(50px) rotate(360deg);
+        opacity: 0;
+      }
+    }
     /* Subtle greyscale with color for headline */
     .rainbow-text {
       background: linear-gradient(90deg, #444 0%, #6366f1 40%, #444 60%, #a78bfa 100%);
@@ -70,6 +111,19 @@
     <svg width="120" height="120" class="float-shape float-shape3" style="top:8rem;right:6rem;">
       <ellipse cx="60" cy="60" rx="55" ry="45" fill="#f472b6" />
     </svg>
+    
+    <!-- Floating particles layer -->
+    <div class="particle" style="width: 8px; height: 8px; background: #6366f1; left: 10%; animation-delay: 0s;"></div>
+    <div class="particle particle2" style="width: 12px; height: 12px; background: #a78bfa; left: 25%; animation-delay: 3s;"></div>
+    <div class="particle particle3" style="width: 6px; height: 6px; background: #f472b6; left: 45%; animation-delay: 6s;"></div>
+    <div class="particle particle4" style="width: 10px; height: 10px; background: #8b5cf6; left: 65%; animation-delay: 9s;"></div>
+    <div class="particle particle5" style="width: 14px; height: 14px; background: #c084fc; left: 80%; animation-delay: 12s;"></div>
+    <div class="particle" style="width: 7px; height: 7px; background: #6366f1; left: 15%; animation-delay: 15s;"></div>
+    <div class="particle particle2" style="width: 9px; height: 9px; background: #a78bfa; left: 35%; animation-delay: 18s;"></div>
+    <div class="particle particle3" style="width: 11px; height: 11px; background: #f472b6; left: 55%; animation-delay: 21s;"></div>
+    <div class="particle particle4" style="width: 5px; height: 5px; background: #8b5cf6; left: 75%; animation-delay: 24s;"></div>
+    <div class="particle particle5" style="width: 13px; height: 13px; background: #c084fc; left: 90%; animation-delay: 27s;"></div>
+    
     <div class="z-10 max-w-lg mx-auto text-center px-8">
       <h1 class="text-4xl font-extrabold mb-4 rainbow-text">Empowering the Chronically Ill</h1>
       <p class="text-lg text-gray-700 mb-6">myHealthTracker helps you monitor symptoms, spot trends, and take control of your health journey. Designed for people with chronic conditions, by people who understand.</p>
