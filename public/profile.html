@@ -1075,6 +1075,19 @@
                                 userProfile: {},
                                 ...firestoreData
                             };
+                            // --- SSO/Any User: If data is missing, run onboarding/data import ---
+                            const needsDefaultData = !Array.isArray(localData.hospitals) || localData.hospitals.length === 0 ||
+                                !Array.isArray(localData.ambulance) || localData.ambulance.length === 0 ||
+                                !localData.userProfile || Object.keys(localData.userProfile).length === 0;
+                            if (needsDefaultData) {
+                                debugLog('User doc exists but is missing data, initializing default data and onboarding');
+                                await initializeDefaultData();
+                                setTimeout(() => {
+                                    debugLog('Triggering showOnboardingModal() for missing data');
+                                    showOnboardingModal();
+                                }, 500);
+                                return;
+                            }
                             debugLog('Calling renderProfile with localData', localData);
                             renderProfile();
                             const profileContent = document.getElementById('profile-content');
@@ -1164,7 +1177,6 @@
             }
 
             // --- Run the app ---
-            startApp();
             initializeAppLogic();
     </script>
 </body>
