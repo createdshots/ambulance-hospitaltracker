@@ -246,6 +246,8 @@
         const db = getFirestore(app);
         // Make statusMessageArea available everywhere
         const statusMessageArea = document.getElementById('status-message-area');
+        // Ensure unsubscribe is always defined
+        let unsubscribe = null;
         onAuthStateChanged(auth, (user) => {
             if (!user) {
                 window.location.href = '/login.html';
