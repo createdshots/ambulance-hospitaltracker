@@ -126,6 +126,12 @@
         const firebaseConfig = userFirebaseConfig;
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
+        // Declare state variables at the top level
+        const db = getFirestore(app);
+        let userId = null;
+        let docRef = null;
+        let localData = { hospitals: [], ambulance: [], awards: [], visitHistory: [], medicalRecords: [], symptomTracking: [], userProfile: {} };
+        let unsubscribe = null;
         onAuthStateChanged(auth, (user) => {
             if (!user) {
                 window.location.href = '/login.html';
@@ -134,13 +140,9 @@
             startApp(user);
         });
         function startApp(user) {
-            // All your app logic, Firestore, rendering, etc. goes here.
-            // Use the 'user' object as needed.
-            let db = getFirestore(app);
-            let userId = user.uid;
-            let docRef;
-            let localData = { hospitals: [], ambulance: [], awards: [], visitHistory: [], medicalRecords: [], symptomTracking: [], userProfile: {} };
-            let unsubscribe;
+            // Set userId and docRef at the top
+            userId = user.uid;
+            docRef = doc(db, "users", userId);
             // Set up UI for signed-in user (including guest)
             const authSignedInView = document.getElementById('auth-signed-in-view');
             const userIdDisplay = document.getElementById('user-id-display');
