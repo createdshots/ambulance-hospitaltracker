@@ -499,6 +499,8 @@
             }
             // --- Edit Profile Modal (enhanced layout) ---
             function showEditProfileModal() {
+                const modalContainer = document.getElementById('modal-container');
+                if (!modalContainer) return;
                 const currentProfile = localData.userProfile || {};
                 const user = auth.currentUser;
                 const availableConditions = [
@@ -731,6 +733,8 @@
             // --- Onboarding Modal (Edit Profile, Unskippable) ---
             function showOnboardingModal() {
                 debugLog('showOnboardingModal called');
+                const modalContainer = document.getElementById('modal-container');
+                if (!modalContainer) return;
                 const currentProfile = localData.userProfile || {};
                 const user = auth.currentUser;
                 const availableConditions = [
@@ -901,6 +905,8 @@
 
             // --- Help Modal ---
             function showHelpModal() {
+                const modalContainer = document.getElementById('modal-container');
+                if (!modalContainer) return;
                 const helpContent = `
                     <div class="space-y-4">
                         <h2 class="text-xl font-bold mb-2">Help & Support</h2>
@@ -957,6 +963,8 @@
 
             // --- Log Symptoms Modal for Profile ---
             function showProfileLogSymptomModal() {
+                const modalContainer = document.getElementById('modal-container');
+                if (!modalContainer) return;
                 const userConditions = localData.userProfile?.conditions || [];
                 if (userConditions.length === 0) {
                     showStatusMessage('Please set up condition tracking in your profile first.', 'error');
